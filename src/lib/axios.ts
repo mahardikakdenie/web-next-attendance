@@ -1,17 +1,28 @@
-import axios from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import Cookies from "js-cookie";
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
+  baseURL: "/api",
 });
 
-// interceptor
-api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      window.location.href = "/login";
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = Cookies.get("token");
+
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return Promise.reject(err);
+
+    return config;
+  },
+  (error: AxiosError) => {
+    return Promise.reject(error);
+  }
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ message?: string }>) => {
+    return Promise.reject(error);
   }
 );
