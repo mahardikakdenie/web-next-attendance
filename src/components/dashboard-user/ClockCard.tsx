@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
-import { Clock, Camera } from "lucide-react";
+import { Clock, Camera, MapPin, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
 import CameraModal from "../attendance/CameraModal";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -35,7 +35,7 @@ export default function ClockCard() {
     const [location, setLocation] = useState<string>(
         typeof navigator === "undefined" || !navigator.geolocation
             ? "Location not supported"
-            : "Getting location..."
+            : "Mencari lokasi..."
     );
 
     useEffect(() => {
@@ -54,7 +54,7 @@ export default function ClockCard() {
                 setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
             },
             () => {
-                setLocation("Location denied");
+                setLocation("Akses lokasi ditolak");
                 toast.error("Location access denied");
             }
         );
@@ -71,7 +71,7 @@ export default function ClockCard() {
 
     const handleClockClick = () => {
         if (attendance.clockIn && attendance.clockOut) {
-            toast.info("Anda sudah melakukan absensi hari ini");
+            toast.info("Anda sudah menyelesaikan absensi hari ini");
             return;
         }
         setStatus("camera");
@@ -105,7 +105,7 @@ export default function ClockCard() {
             const result = compareFace(selfieDesc, profileDesc);
 
             if (!result.isMatch) {
-                toast.error("Wajah tidak cocok dengan data");
+                toast.error("Wajah tidak cocok dengan data profil Anda");
                 setStatus("idle");
                 return;
             }
@@ -118,10 +118,10 @@ export default function ClockCard() {
 
             setAttendance((prev) => {
                 if (!prev.clockIn) {
-                    toast.success("Berhasil Clock In");
+                    toast.success("Berhasil Clock In!");
                     return { ...prev, clockIn: payload };
                 } else {
-                    toast.success("Berhasil Clock Out");
+                    toast.success("Berhasil Clock Out!");
                     return { ...prev, clockOut: payload };
                 }
             });
@@ -129,8 +129,7 @@ export default function ClockCard() {
             setStatus("idle");
         } catch (err) {
             console.log(err);
-
-            toast.error("Terjadi kesalahan saat verifikasi");
+            toast.error("Terjadi kesalahan saat verifikasi wajah");
             setStatus("idle");
         } finally {
             setLoading(false);
@@ -138,94 +137,144 @@ export default function ClockCard() {
     };
 
     const getStatusText = () => {
-        if (status === "processing") return "Memverifikasi wajah...";
-        if (status === "camera") return "Posisikan wajah lalu ambil foto";
-        if (!attendance.clockIn) return "Silakan Clock In";
-        if (!attendance.clockOut) return "Silakan Clock Out";
-        return "Absensi hari ini selesai";
+        if (status === "processing") return "Memverifikasi wajah Anda...";
+        if (status === "camera") return "Posisikan wajah di dalam bingkai";
+        if (!attendance.clockIn) return "Silakan mulai hari kerja Anda";
+        if (!attendance.clockOut) return "Sedang dalam jam kerja";
+        return "Kerja bagus! Absensi hari ini selesai.";
     };
 
     const getButtonText = () => {
-        if (loading) return "Processing...";
-        if (!attendance.clockIn) return "Clock In";
-        if (!attendance.clockOut) return "Clock Out";
-        return "Selesai";
+        if (loading) return "Memproses...";
+        if (!attendance.clockIn) return "Clock In Sekarang";
+        if (!attendance.clockOut) return "Clock Out Sekarang";
+        return "Absensi Selesai";
     };
 
     return (
         <>
-            <div className="rounded-2xl p-6 flex flex-col gap-6 bg-slate-100/80">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <p className="text-sm text-slate-500">Today Status</p>
-                        <h2 className="text-xl font-semibold text-slate-900">
-                            {attendance.clockOut
-                                ? "Completed"
-                                : attendance.clockIn
-                                    ? "Working"
-                                    : "Not Checked In"}
+            {/* Card Container */}
+            <div className="relative w-full mx-auto rounded-4xl p-6 sm:p-8 bg-white border border-slate-100 shadow-2xl shadow-slate-200/50 flex flex-col gap-8 overflow-hidden">
+                
+                {/* Decorative Background Blob */}
+                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-blue-50 blur-3xl opacity-60 pointer-events-none" />
+
+                {/* Header Section */}
+                <div className="flex justify-between items-start relative z-10">
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">Status Hari Ini</p>
+                        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                            {attendance.clockOut ? (
+                                <span className="text-emerald-600 flex items-center gap-2">
+                                    <CheckCircle2 size={24} /> Selesai
+                                </span>
+                            ) : attendance.clockIn ? (
+                                <span className="text-blue-600 flex items-center gap-2">
+                                    <Clock size={24} /> Sedang Bekerja
+                                </span>
+                            ) : (
+                                <span className="text-slate-600">Belum Hadir</span>
+                            )}
                         </h2>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs bg-white px-2 py-1 rounded-full text-slate-500">
-                        <Clock size={14} />
+                    <div className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full ring-1 ring-emerald-500/20 animate-fade-in">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         Live
                     </div>
                 </div>
 
-                <div className="text-4xl font-bold text-slate-900">
-                    {now.format("HH:mm")}
+                {/* Time Display Section */}
+                <div className="flex flex-col items-center justify-center py-4 relative z-10">
+                    <div className="text-6xl sm:text-7xl font-black tracking-tighter bg-linear-to-br from-slate-900 to-slate-600 bg-clip-text text-transparent">
+                        {now.format("HH:mm")}
+                    </div>
+                    <p className="text-slate-500 font-medium mt-2">{now.format("dddd, DD MMMM YYYY")}</p>
+                    
+                    <div className="mt-6 text-sm font-medium text-center bg-slate-50/80 px-6 py-2.5 rounded-2xl text-slate-600 border border-slate-100 w-full max-w-70">
+                        {status === "processing" ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <Loader2 size={16} className="animate-spin text-blue-500" />
+                                {getStatusText()}
+                            </span>
+                        ) : (
+                            getStatusText()
+                        )}
+                    </div>
                 </div>
 
-                <div className="text-sm text-center bg-white p-3 rounded-xl text-slate-600">
-                    {getStatusText()}
-                </div>
-
-                <div className="flex flex-col gap-3">
+                {/* Logs Section */}
+                <div className="flex flex-col gap-4 relative z-10">
                     {attendance.clockIn && (
-                        <div className="bg-white p-3 rounded-xl flex gap-3 items-center">
-                            <Image
-                                src={attendance.clockIn.image}
-                                width={80}
-                                height={80}
-                                alt="clockin"
-                                className="rounded-lg object-cover"
-                                unoptimized
-                            />
-                            <div className="text-xs">
-                                <p className="font-semibold text-slate-700">Clock In</p>
-                                <p>🕒 {attendance.clockIn.time}</p>
-                                <p>📍 {attendance.clockIn.location}</p>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex gap-4 items-center transition-all hover:border-slate-200 hover:shadow-sm">
+                            <div className="relative">
+                                <Image
+                                    src={attendance.clockIn.image}
+                                    width={64}
+                                    height={64}
+                                    alt="clockin"
+                                    className="rounded-xl object-cover ring-2 ring-white shadow-sm h-16 w-16"
+                                    unoptimized
+                                />
+                                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1 rounded-full border-2 border-white">
+                                    <ShieldCheck size={12} />
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-1 text-sm flex-1">
+                                <p className="font-bold text-slate-800">Clock In</p>
+                                <p className="text-slate-500 flex items-center gap-1.5">
+                                    <Clock size={14} /> {attendance.clockIn.time}
+                                </p>
+                                <p className="text-slate-500 flex items-center gap-1.5 truncate pr-2">
+                                    <MapPin size={14} className="shrink-0" /> 
+                                    <span className="truncate">{attendance.clockIn.location}</span>
+                                </p>
                             </div>
                         </div>
                     )}
 
                     {attendance.clockOut && (
-                        <div className="bg-white p-3 rounded-xl flex gap-3 items-center">
-                            <Image
-                                src={attendance.clockOut.image}
-                                width={80}
-                                height={80}
-                                alt="clockout"
-                                className="rounded-lg object-cover"
-                                unoptimized
-                            />
-                            <div className="text-xs">
-                                <p className="font-semibold text-slate-700">Clock Out</p>
-                                <p>🕒 {attendance.clockOut.time}</p>
-                                <p>📍 {attendance.clockOut.location}</p>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex gap-4 items-center transition-all hover:border-slate-200 hover:shadow-sm">
+                            <div className="relative">
+                                <Image
+                                    src={attendance.clockOut.image}
+                                    width={64}
+                                    height={64}
+                                    alt="clockout"
+                                    className="rounded-xl object-cover ring-2 ring-white shadow-sm h-16 w-16"
+                                    unoptimized
+                                />
+                                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1 rounded-full border-2 border-white">
+                                    <ShieldCheck size={12} />
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-1 text-sm flex-1">
+                                <p className="font-bold text-slate-800">Clock Out</p>
+                                <p className="text-slate-500 flex items-center gap-1.5">
+                                    <Clock size={14} /> {attendance.clockOut.time}
+                                </p>
+                                <p className="text-slate-500 flex items-center gap-1.5 truncate pr-2">
+                                    <MapPin size={14} className="shrink-0" /> 
+                                    <span className="truncate">{attendance.clockOut.location}</span>
+                                </p>
                             </div>
                         </div>
                     )}
                 </div>
 
+                {/* Action Button */}
                 <button
                     onClick={handleClockClick}
                     disabled={loading || !!attendance.clockOut}
-                    className="py-3 rounded-xl bg-slate-900 text-white flex justify-center items-center gap-2 disabled:opacity-50"
+                    className="group relative w-full py-4 rounded-2xl text-white font-semibold flex justify-center items-center gap-2 overflow-hidden transition-all disabled:opacity-60 disabled:cursor-not-allowed
+                    bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/25 disabled:shadow-none"
                 >
-                    <Camera size={16} />
-                    {getButtonText()}
+                    {loading ? (
+                        <Loader2 size={20} className="animate-spin" />
+                    ) : (
+                        <Camera size={20} className="transition-transform group-hover:scale-110" />
+                    )}
+                    <span className="relative z-10">{getButtonText()}</span>
                 </button>
             </div>
 
