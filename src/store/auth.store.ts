@@ -1,13 +1,84 @@
+// src/store/auth.store.ts
 import { create } from "zustand";
+import { loginAPI, getMeAPI, logoutAPI } from "@/service/auth.service";
 
-interface AuthState {
-  user: {name?: string};
-  setUser: (user: {name?: string}) => void;
-}
+type User = {
+  id: number;
+  name: string;
+  email: string;
+  tenant_id?: number;
+};
+
+type APIError = {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+};
+
+type AuthState = {
+  user: User | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  fetchUser: () => Promise<void>;
+  logout: () => Promise<void>;
+};
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: {
-    name: ''
+  user: null,
+  loading: false,
+  isAuthenticated: false,
+
+  login: async (email: string, password: string) => {
+    try {
+      set({ loading: true });
+
+      await loginAPI({ email, password });
+
+      const user = await getMeAPI();
+
+      set({
+        user,
+        isAuthenticated: true,
+        loading: false,
+      });
+    } catch (error: unknown) {
+      const err = error as APIError;
+
+      set({ loading: false });
+
+      throw new Error(err?.response?.data?.message || "Login failed");
+    }
   },
-  setUser: (user) => set({ user }),
+
+  fetchUser: async () => {
+    try {
+      set({ loading: true });
+
+      const user = await getMeAPI();
+
+      set({
+        user,
+        isAuthenticated: true,
+        loading: false,
+      });
+    } catch {
+      set({
+        user: null,
+        isAuthenticated: false,
+        loading: false,
+      });
+    }
+  },
+
+  logout: async () => {
+    await logoutAPI();
+
+    set({
+      user: null,
+      isAuthenticated: false,
+    });
+  },
 }));
