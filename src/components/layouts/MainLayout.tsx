@@ -7,19 +7,19 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar />
+    <div className="flex h-dvh w-full flex-col bg-neutral-50 md:flex-row">
+      <div className="md:shrink-0 md:z-20">
+        <Sidebar />
+      </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="sticky top-0 z-20 bg-white/70 backdrop-blur border-b border-gray-200">
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative">
+        <header className="sticky top-0 z-30 w-full bg-white/80 backdrop-blur-xl border-b border-neutral-200">
           <TopNavbar />
-        </div>
+        </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto space-y-6">
-            <div className="rounded-2xl bg-white border border-gray-100 p-6">
-              {children}
-            </div>
+        <main className="flex-1 overflow-y-auto overscroll-y-contain pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+          <div className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+            {children}
           </div>
         </main>
       </div>
