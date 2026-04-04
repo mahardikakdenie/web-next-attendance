@@ -2,16 +2,33 @@
 import { create } from "zustand";
 import { loginAPI, getMeAPI, logoutAPI } from "@/service/auth.service";
 
-type User = {
+export type Tenant = {
+  id: number;
+  name: string;
+};
+
+export type UserAttendance = {
+  id?: number;
+  created_at?: string;
+  createdAt?: string;
+  clock_in_time?: string;
+  clock_out_time?: string;
+  clock_in_media_url?: string;
+  clock_out_media_url?: string;
+  clock_in_latitude?: number | string;
+  clock_in_longitude?: number | string;
+  clock_out_latitude?: number | string;
+  clock_out_longitude?: number | string;
+};
+
+export type User = {
   id: number;
   name: string;
   email: string;
   role?: string;
   tenant_id?: number;
-  tenant: {
-    id: number;
-    name: string;
-  }
+  tenant?: Tenant;
+  attendances?: UserAttendance[];
 };
 
 type APIError = {
@@ -42,9 +59,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       await loginAPI({ email, password });
 
-      const res = await getMeAPI();
+      const res = (await getMeAPI()) as { data: User };
       set({
-        user: res.data, // ✅ FIX
+        user: res.data,
         isAuthenticated: true,
         loading: false,
       });
@@ -61,7 +78,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ loading: true });
 
-      const res = await getMeAPI();
+      const res = (await getMeAPI()) as { data: User };
       set({
         user: res.data,
         isAuthenticated: true,

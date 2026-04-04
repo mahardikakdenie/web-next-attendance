@@ -22,13 +22,15 @@ The current UI focuses on:
 
 - login form with client-side loading state
 - auth state management with Zustand
-- current-user fetch after login
+- current-user fetch after login through `/v1/users/me`
+- typed user session data with `tenant` and `attendances`
 - logout helper for session cleanup
 
 ### 2. Dashboard
 
 - greeting and daily attendance summary
 - live clock card for clock in / clock out
+- `ClockCard` reads today attendance from `/v1/users/me` and shows the latest `clock_in` and `clock_out`
 - recent attendance preview
 - quick info panel for work rules and location
 - responsive layout for desktop and mobile
@@ -160,8 +162,8 @@ If camera, geolocation, or models are unavailable, attendance verification will 
 
 1. User submits credentials from the login form.
 2. The frontend sends the request through the local API proxy.
-3. After login, the app requests the current user profile.
-4. Zustand stores the authenticated user and loading state.
+3. After login, the app requests `/v1/users/me` with `includes=tenant,attendances`.
+4. Zustand stores the authenticated user, tenant, and attendance relations.
 5. Subsequent requests can include the session token through the configured client flow.
 
 ## Development Notes
@@ -170,13 +172,14 @@ If camera, geolocation, or models are unavailable, attendance verification will 
 - Admin pages are grouped under `src/app/(admin)`.
 - Public login pages are separated under `src/app/login`.
 - The UI is already responsive, especially the main layout and sidebar shell.
-- Current attendance and dashboard data appear to be a mix of live integration and placeholder UI content.
+- `ClockCard` is wired to current-user attendance data for the current day.
+- `auth.store.ts` is the main source of user session typing used by dashboard widgets.
 
 ## Known Gaps
 
 - README setup assumes a compatible backend API is already available.
 - `.env.example` currently documents `NEXT_PUBLIC_API_URL` only; the server proxy also needs `API_URL`.
-- Some dashboard widgets still use static sample values.
+- Some dashboard widgets still use static sample values outside the clock card flow.
 
 ## Next Improvements
 

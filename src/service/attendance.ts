@@ -2,8 +2,8 @@ import { api } from "@/lib/axios";
 
 export type RecordAttendancePayload = {
   action: string;
-  latitude: string;
-  longitude: string;
+  latitude: number;
+  longitude: number;
   media_url: string;
 };
 
