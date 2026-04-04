@@ -8,8 +8,9 @@ import Image from "next/image";
 import { toast } from "sonner";
 import {
     loadFaceModels,
-    getFaceDescriptor,
+    analyzeFace,
     compareFace,
+    getFaceAnalysisErrorMessage,
 } from "@/lib/faceRecognition";
 import { getDataAttendances } from "@/service/attendance";
 
@@ -95,19 +96,29 @@ export default function ClockCard() {
 
             selfieImg.src = img;
             profileImg.src = "/profile.jpg";
+            // profileImg.src = "/profile-2.png";
 
             await Promise.all([loadImage(selfieImg), loadImage(profileImg)]);
 
-            const selfieDesc = await getFaceDescriptor(selfieImg);
-            const profileDesc = await getFaceDescriptor(profileImg);
+            const selfieAnalysis = await analyzeFace(selfieImg);
+            const profileAnalysis = await analyzeFace(profileImg);
 
-            if (!selfieDesc || !profileDesc) {
-                toast.error("Wajah tidak terdeteksi, coba lagi dengan pencahayaan cukup");
+            if (!selfieAnalysis.ok) {
+                toast.error(getFaceAnalysisErrorMessage(selfieAnalysis.error));
                 setStatus("idle");
                 return;
             }
 
-            const result = compareFace(selfieDesc, profileDesc);
+            if (!profileAnalysis.ok) {
+                toast.error("Foto referensi profil tidak valid untuk verifikasi wajah");
+                setStatus("idle");
+                return;
+            }
+
+            const result = compareFace(
+                selfieAnalysis.metrics.descriptor,
+                profileAnalysis.metrics.descriptor
+            );
 
             if (!result.isMatch) {
                 toast.error("Wajah tidak cocok dengan data profil Anda");
