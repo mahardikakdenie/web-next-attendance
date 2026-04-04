@@ -5,11 +5,12 @@ import { toast } from "sonner";
 
 interface Props {
   open: boolean;
+  loading?: boolean;
   onClose: () => void;
   onCapture: (image: string) => void;
 }
 
-export default function CameraModal({ open, onClose, onCapture }: Props) {
+export default function CameraModal({ open, loading = false, onClose, onCapture }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -36,10 +37,8 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
-      } catch (error) {
-        console.log(error);
-        
-        toast.error("Camera access denied or not available");
+      } catch {
+        toast.error("Akses kamera ditolak atau tidak tersedia");
         onClose();
       }
     };
@@ -47,15 +46,15 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
     startCamera();
 
     return () => {
-      if (!open) {
-        streamRef.current?.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-        startedRef.current = false;
-      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      startedRef.current = false;
     };
   }, [onClose, open]);
 
   const handleCapture = () => {
+    if (loading) return;
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
@@ -76,7 +75,6 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
     startedRef.current = false;
 
     onCapture(image);
-    toast.success("Photo captured successfully");
     onClose();
   };
 
@@ -85,18 +83,10 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-6 flex flex-col gap-5">
-        <div className="text-lg font-semibold text-slate-800">
-          Take a Photo
-        </div>
+        <div className="text-lg font-semibold text-slate-800">Ambil Foto Absensi</div>
 
         <div className="relative w-full h-100 bg-black rounded-2xl overflow-hidden">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover"
-          />
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
         </div>
 
         <canvas ref={canvasRef} className="hidden" />
@@ -104,23 +94,25 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
         <div className="flex gap-3">
           <button
             type="button"
+            disabled={loading}
             onClick={() => {
               streamRef.current?.getTracks().forEach((t) => t.stop());
               streamRef.current = null;
               startedRef.current = false;
               onClose();
             }}
-            className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 transition text-slate-700 font-medium"
+            className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 transition text-slate-700 font-medium disabled:opacity-60"
           >
-            Cancel
+            Batal
           </button>
 
           <button
             type="button"
+            disabled={loading}
             onClick={handleCapture}
-            className="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 transition text-white font-semibold"
+            className="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 transition text-white font-semibold disabled:opacity-60"
           >
-            Capture
+            {loading ? "Memproses..." : "Ambil Foto"}
           </button>
         </div>
       </div>
