@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { cookies } from "next/headers";
 
 const BASE_URL = process.env.API_URL || "";
 
@@ -36,13 +35,7 @@ async function handler(
   const path = pathArray.join("/");
 
   const fullURL = `${BASE_URL}/api/${path}${req.nextUrl.search}`;
-  console.log("🚀 ~ handler ~ BASE_URL:", BASE_URL)
-
-  console.log("========== PROXY DEBUG ==========");
-  console.log("Incoming Path:", pathArray);
-  console.log("Final URL:", fullURL);
-
-  const token = (await cookies()).get("token")?.value;
+  const requestCookie = req.headers.get("cookie");
 
   const body = method !== "GET" ? await req.text() : undefined;
 
@@ -50,20 +43,23 @@ async function handler(
     method,
     headers: {
       "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
+      ...(requestCookie ? { Cookie: requestCookie } : {}),
     },
     body,
   });
 
   const data = await res.text();
-
-  console.log("Response Status:", res.status);
-  console.log("================================");
-
-  return new Response(data, {
+  const response = new Response(data, {
     status: res.status,
     headers: {
       "Content-Type": res.headers.get("content-type") || "application/json",
     },
   });
+
+  const setCookie = res.headers.get("set-cookie");
+  if (setCookie) {
+    response.headers.set("set-cookie", setCookie);
+  }
+
+  return response;
 }
