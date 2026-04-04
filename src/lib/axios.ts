@@ -1,28 +1,7 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import Cookies from "js-cookie";
+// src/lib/axios.ts
+import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "/api",
+  baseURL: '/api',
+  withCredentials: true,
 });
-
-api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = Cookies.get("token");
-
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  },
-  (error: AxiosError) => {
-    return Promise.reject(error);
-  }
-);
-
-api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError<{ message?: string }>) => {
-    return Promise.reject(error);
-  }
-);
