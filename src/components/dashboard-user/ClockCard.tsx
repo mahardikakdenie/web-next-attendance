@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
-import { Clock, Camera, MapPin, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
+import { Clock, Camera, MapPin, ShieldCheck, Loader2 } from "lucide-react";
 import CameraModal from "../attendance/CameraModal";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -11,22 +11,17 @@ import {
     getFaceDescriptor,
     compareFace,
 } from "@/lib/faceRecognition";
+import { getDataAttendances } from "@/service/attendance";
 
-type AttendanceData = {
-    clockIn?: {
-        image: string;
-        time: string;
-        location: string;
-    };
-    clockOut?: {
-        image: string;
-        time: string;
-        location: string;
-    };
+type AttendanceItem = {
+    type: "clockIn" | "clockOut";
+    image: string;
+    time: string;
+    location: string;
 };
 
 export default function ClockCard() {
-    const [attendance, setAttendance] = useState<AttendanceData>({});
+    const [attendance, setAttendance] = useState<AttendanceItem[]>([]);
     const [now, setNow] = useState(dayjs());
     const [openCamera, setOpenCamera] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -43,6 +38,16 @@ export default function ClockCard() {
             setNow(dayjs());
         }, 1000);
         return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const getData = async () => {
+            const res = await getDataAttendances();
+
+            console.log(res);
+        }
+
+        getData();
     }, []);
 
     useEffect(() => {
@@ -70,7 +75,7 @@ export default function ClockCard() {
         });
 
     const handleClockClick = () => {
-        if (attendance.clockIn && attendance.clockOut) {
+        if (attendance.length === 2) {
             toast.info("Anda sudah menyelesaikan absensi hari ini");
             return;
         }
@@ -110,25 +115,21 @@ export default function ClockCard() {
                 return;
             }
 
-            const payload = {
+            const payload: AttendanceItem = {
+                type: attendance.length === 0 ? "clockIn" : "clockOut",
                 image: img,
                 time: dayjs().format("HH:mm:ss"),
                 location,
             };
 
-            setAttendance((prev) => {
-                if (!prev.clockIn) {
-                    toast.success("Berhasil Clock In!");
-                    return { ...prev, clockIn: payload };
-                } else {
-                    toast.success("Berhasil Clock Out!");
-                    return { ...prev, clockOut: payload };
-                }
-            });
+            setAttendance((prev) => [...prev, payload]);
+
+            toast.success(payload.type === "clockIn" ? "Berhasil Clock In!" : "Berhasil Clock Out!");
 
             setStatus("idle");
         } catch (err) {
             console.log(err);
+            
             toast.error("Terjadi kesalahan saat verifikasi wajah");
             setStatus("idle");
         } finally {
@@ -139,142 +140,92 @@ export default function ClockCard() {
     const getStatusText = () => {
         if (status === "processing") return "Memverifikasi wajah Anda...";
         if (status === "camera") return "Posisikan wajah di dalam bingkai";
-        if (!attendance.clockIn) return "Silakan mulai hari kerja Anda";
-        if (!attendance.clockOut) return "Sedang dalam jam kerja";
+        if (attendance.length === 0) return "Silakan mulai hari kerja Anda";
+        if (attendance.length === 1) return "Sedang dalam jam kerja";
         return "Kerja bagus! Absensi hari ini selesai.";
     };
 
     const getButtonText = () => {
         if (loading) return "Memproses...";
-        if (!attendance.clockIn) return "Clock In Sekarang";
-        if (!attendance.clockOut) return "Clock Out Sekarang";
+        if (attendance.length === 0) return "Clock In Sekarang";
+        if (attendance.length === 1) return "Clock Out Sekarang";
         return "Absensi Selesai";
     };
 
     return (
         <>
-            {/* Card Container */}
-            <div className="relative w-full mx-auto rounded-4xl p-6 sm:p-8 bg-white border border-slate-100 shadow-2xl shadow-slate-200/50 flex flex-col gap-8 overflow-hidden">
-                
-                {/* Decorative Background Blob */}
-                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-blue-50 blur-3xl opacity-60 pointer-events-none" />
+            <div className="relative w-full mx-auto rounded-4xl p-6 sm:p-8 bg-white border border-slate-100 shadow-2xl flex flex-col gap-8 overflow-hidden">
 
-                {/* Header Section */}
-                <div className="flex justify-between items-start relative z-10">
-                    <div className="space-y-1">
-                        <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">Status Hari Ini</p>
-                        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                            {attendance.clockOut ? (
-                                <span className="text-emerald-600 flex items-center gap-2">
-                                    <CheckCircle2 size={24} /> Selesai
-                                </span>
-                            ) : attendance.clockIn ? (
-                                <span className="text-blue-600 flex items-center gap-2">
-                                    <Clock size={24} /> Sedang Bekerja
-                                </span>
-                            ) : (
-                                <span className="text-slate-600">Belum Hadir</span>
-                            )}
+                <div className="flex justify-between items-start">
+                    <div>
+                        <p className="text-sm text-slate-400">Status Hari Ini</p>
+                        <h2 className="text-2xl font-bold text-slate-800">
+                            {attendance.length === 2
+                                ? "Selesai"
+                                : attendance.length === 1
+                                    ? "Sedang Bekerja"
+                                    : "Belum Hadir"}
                         </h2>
                     </div>
-
-                    <div className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full ring-1 ring-emerald-500/20 animate-fade-in">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        Live
-                    </div>
                 </div>
 
-                {/* Time Display Section */}
-                <div className="flex flex-col items-center justify-center py-4 relative z-10">
-                    <div className="text-6xl sm:text-7xl font-black tracking-tighter bg-linear-to-br from-slate-900 to-slate-600 bg-clip-text text-transparent">
+                <div className="text-center">
+                    <div className="text-6xl font-black">
                         {now.format("HH:mm")}
                     </div>
-                    <p className="text-slate-500 font-medium mt-2">{now.format("dddd, DD MMMM YYYY")}</p>
-                    
-                    <div className="mt-6 text-sm font-medium text-center bg-slate-50/80 px-6 py-2.5 rounded-2xl text-slate-600 border border-slate-100 w-full max-w-70">
-                        {status === "processing" ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <Loader2 size={16} className="animate-spin text-blue-500" />
-                                {getStatusText()}
-                            </span>
-                        ) : (
-                            getStatusText()
-                        )}
-                    </div>
+                    <p className="text-slate-500 mt-2">{now.format("dddd, DD MMMM YYYY")}</p>
+                    <p className="mt-4 text-sm text-slate-600">{getStatusText()}</p>
                 </div>
 
-                {/* Logs Section */}
-                <div className="flex flex-col gap-4 relative z-10">
-                    {attendance.clockIn && (
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex gap-4 items-center transition-all hover:border-slate-200 hover:shadow-sm">
-                            <div className="relative">
+                <div className="grid gap-6">
+                    {attendance.map((item, idx) => (
+                        <div key={idx} className="relative rounded-3xl overflow-hidden shadow-lg">
+                            <div className="relative w-full h-64">
                                 <Image
-                                    src={attendance.clockIn.image}
-                                    width={64}
-                                    height={64}
-                                    alt="clockin"
-                                    className="rounded-xl object-cover ring-2 ring-white shadow-sm h-16 w-16"
+                                    src={item.image}
+                                    alt="attendance"
+                                    fill
+                                    className="object-cover"
                                     unoptimized
                                 />
-                                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1 rounded-full border-2 border-white">
-                                    <ShieldCheck size={12} />
-                                </div>
                             </div>
-                            <div className="flex flex-col gap-1 text-sm flex-1">
-                                <p className="font-bold text-slate-800">Clock In</p>
-                                <p className="text-slate-500 flex items-center gap-1.5">
-                                    <Clock size={14} /> {attendance.clockIn.time}
-                                </p>
-                                <p className="text-slate-500 flex items-center gap-1.5 truncate pr-2">
-                                    <MapPin size={14} className="shrink-0" /> 
-                                    <span className="truncate">{attendance.clockIn.location}</span>
-                                </p>
-                            </div>
-                        </div>
-                    )}
 
-                    {attendance.clockOut && (
-                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex gap-4 items-center transition-all hover:border-slate-200 hover:shadow-sm">
-                            <div className="relative">
-                                <Image
-                                    src={attendance.clockOut.image}
-                                    width={64}
-                                    height={64}
-                                    alt="clockout"
-                                    className="rounded-xl object-cover ring-2 ring-white shadow-sm h-16 w-16"
-                                    unoptimized
-                                />
-                                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1 rounded-full border-2 border-white">
-                                    <ShieldCheck size={12} />
+                            <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
+
+                            <div className="absolute bottom-0 p-4 text-white w-full">
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <p className="text-sm opacity-80">
+                                            {item.type === "clockIn" ? "Clock In" : "Clock Out"}
+                                        </p>
+                                        <p className="text-lg font-bold flex items-center gap-2">
+                                            <Clock size={16} /> {item.time}
+                                        </p>
+                                        <p className="text-xs opacity-80 flex items-center gap-2 truncate">
+                                            <MapPin size={14} /> {item.location}
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-emerald-500 p-2 rounded-full">
+                                        <ShieldCheck size={16} />
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-1 text-sm flex-1">
-                                <p className="font-bold text-slate-800">Clock Out</p>
-                                <p className="text-slate-500 flex items-center gap-1.5">
-                                    <Clock size={14} /> {attendance.clockOut.time}
-                                </p>
-                                <p className="text-slate-500 flex items-center gap-1.5 truncate pr-2">
-                                    <MapPin size={14} className="shrink-0" /> 
-                                    <span className="truncate">{attendance.clockOut.location}</span>
-                                </p>
-                            </div>
                         </div>
-                    )}
+                    ))}
                 </div>
 
-                {/* Action Button */}
                 <button
                     onClick={handleClockClick}
-                    disabled={loading || !!attendance.clockOut}
-                    className="group relative w-full py-4 rounded-2xl text-white font-semibold flex justify-center items-center gap-2 overflow-hidden transition-all disabled:opacity-60 disabled:cursor-not-allowed
-                    bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/25 disabled:shadow-none"
+                    disabled={loading || attendance.length === 2}
+                    className="w-full py-4 rounded-2xl text-white font-semibold flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
                 >
                     {loading ? (
                         <Loader2 size={20} className="animate-spin" />
                     ) : (
-                        <Camera size={20} className="transition-transform group-hover:scale-110" />
+                        <Camera size={20} />
                     )}
-                    <span className="relative z-10">{getButtonText()}</span>
+                    {getButtonText()}
                 </button>
             </div>
 
