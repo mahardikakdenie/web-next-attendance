@@ -6,7 +6,12 @@ type User = {
   id: number;
   name: string;
   email: string;
+  role?: string;
   tenant_id?: number;
+  tenant: {
+    id: number;
+    name: string;
+  }
 };
 
 type APIError = {
@@ -37,10 +42,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       await loginAPI({ email, password });
 
-      const user = await getMeAPI();
-
+      const res = await getMeAPI();
       set({
-        user,
+        user: res.data, // ✅ FIX
         isAuthenticated: true,
         loading: false,
       });
@@ -57,10 +61,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ loading: true });
 
-      const user = await getMeAPI();
+      const res = await getMeAPI();
+
+      console.log(res.data);
+      
 
       set({
-        user,
+        user: res.data,
         isAuthenticated: true,
         loading: false,
       });
