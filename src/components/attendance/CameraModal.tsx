@@ -21,7 +21,12 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
+          video: {
+            facingMode: "user",
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 24, max: 30 },
+          },
         });
 
         streamRef.current = stream;
@@ -29,6 +34,7 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          await videoRef.current.play();
         }
       } catch (error) {
         console.log(error);
