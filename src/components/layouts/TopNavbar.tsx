@@ -17,7 +17,7 @@ export default function TopNavbar() {
         </div>
         <div>
           <h1 className="text-lg font-semibold text-gray-900">Attendance</h1>
-          <p className="text-xs text-gray-400">Dashboard overview</p>
+          <p className="text-xs text-gray-400">{user?.tenant?.name ?? ''}</p>
         </div>
       </div>
 
