@@ -13,6 +13,7 @@ import {
   getFaceAnalysisErrorMessage,
 } from "@/lib/faceRecognition";
 import { getDataAttendances, recordAttendances } from "@/service/attendance";
+import { uploadMedia } from "@/service/media";
 
 type AttendanceType = "clockIn" | "clockOut";
 
@@ -28,6 +29,13 @@ type Coordinates = {
   longitude: string;
 };
 
+
+const dataUrlToFile = async (dataUrl: string) => {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  const extension = blob.type.split("/")[1] || "png";
+  return new File([blob], `attendance-${Date.now()}.${extension}`, { type: blob.type || "image/png" });
+};
 const EMPTY_IMAGE =
   "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360'%3E%3Crect width='100%25' height='100%25' fill='%23e2e8f0'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2364758b' font-size='24'%3ENo+Image%3C/text%3E%3C/svg%3E";
 
@@ -184,6 +192,9 @@ export default function ClockCard() {
       setLoading(true);
       setStatus("processing");
 
+      const mediaFile = await dataUrlToFile(img);
+      const mediaUrl = await uploadMedia(mediaFile);
+
       await loadFaceModels();
 
       const selfieImg = new window.Image();
@@ -221,12 +232,12 @@ export default function ClockCard() {
         action,
         latitude: coords.latitude,
         longitude: coords.longitude,
-        media_url: img,
+        media_url: mediaUrl,
       });
 
       const payload: AttendanceItem = {
         type: action === "clock_in" ? "clockIn" : "clockOut",
-        image: img,
+        image: mediaUrl,
         time: dayjs().format("HH:mm:ss"),
         location,
       };
@@ -234,8 +245,12 @@ export default function ClockCard() {
       setAttendance((prev) => [...prev, payload]);
       toast.success(payload.type === "clockIn" ? "Berhasil Clock In!" : "Berhasil Clock Out!");
       setStatus("idle");
-    } catch {
-      toast.error("Terjadi kesalahan saat verifikasi wajah");
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Media upload")) {
+        toast.error("Upload foto selfie gagal");
+      } else {
+        toast.error("Terjadi kesalahan saat verifikasi wajah");
+      }
       setStatus("idle");
     } finally {
       setLoading(false);

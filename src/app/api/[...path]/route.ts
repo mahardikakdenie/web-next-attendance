@@ -33,16 +33,16 @@ async function handler(
   }
 
   const path = pathArray.join("/");
-
   const fullURL = `${BASE_URL}/api/${path}${req.nextUrl.search}`;
   const requestCookie = req.headers.get("cookie");
+  const requestContentType = req.headers.get("content-type");
 
-  const body = method !== "GET" ? await req.text() : undefined;
+  const body = method !== "GET" ? await req.arrayBuffer() : undefined;
 
   const res = await fetch(fullURL, {
     method,
     headers: {
-      "Content-Type": "application/json",
+      ...(requestContentType ? { "Content-Type": requestContentType } : {}),
       ...(requestCookie ? { Cookie: requestCookie } : {}),
     },
     body,
