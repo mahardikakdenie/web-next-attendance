@@ -14,6 +14,9 @@ export const loginAPI = async (payload: {
 export const getMeAPI = async () => {
   const res = await api.get("/v1/users/me", {
     withCredentials: true,
+    params: {
+      includes: 'tenant,attendances'
+    }
   });
   return res.data;
 };
