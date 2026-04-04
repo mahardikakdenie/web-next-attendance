@@ -63,11 +63,30 @@ export default function ClockCard() {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const lat = Number(pos.coords.latitude.toFixed(6));
         const lng = Number(pos.coords.longitude.toFixed(6));
         setCoords({ latitude: lat, longitude: lng });
-        setLocation(`${lat}, ${lng}`);
+
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+          );
+          const data = await res.json();
+
+          if (data?.address) {
+            const { road, village, suburb, city, town } = data.address;
+            const streetName = road || "";
+            const areaName = village || suburb || city || town || "";
+
+            const shortAddress = [streetName, areaName].filter(Boolean).join(", ");
+            setLocation(shortAddress || data.display_name || `${lat}, ${lng}`);
+          } else {
+            setLocation(data.display_name || `${lat}, ${lng}`);
+          }
+        } catch {
+          setLocation(`${lat}, ${lng}`);
+        }
       },
       () => {
         setLocation("Akses lokasi ditolak");
@@ -157,94 +176,153 @@ export default function ClockCard() {
     status === "processing"
       ? "Memproses verifikasi wajah..."
       : status === "camera"
-        ? "Ambil selfie untuk lanjut absensi"
-        : attendance.length === 0
-          ? "Belum ada absensi hari ini"
-          : attendance.length === 1
-            ? "Satu absensi terekam hari ini"
-            : "Clock In dan Clock Out hari ini sudah tampil";
+      ? "Ambil selfie untuk absensi"
+      : attendance.length === 0
+      ? "Belum ada absensi hari ini"
+      : attendance.length === 1
+      ? "Satu absensi terekam hari ini"
+      : "Absensi hari ini telah lengkap";
+
+  const hasClockIn = attendance.some((a) => a.type === "clockIn");
+  const hasClockOut = attendance.some((a) => a.type === "clockOut");
+
+  const isClockInDisabled = loading || hasClockIn;
+  const isClockOutDisabled = loading || !hasClockIn || hasClockOut;
 
   return (
     <>
-      <div className="w-full mx-auto rounded-4xl p-6 bg-white shadow-2xl flex flex-col gap-6">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2 text-5xl font-black">
-            <Clock size={32} /> {now.format("HH:mm")}
-          </div>
-          <p className="text-slate-500">{now.format("dddd, DD MMMM YYYY")}</p>
-          <p className="text-sm text-slate-500">{statusText}</p>
-
-          <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
-            <MapPin size={14} />
-            {location}
-          </div>
-        </div>
-
-        <div className="grid gap-4">
-          {attendance.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
-              Belum ada data attendance untuk hari ini.
+      <div className="w-full mx-auto rounded-4xl p-6 sm:p-10 bg-white shadow-2xl shadow-slate-200/50 border border-slate-100 flex flex-col gap-10">
+        
+        {/* Header Section: Time & Location */}
+        <div className="flex flex-col items-center text-center space-y-6">
+          <div className="space-y-1">
+            <h2 className="text-sm font-bold text-blue-600 tracking-widest uppercase">
+              {now.format("dddd, DD MMMM YYYY")}
+            </h2>
+            <div className="text-6xl sm:text-7xl font-extrabold tracking-tighter text-slate-900 tabular-nums">
+              {now.format("HH:mm")}
             </div>
-          ) : (
-            attendance.map((item, idx) => (
-              <div key={idx} className="relative rounded-2xl overflow-hidden shadow-lg">
-                <div className="relative w-full h-56">
-                  <Image
-                    src={item.image || EMPTY_IMAGE}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
+          </div>
 
-                <div className="absolute inset-0 bg-linear-to-t from-black/70 to-transparent" />
-
-                <div className="absolute bottom-0 p-4 text-white w-full flex justify-between items-end">
-                  <div>
-                    <p className="text-sm">{item.type === "clockIn" ? "Clock In" : "Clock Out"}</p>
-                    <p className="flex items-center gap-2 text-lg font-semibold">
-                      <Clock size={14} /> {item.time}
-                    </p>
-                    <p className="flex items-center gap-2 text-xs opacity-80">
-                      <MapPin size={12} /> {item.location}
-                    </p>
-                  </div>
-
-                  <div className="bg-emerald-500 p-2 rounded-full">
-                    <ShieldCheck size={16} />
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
+          <div className="flex flex-col items-center gap-3 w-full max-w-md mx-auto">
+            <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold tracking-wide">
+              {statusText}
+            </span>
+            <div className="flex items-center justify-center gap-2.5 text-sm font-medium text-slate-700 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm w-full transition-all hover:border-slate-300">
+              <MapPin className="text-rose-500 shrink-0" size={20} />
+              <span className="truncate">{location}</span>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        {/* Activity Section */}
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              Aktivitas Hari Ini
+            </h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {attendance.length === 0 ? (
+              <div className="col-span-1 md:col-span-2 flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/50 py-14 px-6 text-center transition-colors hover:bg-slate-50">
+                <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100">
+                  <Clock size={32} className="text-slate-300" />
+                </div>
+                <p className="text-sm font-medium text-slate-500">
+                  Belum ada data absensi untuk hari ini.
+                </p>
+              </div>
+            ) : (
+              attendance.map((item, idx) => (
+                <div key={idx} className="group relative rounded-3xl overflow-hidden shadow-md shadow-slate-200/50 border border-slate-100 bg-white transition-all duration-300 hover:shadow-xl hover:shadow-slate-200 hover:-translate-y-1">
+                  <div className="relative w-full h-48 sm:h-52">
+                    <Image
+                      src={item.image || EMPTY_IMAGE}
+                      alt="Attendance"
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      unoptimized
+                    />
+                  </div>
+
+                  {/* Gradient Overlay fix */}
+                  <div className="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/30 to-transparent" />
+
+                  <div className="absolute bottom-0 p-5 text-white w-full flex justify-between items-end">
+                    <div className="flex flex-col gap-1.5 w-full pr-4">
+                      <span className="inline-flex w-fit px-2.5 py-1 rounded-md bg-white/20 backdrop-blur-md text-[10px] font-bold uppercase tracking-widest border border-white/10">
+                        {item.type === "clockIn" ? "Clock In" : "Clock Out"}
+                      </span>
+                      <p className="flex items-center gap-2 text-3xl font-bold tracking-tight">
+                        {item.time}
+                      </p>
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-slate-300">
+                        <MapPin size={12} className="shrink-0 text-rose-400" />
+                        <span className="truncate">{item.location}</span>
+                      </p>
+                    </div>
+
+                    <div className="bg-emerald-500/90 backdrop-blur-md p-2.5 rounded-xl shadow-lg border border-emerald-400/30 mb-1 shrink-0">
+                      <ShieldCheck size={24} className="text-white" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          {/* CLOCK IN BUTTON */}
           <button
             onClick={() => handleClockClick("clock_in")}
-            disabled={loading}
-            className="py-4 rounded-xl bg-green-600 text-white flex items-center justify-center gap-2 disabled:opacity-50"
+            disabled={isClockInDisabled}
+            className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl p-6 transition-all duration-300
+              ${
+                isClockInDisabled
+                  ? "bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                  : "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:-translate-y-1 active:translate-y-0"
+              }`}
           >
-            {loading && selectedAction === "clock_in" ? (
-              <Loader2 className="animate-spin" size={18} />
-            ) : (
-              <Camera size={18} />
-            )}
-            Clock In
+            <div className={`p-3 rounded-full transition-colors ${isClockInDisabled ? "bg-slate-200/50 text-slate-400" : "bg-white/20 text-white"}`}>
+              {loading && selectedAction === "clock_in" ? (
+                <Loader2 className="animate-spin" size={28} />
+              ) : (
+                <Camera size={28} strokeWidth={2} />
+              )}
+            </div>
+            <span className="font-semibold text-base tracking-wide">
+              {hasClockIn ? "Sudah Clock In" : "Clock In"}
+            </span>
           </button>
 
+          {/* CLOCK OUT BUTTON */}
           <button
             onClick={() => handleClockClick("clock_out")}
-            disabled={loading}
-            className="py-4 rounded-xl bg-orange-500 text-white flex items-center justify-center gap-2 disabled:opacity-50"
+            disabled={isClockOutDisabled}
+            className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl p-6 transition-all duration-300
+              ${
+                isClockOutDisabled
+                  ? "bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                  : "bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600 hover:-translate-y-1 active:translate-y-0"
+              }`}
           >
-            {loading && selectedAction === "clock_out" ? (
-              <Loader2 className="animate-spin" size={18} />
-            ) : (
-              <Camera size={18} />
-            )}
-            Clock Out
+            <div className={`p-3 rounded-full transition-colors ${isClockOutDisabled ? "bg-slate-200/50 text-slate-400" : "bg-white/20 text-white"}`}>
+              {loading && selectedAction === "clock_out" ? (
+                <Loader2 className="animate-spin" size={28} />
+              ) : (
+                <Camera size={28} strokeWidth={2} />
+              )}
+            </div>
+            <span className="font-semibold text-base tracking-wide">
+              {!hasClockIn
+                ? "Belum Clock In"
+                : hasClockOut
+                ? "Sudah Clock Out"
+                : "Clock Out"}
+            </span>
           </button>
         </div>
       </div>
