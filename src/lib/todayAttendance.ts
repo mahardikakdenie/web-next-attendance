@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import type { User, UserAttendance } from "@/store/auth.store";
 
-export type AttendanceType = "clockIn" | "clockOut";
+export type AttendanceType = "clock_in" | "clock_out" | null;
 
 export type AttendanceItem = {
   type: AttendanceType;
@@ -40,7 +40,7 @@ const mapClockIn = (attendance: UserAttendance): AttendanceItem | null => {
   if (!attendance.clock_in_time) return null;
 
   return {
-    type: "clockIn",
+    type: "clock_in",
     image: attendance.clock_in_media_url || EMPTY_IMAGE,
     time: dayjs(attendance.clock_in_time).format("HH:mm:ss"),
     location: `${formatCoordinate(attendance.clock_in_latitude)}, ${formatCoordinate(attendance.clock_in_longitude)}`,
@@ -51,7 +51,7 @@ const mapClockOut = (attendance: UserAttendance): AttendanceItem | null => {
   if (!attendance.clock_out_time) return null;
 
   return {
-    type: "clockOut",
+    type: "clock_out",
     image: attendance.clock_out_media_url || EMPTY_IMAGE,
     time: dayjs(attendance.clock_out_time).format("HH:mm:ss"),
     location: `${formatCoordinate(attendance.clock_out_latitude)}, ${formatCoordinate(attendance.clock_out_longitude)}`,
@@ -104,7 +104,7 @@ export const upsertAttendance = (
   const filtered = currentAttendance.filter((item) => item.type !== nextAttendance.type);
   const newList = [...filtered, nextAttendance];
   return newList.sort((left, right) =>
-    left.type === right.type ? 0 : left.type === "clockIn" ? -1 : 1
+    left.type === right.type ? 0 : left.type === "clock_in" ? -1 : 1
   );
 };
 

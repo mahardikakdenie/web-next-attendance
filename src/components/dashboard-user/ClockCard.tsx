@@ -148,14 +148,14 @@ export default function ClockCard() {
       const mediaUrl = await uploadMedia(file);
 
       await recordAttendances({
-        action: selectedAction === "clock_out" ? "checkout" : "checkin",
+        action: selectedAction,
         latitude: coords.latitude,
         longitude: coords.longitude,
         media_url: mediaUrl,
       });
 
       const payload: AttendanceItem = {
-        type: selectedAction === "clock_in" ? "clockIn" : "clockOut",
+        type: selectedAction,
         image: mediaUrl,
         time: dayjs().format("HH:mm:ss"),
         location,
@@ -188,8 +188,8 @@ export default function ClockCard() {
             ? "Satu absensi terekam hari ini"
             : "Absensi hari ini telah lengkap";
 
-  const hasClockIn = attendance.some((a) => a.type === "clockIn");
-  const hasClockOut = attendance.some((a) => a.type === "clockOut");
+  const hasClockIn = attendance.some((a) => a.type === "clock_in");
+  const hasClockOut = attendance.some((a) => a.type === "clock_out");
 
   const isClockInDisabled = loading || hasClockIn;
   const isClockOutDisabled = loading || !hasClockIn || hasClockOut;
@@ -257,7 +257,7 @@ export default function ClockCard() {
                   <div className="absolute bottom-0 p-5 text-white w-full flex justify-between items-end">
                     <div className="flex flex-col gap-1.5 w-full pr-4">
                       <span className="inline-flex w-fit px-2.5 py-1 rounded-md bg-white/20 backdrop-blur-md text-[10px] font-bold uppercase tracking-widest border border-white/10">
-                        {item.type === "clockIn" ? "Clock In" : "Clock Out"}
+                        {item.type === "clock_in" ? "Clock In" : "Clock Out"}
                       </span>
                       <p className="flex items-center gap-2 text-3xl font-bold tracking-tight">
                         {item.time}

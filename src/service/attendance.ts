@@ -7,7 +7,7 @@ import type { AxiosRequestConfig } from "axios";
 //////////////////////////////////////////////////////////////
 
 export type RecordAttendancePayload = {
-  action: "checkin" | "checkout";
+  action: "clock_in" | "clock_out" | null;
   latitude: number;
   longitude: number;
   media_url: string;
