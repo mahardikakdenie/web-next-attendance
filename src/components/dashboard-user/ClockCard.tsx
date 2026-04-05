@@ -148,7 +148,7 @@ export default function ClockCard() {
       const mediaUrl = await uploadMedia(file);
 
       await recordAttendances({
-        action: selectedAction ?? "",
+        action: selectedAction === "clock_out" ? "checkout" : "checkin",
         latitude: coords.latitude,
         longitude: coords.longitude,
         media_url: mediaUrl,
@@ -164,8 +164,13 @@ export default function ClockCard() {
       setAttendance((prev) => upsertAttendance(prev, payload));
       setOpenCamera(false);
       toast.success(selectedAction === "clock_in" ? "Clock In berhasil" : "Clock Out berhasil");
-    } catch {
-      toast.error("Terjadi kesalahan");
+    } catch (error: unknown) {
+      const err = error as { response: { data: { message: string } } };
+      if (err.response?.data?.message === "Request expired") {
+        toast.error("Koneksi Anda terlalu lambat. Silakan coba tekan tombol absen sekali lagi. atau melakukan Request Absensi");
+      } else {
+        toast.error("Terjadi kesalahan saat absen.");
+      }
     } finally {
       setLoading(false);
       setStatus("idle");
@@ -176,12 +181,12 @@ export default function ClockCard() {
     status === "processing"
       ? "Memproses verifikasi wajah..."
       : status === "camera"
-      ? "Ambil selfie untuk absensi"
-      : attendance.length === 0
-      ? "Belum ada absensi hari ini"
-      : attendance.length === 1
-      ? "Satu absensi terekam hari ini"
-      : "Absensi hari ini telah lengkap";
+        ? "Ambil selfie untuk absensi"
+        : attendance.length === 0
+          ? "Belum ada absensi hari ini"
+          : attendance.length === 1
+            ? "Satu absensi terekam hari ini"
+            : "Absensi hari ini telah lengkap";
 
   const hasClockIn = attendance.some((a) => a.type === "clockIn");
   const hasClockOut = attendance.some((a) => a.type === "clockOut");
@@ -192,7 +197,7 @@ export default function ClockCard() {
   return (
     <>
       <div className="w-full mx-auto rounded-4xl p-6 sm:p-10 bg-white shadow-2xl shadow-slate-200/50 border border-slate-100 flex flex-col gap-10">
-        
+
         {/* Header Section: Time & Location */}
         <div className="flex flex-col items-center text-center space-y-6">
           <div className="space-y-1">
@@ -222,7 +227,7 @@ export default function ClockCard() {
               Aktivitas Hari Ini
             </h3>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {attendance.length === 0 ? (
               <div className="col-span-1 md:col-span-2 flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/50 py-14 px-6 text-center transition-colors hover:bg-slate-50">
@@ -280,10 +285,9 @@ export default function ClockCard() {
             onClick={() => handleClockClick("clock_in")}
             disabled={isClockInDisabled}
             className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl p-6 transition-all duration-300
-              ${
-                isClockInDisabled
-                  ? "bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-                  : "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:-translate-y-1 active:translate-y-0"
+              ${isClockInDisabled
+                ? "bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                : "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600 hover:-translate-y-1 active:translate-y-0"
               }`}
           >
             <div className={`p-3 rounded-full transition-colors ${isClockInDisabled ? "bg-slate-200/50 text-slate-400" : "bg-white/20 text-white"}`}>
@@ -303,10 +307,9 @@ export default function ClockCard() {
             onClick={() => handleClockClick("clock_out")}
             disabled={isClockOutDisabled}
             className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl p-6 transition-all duration-300
-              ${
-                isClockOutDisabled
-                  ? "bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-                  : "bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600 hover:-translate-y-1 active:translate-y-0"
+              ${isClockOutDisabled
+                ? "bg-slate-50 border border-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                : "bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600 hover:-translate-y-1 active:translate-y-0"
               }`}
           >
             <div className={`p-3 rounded-full transition-colors ${isClockOutDisabled ? "bg-slate-200/50 text-slate-400" : "bg-white/20 text-white"}`}>
@@ -320,8 +323,8 @@ export default function ClockCard() {
               {!hasClockIn
                 ? "Belum Clock In"
                 : hasClockOut
-                ? "Sudah Clock Out"
-                : "Clock Out"}
+                  ? "Sudah Clock Out"
+                  : "Clock Out"}
             </span>
           </button>
         </div>
