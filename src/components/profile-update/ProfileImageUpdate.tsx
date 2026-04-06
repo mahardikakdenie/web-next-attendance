@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Camera, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Camera, RefreshCw, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Card from "@/components/ui/Card";
 import CameraModal from "@/components/attendance/CameraModal";
 import { toast } from "sonner";
 
 import { uploadMedia } from "@/service/media";
+import { uploadPhotos } from "@/service/auth.service";
 import { getProfileImage } from "@/lib/utils";
+import { 
+  analyzeFace, 
+  loadFaceModels, 
+  getFaceAnalysisErrorMessage 
+} from "@/lib/faceRecognition";
+import { useAuthStore } from "@/store/auth.store";
 
 interface ProfileImageUpdateProps {
   currentImage?: string | null;
@@ -18,10 +25,42 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const { fetchUser } = useAuthStore();
 
-  const handleCapture = (image: string) => {
-    setPreviewImage(image);
-    toast.success("Selfie captured successfully!");
+  useEffect(() => {
+    loadFaceModels().catch((err) => {
+      console.error("Failed to load face models:", err);
+    });
+  }, []);
+
+  const handleCapture = async (image: string) => {
+    setIsValidating(true);
+    try {
+      // Create HTMLImageElement to analyze
+      const img = new (window.Image as any)();
+      img.src = image;
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      const result = await analyzeFace(img);
+      
+      if (!result.ok) {
+        toast.error(getFaceAnalysisErrorMessage(result.error));
+        return;
+      }
+
+      setPreviewImage(image);
+      toast.success("Wajah terdeteksi! Foto siap diunggah.");
+    } catch (error) {
+      console.error("Face analysis error:", error);
+      toast.error("Gagal menganalisis wajah. Silakan coba lagi.");
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const base64ToFile = (base64: string, filename: string) => {
@@ -44,17 +83,17 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
       const file = base64ToFile(previewImage, `profile-${Date.now()}.png`);
       const uploadedUrl = await uploadMedia(file);
       
-      // Note: Here you would normally call an API to save this URL to the user profile
-      // For now we just simulate success as requested
-      console.log("Uploaded URL:", uploadedUrl);
+      // Update profile photo in backend
+      await uploadPhotos({ media_url: uploadedUrl });
       
-      toast.success("Profile image updated successfully!");
+      toast.success("Foto profil berhasil diperbarui!");
       setPreviewImage(null);
-      // In a real app, you'd trigger a store refresh here:
-      // fetchUser(); 
+      
+      // Refresh user data to update the UI everywhere
+      await fetchUser(); 
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update profile image");
+      toast.error("Gagal memperbarui foto profil");
     } finally {
       setIsUploading(false);
     }
@@ -75,7 +114,7 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
               height={160}
               className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
             />
-            {isUploading && (
+            {(isUploading || isValidating) && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm">
                 <RefreshCw size={32} className="animate-spin text-blue-600" />
               </div>
@@ -108,22 +147,25 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
             {!previewImage ? (
               <button
+                disabled={isValidating}
                 onClick={() => setIsCameraOpen(true)}
-                className="rounded-2xl bg-neutral-50 border border-neutral-200 px-6 py-3 text-sm font-bold text-neutral-900 transition-all hover:bg-white hover:shadow-lg active:scale-95"
+                className="rounded-2xl bg-neutral-50 border border-neutral-200 px-6 py-3 text-sm font-bold text-neutral-900 transition-all hover:bg-white hover:shadow-lg active:scale-95 disabled:opacity-50 flex items-center gap-2"
               >
-                Take New Selfie
+                {isValidating && <Loader2 size={16} className="animate-spin" />}
+                {isValidating ? "Validating Face..." : "Take New Selfie"}
               </button>
             ) : (
               <>
                 <button
-                  disabled={isUploading}
+                  disabled={isUploading || isValidating}
                   onClick={handleUpload}
-                  className="rounded-2xl bg-blue-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-700 active:scale-95 disabled:opacity-50"
+                  className="rounded-2xl bg-blue-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-700 active:scale-95 disabled:opacity-50 flex items-center gap-2"
                 >
+                  {isUploading && <Loader2 size={16} className="animate-spin" />}
                   {isUploading ? "Uploading..." : "Save Changes"}
                 </button>
                 <button
-                  disabled={isUploading}
+                  disabled={isUploading || isValidating}
                   onClick={() => setPreviewImage(null)}
                   className="rounded-2xl bg-neutral-100 px-6 py-3 text-sm font-bold text-neutral-600 transition-all hover:bg-neutral-200 active:scale-95"
                 >
@@ -137,6 +179,7 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
 
       <CameraModal
         open={isCameraOpen}
+        loading={isValidating}
         onClose={() => setIsCameraOpen(false)}
         onCapture={handleCapture}
       />
