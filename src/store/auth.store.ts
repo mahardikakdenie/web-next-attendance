@@ -26,6 +26,7 @@ export type User = {
   name: string;
   email: string;
   role?: string;
+  profile_photo_url?: string;
   tenant_id?: number;
   tenant?: Tenant;
   attendances?: UserAttendance[];
