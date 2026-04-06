@@ -37,8 +37,9 @@ The current UI focuses on:
 
 ### 3. Attendance Flow
 
-- browser camera access through a modal
-- selfie capture before attendance submission
+- modern bento-style modal for browser camera access
+- selfie capture with mirrored preview and exact context mapping fix
+- robust camera initialization with loading UI and comprehensive error handling
 - face descriptor matching via `face-api.js`
 - location retrieval using browser geolocation
 

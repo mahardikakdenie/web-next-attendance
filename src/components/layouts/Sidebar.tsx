@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useState } from "react";
+import { startTransition, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -9,24 +9,31 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  UserCog,
+  Building2,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
 
-type MenuKey = "dashboard" | "attendance";
+type MenuKey = "dashboard" | "attendance" | "profileUpdate" | "tenantSetting";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState<boolean>(true);
 
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
+
+  const canAccessTenantSetting = Boolean(
+    user?.tenant_id && (user.role === "admin" || user.role === "employee")
+  );
 
   const menus: {
     key: MenuKey;
     label: string;
     icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
     path: string;
-  }[] = [
+  }[] = useMemo(
+    () => [
       { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/" },
       {
         key: "attendance",
@@ -34,7 +41,25 @@ export default function Sidebar() {
         icon: CalendarDays,
         path: "/attendances",
       },
-    ];
+      {
+        key: "profileUpdate",
+        label: "Data Update",
+        icon: UserCog,
+        path: "/request-profile-update",
+      },
+      ...(canAccessTenantSetting
+        ? [
+            {
+              key: "tenantSetting" as const,
+              label: "Tenant Setting",
+              icon: Building2,
+              path: "/tenant-settings",
+            },
+          ]
+        : []),
+    ],
+    [canAccessTenantSetting]
+  );
 
   const isActive = (path: string) => pathname === path;
 
@@ -87,8 +112,8 @@ export default function Sidebar() {
               type="button"
               onClick={() => router.push(menu.path)}
               className={`group flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl p-2 transition-all md:flex-row md:justify-start md:gap-3 md:px-3 md:py-3.5 ${active
-                  ? "text-blue-600 md:bg-blue-600 md:text-white md:shadow-md md:shadow-blue-600/20"
-                  : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900"
+                ? "text-blue-600 md:bg-blue-600 md:text-white md:shadow-md md:shadow-blue-600/20"
+                : "text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900"
                 }`}
             >
               <Icon
@@ -124,7 +149,7 @@ export default function Sidebar() {
             className={`text-[10px] font-bold md:text-[13px] md:whitespace-nowrap ${open ? "md:block" : "md:hidden"
               }`}
           >
-            Settings
+            Preferences
           </span>
         </button>
 

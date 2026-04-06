@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Camera, RefreshCw, AlertCircle, X } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -16,6 +17,9 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
   const streamRef = useRef<MediaStream | null>(null);
   const startedRef = useRef(false);
 
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!open || startedRef.current) return;
 
@@ -26,7 +30,6 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
             facingMode: "user",
             width: { ideal: 1280 },
             height: { ideal: 720 },
-            frameRate: { ideal: 24, max: 30 },
           },
         });
 
@@ -35,25 +38,42 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          // Wait for video metadata to load before considering it ready
+          videoRef.current.onloadedmetadata = () => {
+            setIsCameraReady(true);
+            videoRef.current?.play().catch(console.error);
+          };
         }
-      } catch {
+      } catch (err) {
+        console.error("Camera error:", err);
+        setCameraError("Akses kamera ditolak atau tidak tersedia. Pastikan Anda memberikan izin akses.");
         toast.error("Akses kamera ditolak atau tidak tersedia");
-        onClose();
       }
     };
 
-    startCamera();
+    // Reset state before starting camera (setTimeout ensures it's not synchronous in the effect)
+    setTimeout(() => {
+      setCameraError(null);
+      setIsCameraReady(false);
+      startCamera();
+    }, 0);
 
     return () => {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
       startedRef.current = false;
+      
+      // Delay cleanup state to avoid synchronous effect update
+      setTimeout(() => {
+        setIsCameraReady(false);
+      }, 0);
     };
-  }, [onClose, open]);
+  }, [open]);
 
   const handleCapture = () => {
-    if (loading) return;
+    if (loading || !isCameraReady || cameraError) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -66,13 +86,17 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Capture video ke canvas
-    ctx.drawImage(video, 0, 0);
+    // Mirror the canvas context so the saved image matches the mirrored video preview
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const image = canvas.toDataURL("image/png");
 
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
     startedRef.current = false;
 
     onCapture(image);
@@ -82,61 +106,97 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-6">
-      {/* Modal Container diperbesar menjadi max-w-3xl */}
-      <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl p-5 md:p-8 flex flex-col gap-6">
-        <div className="text-xl font-bold text-slate-800 text-center">
-          Ambil Foto Absensi
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/60 p-4 backdrop-blur-md transition-all duration-300 sm:p-6">
+      <div className="relative flex w-full max-w-2xl flex-col gap-6 overflow-hidden rounded-[2.5rem] bg-white p-6 shadow-2xl sm:p-8 animate-in fade-in zoom-in-95 duration-300">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-inner">
+              <Camera size={22} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-neutral-900">
+                Ambil Foto Absensi
+              </h2>
+              <p className="text-xs font-medium text-neutral-500">
+                Posisikan wajah Anda di dalam bingkai
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (streamRef.current) {
+                streamRef.current.getTracks().forEach((t) => t.stop());
+                streamRef.current = null;
+              }
+              startedRef.current = false;
+              onClose();
+            }}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-neutral-50 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-900 active:scale-95"
+          >
+            <X size={20} strokeWidth={2.5} />
+          </button>
         </div>
 
-        {/* Video Container diperbesar tingginya menggunakan vh */}
-        <div className="relative w-full h-[60vh] bg-black rounded-2xl overflow-hidden shadow-inner">
-          {/* Efek scale-x-[-1] membuat kamera bertindak seperti cermin */}
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            muted 
-            className="w-full h-full object-cover -scale-x-100" 
-          />
-
-          {/* 🔥 OVERLAY BINGKAI WAJAH 🔥 */}
-          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
-            {/* Teks Instruksi */}
-            <div className="absolute top-8 bg-black/50 text-white px-4 py-2 rounded-full text-sm font-medium backdrop-blur-md">
-              Posisikan wajah Anda di dalam bingkai
+        {/* Video Container */}
+        <div className="relative flex h-[50vh] w-full items-center justify-center overflow-hidden rounded-4xl bg-neutral-950 ring-1 ring-neutral-200/50 sm:h-[60vh]">
+          
+          {cameraError ? (
+            <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/20 text-rose-500">
+                <AlertCircle size={32} strokeWidth={2} />
+              </div>
+              <p className="text-sm font-medium text-rose-200 max-w-xs">{cameraError}</p>
             </div>
+          ) : (
+            <>
+              {!isCameraReady && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-neutral-900 z-10">
+                  <RefreshCw size={28} className="animate-spin text-blue-500" />
+                  <p className="text-sm font-semibold tracking-wide text-neutral-400">Menyiapkan Kamera...</p>
+                </div>
+              )}
 
-            {/* Area Bingkai Kapsul Wajah */}
-            {/* Trik shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] digunakan untuk menggelapkan area di luar bingkai */}
-            <div className="w-56 h-72 md:w-64 md:h-80 border-4 border-white/70 border-dashed rounded-[120px] shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] animate-pulse-slow"></div>
-          </div>
+              <video 
+                ref={videoRef} 
+                playsInline 
+                muted 
+                className={`h-full w-full object-cover transition-opacity duration-500 ${isCameraReady ? "opacity-100" : "opacity-0"} -scale-x-100`} 
+              />
+
+              {/* Overlay Bingkai Wajah */}
+              {isCameraReady && (
+                <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
+                  <div className="h-72 w-56 rounded-[100px] border-4 border-white/40 shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] sm:h-80 sm:w-64 transition-all duration-300 animate-pulse-slow"></div>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <canvas ref={canvasRef} className="hidden" />
 
-        <div className="flex gap-4 mt-2">
+        {/* Action Buttons */}
+        <div className="flex gap-4">
           <button
             type="button"
-            disabled={loading}
-            onClick={() => {
-              streamRef.current?.getTracks().forEach((t) => t.stop());
-              streamRef.current = null;
-              startedRef.current = false;
-              onClose();
-            }}
-            className="flex-1 py-4 rounded-xl bg-slate-100 hover:bg-slate-200 transition text-slate-700 font-semibold text-lg disabled:opacity-60"
-          >
-            Batal
-          </button>
-
-          <button
-            type="button"
-            disabled={loading}
+            disabled={loading || !isCameraReady || !!cameraError}
             onClick={handleCapture}
-            className="flex-1 py-4 rounded-xl bg-slate-900 hover:bg-slate-800 transition text-white font-semibold text-lg disabled:opacity-60 shadow-lg"
+            className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-neutral-900 py-4 text-base font-bold text-white transition-all hover:bg-neutral-800 hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Memproses..." : "Ambil Foto"}
+            {loading ? (
+              <>
+                <RefreshCw size={20} className="animate-spin" />
+                <span>Memproses...</span>
+              </>
+            ) : (
+              <>
+                <Camera size={20} className="transition-transform group-hover:scale-110" />
+                <span>Ambil Foto</span>
+              </>
+            )}
           </button>
         </div>
       </div>
