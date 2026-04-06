@@ -1,25 +1,43 @@
+"use client";
+
+import { useEffect } from "react";
+import { useAuthStore } from "@/store/auth.store";
 import UpdateRequestForm from "@/components/profile-update/UpdateRequestForm";
 import UserCurrentDataCard from "@/components/profile-update/UserCurrentDataCard";
-
-const mockCurrentUser = {
-  fullName: "Rizky Maulana",
-  email: "rizky.maulana@company.com",
-  phoneNumber: "+62 812-1111-2222",
-  employeeId: "EMP-2024-017",
-  department: "Engineering",
-  address: "Jakarta, Indonesia",
-};
+import ProfileImageUpdate from "@/components/profile-update/ProfileImageUpdate";
 
 export default function ProfileUpdateView() {
+  const { user, loading, fetchUser } = useAuthStore();
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
+  const userData = {
+    fullName: user?.name,
+    email: user?.email,
+    phoneNumber: "+62 812-1111-2222", // Placeholder for phone if not in user model yet
+    employeeId: "EMP-2024-017",      // Placeholder
+    department: "Engineering",       // Placeholder
+    address: "Jakarta, Indonesia",   // Placeholder
+  };
+
   return (
-    <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Update Request: User Current Data</h1>
-        <p className="mt-1 text-sm text-slate-500">Prepare your profile data change request (UI only for now).</p>
+    <section className="mx-auto max-w-6xl space-y-10 pb-20 pt-6">
+      <div className="flex flex-col gap-2 px-4 md:px-0">
+        <h1 className="text-4xl font-black tracking-tight text-neutral-900">
+          Profile Management
+        </h1>
+        <p className="text-base font-medium text-neutral-400">
+          Manage your current data and request updates through HR verification.
+        </p>
       </div>
 
-      <UserCurrentDataCard data={mockCurrentUser} />
-      <UpdateRequestForm />
+      <div className="space-y-12">
+        <ProfileImageUpdate currentImage={user?.profile_photo_url} />
+        <UserCurrentDataCard data={userData} isLoading={loading} />
+        <UpdateRequestForm />
+      </div>
     </section>
   );
 }
