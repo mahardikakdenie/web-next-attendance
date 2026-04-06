@@ -15,10 +15,10 @@ export type UserAttendance = {
   clock_out_time?: string;
   clock_in_media_url?: string;
   clock_out_media_url?: string;
-  clock_in_latitude?: number | string;
-  clock_in_longitude?: number | string;
-  clock_out_latitude?: number | string;
-  clock_out_longitude?: number | string;
+  clock_in_latitude?: number;
+  clock_in_longitude?: number;
+  clock_out_latitude?: number;
+  clock_out_longitude?: number;
 };
 
 export type User = {
