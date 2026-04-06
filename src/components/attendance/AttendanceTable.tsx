@@ -106,6 +106,7 @@ function AttendanceRow({ item }: { item: Attendance }) {
               sizes="36px"
               alt={item.name}
               className="rounded-full object-cover ring-1 ring-slate-200"
+              priority
             />
           </div>
           <div>
