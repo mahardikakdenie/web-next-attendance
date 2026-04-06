@@ -3,6 +3,8 @@
 import { useAuthStore } from "@/store/auth.store";
 import Image from "next/image";
 
+import { getProfileImage } from "@/lib/utils";
+
 export default function TopNavbar() {
   const user = useAuthStore((state) => state.user);
 
@@ -37,11 +39,11 @@ export default function TopNavbar() {
             <div className="w-8 h-8 rounded-full bg-gray-300 animate-pulse" />
           ) : (
             <Image
-              src="https://i.pravatar.cc/40"
+              src={getProfileImage(user?.profile_photo_url)}
               width={32}
               height={32}
               alt="User avatar"
-              className="rounded-full object-cover"
+              className="rounded-full h-8 w-8 object-cover"
             />
           )}
 
