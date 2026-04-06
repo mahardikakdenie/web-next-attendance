@@ -1,9 +1,12 @@
 const nextConfig = {
   images: {
-    domains: ["i.pravatar.cc", "i.ibb.co.com"],
-     localPatterns: [
+    remotePatterns: [
+      { hostname: "i.pravatar.cc" },
+      { hostname: "i.ibb.co.com" }
+    ],
+    localPatterns: [
       {
-        pathname: "/api/image",
+        pathname: "/**",
       },
     ],
   },
