@@ -34,7 +34,7 @@ export default function ProfileUpdateView() {
       </div>
 
       <div className="space-y-12">
-        <ProfileImageUpdate currentImage={user?.profile_photo_url} />
+        <ProfileImageUpdate currentImage={user?.media_url || user?.profile_photo_url} />
         <UserCurrentDataCard data={userData} isLoading={loading} />
         <UpdateRequestForm />
       </div>

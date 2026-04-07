@@ -1,37 +1,74 @@
 // src/store/auth.store.ts
 import { create } from "zustand";
 import { loginAPI, getMeAPI, logoutAPI } from "@/service/auth.service";
+export type TenantSettingsTenant = {
+  ID: number;
+  Name: string;
+  Code: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+};
+
+export type TenantSettings = {
+  id: number;
+  tenant_id: number;
+  tenant?: TenantSettingsTenant;
+  office_latitude: number;
+  office_longitude: number;
+  max_radius_meter: number;
+  allow_remote: boolean;
+  require_location: boolean;
+  clock_in_start_time: string;
+  clock_in_end_time: string;
+  late_after_minute: number;
+  clock_out_start_time: string;
+  clock_out_end_time: string;
+  require_selfie: boolean;
+  allow_multiple_check: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
 export type Tenant = {
   id: number;
   name: string;
+  tenant_settings: TenantSettings;
 };
 
 export type UserAttendance = {
-  id?: number;
-  created_at?: string;
-  createdAt?: string;
-  clock_in_time?: string;
+  id: string;
+  user_id: number;
+  clock_in_time: string;
   clock_out_time?: string;
-  clock_in_media_url?: string;
-  clock_out_media_url?: string;
-  clock_in_latitude?: number;
-  clock_in_longitude?: number;
+  clock_in_latitude: number;
+  clock_in_longitude: number;
   clock_out_latitude?: number;
   clock_out_longitude?: number;
+  clock_in_media_url: string;
+  clock_out_media_url?: string;
+  status: "done" | "late" | string;
 };
 
 export type User = {
   id: number;
   name: string;
   email: string;
-  role?: string;
-  profile_photo_url?: string;
-  tenant_id?: number;
+  role: string;
+  tenant_id: number;
+  employee_id: string;
+  department: string;
+  address: string;
+  media_url: string;
+  phone_number: string;
+  created_at: string;
   tenant?: Tenant;
   attendances?: UserAttendance[];
 };
 
+export type UserResponse = {
+  data: User;
+  includes: string[];
+};
 type APIError = {
   response?: {
     data?: {
