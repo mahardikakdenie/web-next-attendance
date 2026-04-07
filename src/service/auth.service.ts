@@ -56,7 +56,7 @@ export const getMeAPI = async () => {
   const res = await api.get("/v1/users/me", {
     withCredentials: true,
     params: {
-      includes: "tenant,attendances",
+      includes: "tenant,tenant.tenant_settings,attendances",
     },
     headers: {
       ...getSecurityHeaders(),
