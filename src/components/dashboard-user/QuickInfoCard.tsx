@@ -1,29 +1,49 @@
 import { useState, useEffect } from "react";
-import { 
-  MapPin, 
-  Briefcase, 
-  ChevronRight, 
-  Ruler, 
-  LogIn, 
-  LogOut, 
-  Camera, 
-  Navigation 
+import {
+  MapPin,
+  Briefcase,
+  ChevronRight,
+  Ruler,
+  LogIn,
+  LogOut,
+  Camera,
+  Navigation
 } from "lucide-react";
+import { useAuthStore } from "@/store/auth.store";
 
 export function QuickInfoCard() {
   const [address, setAddress] = useState("Memuat lokasi...");
-  
-  const lat = -6.1339179;
-  const lon = 106.8329504;
+
+  const { user } = useAuthStore();
+  const tenantSettings = user?.tenant?.tenant_settings;
+
+  const lat = tenantSettings?.office_latitude;
+  const lon = tenantSettings?.office_longitude;
+  const maxRadius = tenantSettings?.max_radius_meter || 0;
+  const allowRemote = tenantSettings?.allow_remote;
+  const requireLocation = tenantSettings?.require_location;
+  const requireSelfie = tenantSettings?.require_selfie;
+
+  const workMode = allowRemote ? "Remote / WFA" : "Strict WFO";
+
+  const clockInStart = tenantSettings?.clock_in_start_time || "-";
+  const clockInEnd = tenantSettings?.clock_in_end_time || "-";
+  const clockOutStart = tenantSettings?.clock_out_start_time || "-";
+  const clockOutEnd = tenantSettings?.clock_out_end_time || "-";
 
   useEffect(() => {
     const fetchAddress = async () => {
+      if (!lat || !lon) {
+        setAddress("Lokasi kantor belum diatur");
+        return;
+      }
+
       try {
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`
         );
         const data = await response.json();
-        
+
         if (data && data.address) {
           const { road, neighbourhood, suburb, city, state } = data.address;
           const shortAddress = [road || neighbourhood, suburb, city || state]
@@ -35,7 +55,6 @@ export function QuickInfoCard() {
         }
       } catch (error) {
         console.log(error);
-        
         setAddress("Gagal memuat lokasi");
       }
     };
@@ -45,7 +64,6 @@ export function QuickInfoCard() {
 
   return (
     <div className="w-full rounded-[28px] border border-neutral-200 bg-white p-5 sm:p-6 overflow-hidden">
-      
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-base font-bold text-neutral-800">
           Today Info
@@ -61,7 +79,7 @@ export function QuickInfoCard() {
             <Briefcase size={16} strokeWidth={2.5} />
           </div>
           <span className="text-xs font-semibold text-neutral-500 truncate">Work Mode</span>
-          <span className="text-sm font-black text-neutral-900 mt-1 tracking-tight truncate">Strict WFO</span>
+          <span className="text-sm font-black text-neutral-900 mt-1 tracking-tight truncate">{workMode}</span>
         </div>
 
         <div className="flex flex-col justify-center rounded-[20px] border border-orange-100 bg-orange-50/50 p-4 min-w-0">
@@ -69,7 +87,7 @@ export function QuickInfoCard() {
             <Ruler size={16} strokeWidth={2.5} />
           </div>
           <span className="text-xs font-semibold text-neutral-500 truncate">Max Radius</span>
-          <span className="text-sm font-black text-neutral-900 mt-1 tracking-tight truncate">100 Meters</span>
+          <span className="text-sm font-black text-neutral-900 mt-1 tracking-tight truncate">{maxRadius} Meters</span>
         </div>
       </div>
 
@@ -79,7 +97,9 @@ export function QuickInfoCard() {
             <LogIn size={15} className="text-emerald-600 shrink-0" strokeWidth={2.5} />
             <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider truncate">Clock In</span>
           </div>
-          <span className="text-sm font-black text-neutral-900 tracking-tight truncate">07:00 - 09:00</span>
+          <span className="text-sm font-black text-neutral-900 tracking-tight truncate">
+            {clockInStart} - {clockInEnd}
+          </span>
         </div>
 
         <div className="flex flex-col justify-center rounded-[20px] border border-rose-100 bg-rose-50/50 p-4 min-w-0">
@@ -87,17 +107,23 @@ export function QuickInfoCard() {
             <LogOut size={15} className="text-rose-600 shrink-0" strokeWidth={2.5} />
             <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider truncate">Clock Out</span>
           </div>
-          <span className="text-sm font-black text-neutral-900 tracking-tight truncate">16:00 - 23:00</span>
+          <span className="text-sm font-black text-neutral-900 tracking-tight truncate">
+            {clockOutStart} - {clockOutEnd}
+          </span>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <div className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-bold text-neutral-600 whitespace-nowrap">
-          <Camera size={13} strokeWidth={2.5} /> Require Selfie
-        </div>
-        <div className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-bold text-neutral-600 whitespace-nowrap">
-          <Navigation size={13} strokeWidth={2.5} /> Require GPS
-        </div>
+        {requireSelfie && (
+          <div className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-bold text-neutral-600 whitespace-nowrap">
+            <Camera size={13} strokeWidth={2.5} /> Require Selfie
+          </div>
+        )}
+        {requireLocation && (
+          <div className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-bold text-neutral-600 whitespace-nowrap">
+            <Navigation size={13} strokeWidth={2.5} /> Require GPS
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between w-full rounded-[20px] border border-neutral-100 bg-neutral-50 p-4 hover:bg-neutral-100/50 transition-colors cursor-pointer group overflow-hidden">
@@ -114,7 +140,6 @@ export function QuickInfoCard() {
           <ChevronRight size={14} strokeWidth={2.5} />
         </div>
       </div>
-
     </div>
   );
 }
