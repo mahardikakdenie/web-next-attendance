@@ -29,7 +29,7 @@ const getTodayRecord = (user?: User | null): UserAttendance | null => {
 
   const today = dayjs().startOf("day");
   const todayRecords = user.attendances.filter((item) => {
-    const date = item.clock_in_time || item.createdAt || item.created_at;
+    const date = item.clock_in_time;
     return dayjs(date).isSame(today, "day");
   });
 
