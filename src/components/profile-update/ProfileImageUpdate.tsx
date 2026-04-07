@@ -38,7 +38,7 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
     setIsValidating(true);
     try {
       // Create HTMLImageElement to analyze
-      const img = new (window.Image as any)();
+      const img = new (window.Image)();
       img.src = image;
       
       await new Promise((resolve, reject) => {
