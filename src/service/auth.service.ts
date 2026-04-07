@@ -37,6 +37,18 @@ export const loginAPI = async (payload: {
   return res.data;
 };
 
+export const uploadPhotos = async (payload: {media_url: string}) => {
+  const res = await api.put('/v1/users/profile-photo', payload, {
+    withCredentials: true,
+    headers: {
+      ...getSecurityHeaders(),
+      "X-CSRF-Token": getCSRFToken(),
+    },
+  });
+
+  return res.data;
+}
+
 //////////////////////////////////////////////////////////////
 // 🔥 GET ME
 //////////////////////////////////////////////////////////////
