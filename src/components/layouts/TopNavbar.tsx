@@ -39,7 +39,7 @@ export default function TopNavbar() {
             <div className="w-8 h-8 rounded-full bg-gray-300 animate-pulse" />
           ) : (
             <Image
-              src={getProfileImage(user?.profile_photo_url)}
+              src={getProfileImage(user?.media_url)}
               width={32}
               height={32}
               alt="User avatar"
