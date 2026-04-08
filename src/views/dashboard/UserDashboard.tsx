@@ -7,6 +7,8 @@ import { QuickInfoCard } from "@/components/dashboard-user/QuickInfoCard";
 import { RecentAttendance } from "@/components/dashboard-user/RecentAttendance";
 import { OvertimeRequestCard } from "@/components/dashboard-user/OvertimeRequestCard";
 import { RecentActivityCard } from "@/components/dashboard-user/RecentlyActivity";
+import { LeaveBalanceCard } from "@/components/dashboard-user/LeaveBalanceCard";
+import { LeaveRequestCard } from "@/components/dashboard-user/LeaveRequestCard";
 
 export default function UserDashboardPage() {
   return (
@@ -30,7 +32,17 @@ export default function UserDashboardPage() {
           </div>
         </div>
 
-        {/* Row 2: Information & Summary (Bento Sub-items) */}
+        {/* Row 2: Leave Management (Balance & Request) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+          <div className="lg:col-span-4 h-full">
+            <LeaveBalanceCard />
+          </div>
+          <div className="lg:col-span-8 h-full">
+            <LeaveRequestCard />
+          </div>
+        </div>
+
+        {/* Row 3: Information & Summary (Bento Sub-items) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="flex flex-col">
             <TodayStatusCard />
