@@ -12,7 +12,7 @@ import {
   UserCog,
   Building2,
 } from "lucide-react";
-import { useAuthStore } from "@/store/auth.store";
+import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
 
 type MenuKey = "dashboard" | "attendance" | "profileUpdate" | "tenantSetting";
 
@@ -22,44 +22,52 @@ export default function Sidebar() {
   const [open, setOpen] = useState<boolean>(true);
 
   const { logout, user } = useAuthStore();
-
-  const canAccessTenantSetting = Boolean(
-    user?.tenant_id && (user.role === "admin" || user.role === "employee")
-  );
+  const role = user?.role?.name;
 
   const menus: {
     key: MenuKey;
     label: string;
     icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
     path: string;
+    roles: RoleName[];
   }[] = useMemo(
     () => [
-      { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, path: "/" },
+      { 
+        key: "dashboard", 
+        label: "Dashboard", 
+        icon: LayoutDashboard, 
+        path: "/",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.USER] 
+      },
       {
         key: "attendance",
         label: "Attendance",
         icon: CalendarDays,
         path: "/attendances",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR]
       },
       {
         key: "profileUpdate",
         label: "Data Update",
         icon: UserCog,
         path: "/request-profile-update",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.USER]
       },
-      ...(canAccessTenantSetting
-        ? [
-            {
-              key: "tenantSetting" as const,
-              label: "Tenant Setting",
-              icon: Building2,
-              path: "/tenant-settings",
-            },
-          ]
-        : []),
+      {
+        key: "tenantSetting",
+        label: "Tenant Setting",
+        icon: Building2,
+        path: "/tenant-settings",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN]
+      },
     ],
-    [canAccessTenantSetting]
+    []
   );
+
+  const filteredMenus = useMemo(() => {
+    if (!role) return [];
+    return menus.filter(menu => menu.roles.includes(role));
+  }, [role, menus]);
 
   const isActive = (path: string) => pathname === path;
 
@@ -102,7 +110,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex w-full flex-row items-center justify-around gap-1 md:h-full md:flex-col md:justify-start md:gap-2">
-        {menus.map((menu) => {
+        {filteredMenus.map((menu) => {
           const Icon = menu.icon;
           const active = isActive(menu.path);
 
