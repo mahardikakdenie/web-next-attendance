@@ -16,10 +16,10 @@ export default function ProfileUpdateView() {
   const userData = {
     fullName: user?.name,
     email: user?.email,
-    phoneNumber: "+62 812-1111-2222", // Placeholder for phone if not in user model yet
-    employeeId: "EMP-2024-017",      // Placeholder
-    department: "Engineering",       // Placeholder
-    address: "Jakarta, Indonesia",   // Placeholder
+    phoneNumber: user?.phone_number || "+62 812-1111-2222",
+    employeeId: user?.employee_id || "EMP-2024-017",
+    department: user?.department?.name || "Engineering",
+    address: user?.address || "Jakarta, Indonesia",
   };
 
   return (
@@ -34,7 +34,7 @@ export default function ProfileUpdateView() {
       </div>
 
       <div className="space-y-12">
-        <ProfileImageUpdate currentImage={user?.media_url || user?.profile_photo_url} />
+        <ProfileImageUpdate currentImage={user?.media_url} />
         <UserCurrentDataCard data={userData} isLoading={loading} />
         <UpdateRequestForm />
       </div>
