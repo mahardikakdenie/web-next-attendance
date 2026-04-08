@@ -1,14 +1,14 @@
 import { User } from "@/store/auth.store";
 
 export default function TenantAccessNotice({ user }: { user: User | null }) {
-  const hasAccess = Boolean(user?.tenant_id && (user?.role === "admin" || user?.role === "employee"));
+  const hasAccess = Boolean(user?.tenant_id && (user?.role?.name === "admin" || user?.role?.name === "employee"));
 
   if (hasAccess) {
     return (
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
         <p className="text-sm font-semibold text-emerald-700">Access granted</p>
         <p className="mt-1 text-sm text-emerald-600">
-          Current role <span className="font-semibold capitalize">{user?.role}</span> with tenant id {user?.tenant_id} can view attendance settings.
+          Current role <span className="font-semibold capitalize">{user?.role?.name}</span> with tenant id {user?.tenant_id} can view attendance settings.
         </p>
       </div>
     );
