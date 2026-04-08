@@ -7,7 +7,7 @@ export default function TenantAccessNotice({ user }: { user: User | null }) {
 
   if (hasAccess) {
     return (
-      <div className="group rounded-[24px] border border-emerald-100 bg-emerald-50/30 p-5 transition-all hover:bg-emerald-50/50">
+      <div className="group rounded-3xl border border-emerald-100 bg-emerald-50/30 p-5 transition-all hover:bg-emerald-50/50">
         <div className="flex items-start gap-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
             <ShieldCheck size={20} strokeWidth={2.5} />
@@ -24,7 +24,7 @@ export default function TenantAccessNotice({ user }: { user: User | null }) {
   }
 
   return (
-    <div className="group rounded-[24px] border border-amber-100 bg-amber-50/30 p-5 transition-all hover:bg-amber-50/50">
+    <div className="group rounded-3xl border border-amber-100 bg-amber-50/30 p-5 transition-all hover:bg-amber-50/50">
       <div className="flex items-start gap-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
           <ShieldAlert size={20} strokeWidth={2.5} />
