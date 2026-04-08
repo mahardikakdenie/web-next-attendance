@@ -49,14 +49,29 @@ export type UserAttendance = {
   status: "done" | "late" | string;
 };
 
+export const ROLES = {
+  SUPERADMIN: "superadmin",
+  ADMIN: "admin",
+  HR: "hr",
+  USER: "employee", // Menggunakan 'employee' sesuai data dari API sebelumnya
+} as const;
+
+export type RoleName = typeof ROLES[keyof typeof ROLES];
+
 export type User = {
   id: number;
   name: string;
   email: string;
-  role: string;
+  role: {
+    id: number;
+    name: RoleName;
+  };
   tenant_id: number;
   employee_id: string;
-  department: string;
+  department: {
+    id: number;
+    name: string;
+  };
   address: string;
   media_url: string;
   phone_number: string;

@@ -43,7 +43,7 @@ export const uploadPhotos = async (payload: {media_url: string}) => {
     headers: {
       ...getSecurityHeaders(),
       "X-CSRF-Token": getCSRFToken(),
-    },
+    },  
   });
 
   return res.data;
@@ -56,7 +56,7 @@ export const getMeAPI = async () => {
   const res = await api.get("/v1/users/me", {
     withCredentials: true,
     params: {
-      includes: "tenant,tenant.tenant_settings,attendances",
+      includes: "tenant,tenant.tenant_settings,attendances,role",
     },
     headers: {
       ...getSecurityHeaders(),
