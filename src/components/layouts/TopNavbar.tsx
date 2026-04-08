@@ -60,7 +60,7 @@ export default function TopNavbar() {
                   {user?.name}
                 </p>
                 <p className="text-xs text-gray-400 capitalize">
-                  {user?.role ?? ""}
+                  {user?.role?.name ?? ""}
                 </p>
               </>
             )}
