@@ -1,7 +1,6 @@
 "use client";
 
-import { CreditCard, TrendingUp, Users, ArrowUpRight, CheckCircle2, AlertCircle, Clock } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { CreditCard, ArrowUpRight, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
 const SUBSCRIPTIONS = [

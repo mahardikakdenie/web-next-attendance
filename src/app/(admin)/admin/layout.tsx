@@ -1,5 +1,3 @@
-import MainLayout from "@/components/layouts/MainLayout";
-import { Toaster } from "sonner";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -13,8 +11,8 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <MainLayout>
+    <>
       {children}
-    </MainLayout>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { UserCheck, Shield, Mail, Phone, MoreVertical, Plus, Search } from "lucide-react";
+import { UserCheck, Shield, Mail, MoreVertical, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";

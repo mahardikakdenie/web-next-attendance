@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { 
-  Building2, 
   Search, 
   Plus, 
   MoreVertical, 
@@ -10,7 +9,6 @@ import {
   Users, 
   ShieldCheck,
   ArrowUpRight,
-  ArrowDownRight,
   CheckCircle2,
   XCircle
 } from "lucide-react";
