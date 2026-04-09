@@ -18,10 +18,11 @@ import {
   CheckCircle2,
   Info
 } from "lucide-react";
-import Button from "@/components/ui/Button";
+// import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Switch from "@/components/ui/Switch";
 import CustomTimeSelector from "../ui/CustomTimeSelector";
+import { Button } from "../ui/Button";
 
 interface TenantSettingsData {
   tenantId: number;

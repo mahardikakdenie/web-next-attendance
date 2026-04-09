@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { Calendar, Clock, MessageSquare, Send } from "lucide-react";
-import Button from "@/components/ui/Button";
+// import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import clsx from "clsx";
+import { Button } from "../ui/Button";
 
 export function OvertimeRequestCard() {
   const [formData, setFormData] = useState({

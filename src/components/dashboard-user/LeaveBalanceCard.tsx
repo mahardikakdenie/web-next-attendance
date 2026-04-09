@@ -11,7 +11,7 @@ export function LeaveBalanceCard() {
   };
 
   return (
-    <div className="w-full h-full rounded-[32px] border border-neutral-200 bg-white p-6 shadow-sm overflow-hidden flex flex-col">
+    <div className="w-full h-full rounded-4xl border border-neutral-200 bg-white p-6 shadow-sm overflow-hidden flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-base font-bold text-neutral-800 tracking-tight">Time Off Balance</h2>
@@ -23,8 +23,7 @@ export function LeaveBalanceCard() {
       </div>
 
       <div className="flex flex-col gap-4">
-        {/* Main Counter */}
-        <div className="relative p-6 rounded-[24px] bg-indigo-600 text-white overflow-hidden shadow-xl shadow-indigo-600/20 group">
+        <div className="relative p-6 rounded-3xl bg-indigo-500 text-white overflow-hidden shadow-xl shadow-indigo-600/20 group">
           <div className="relative z-10">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Remaining Days</span>
             <div className="flex items-baseline gap-1 mt-1">
@@ -33,35 +32,33 @@ export function LeaveBalanceCard() {
             </div>
           </div>
           
-          {/* Decorative Elements */}
           <Sparkles size={64} className="absolute -right-4 -bottom-4 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-700" />
         </div>
 
-        {/* Breakdown Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3.5 rounded-2xl border border-neutral-100 bg-neutral-50/50 flex flex-col gap-1 transition-all hover:bg-white hover:border-neutral-200 group">
+        <div className="flex justify-center gap-5 mt-3 px-4 translate-y-1">
+          <div className="flex-1 p-4 rounded-2xl border border-neutral-100 bg-neutral-50/50 flex flex-col items-center text-center gap-1 transition-all hover:bg-white hover:border-neutral-200 group">
             <div className="flex items-center gap-2">
-              <div className="h-5 w-5 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                <TrendingUp size={10} strokeWidth={3} />
+              <div className="h-6 w-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                <TrendingUp size={12} strokeWidth={3} />
               </div>
-              <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Accrued</span>
+              <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Accrued</span>
             </div>
-            <span className="text-sm font-black text-neutral-900 ml-0.5">+{balanceData.accrued} Days</span>
+            <span className="text-base font-black text-neutral-900 mt-1">+{balanceData.accrued} Days</span>
           </div>
 
-          <div className="p-3.5 rounded-2xl border border-neutral-100 bg-neutral-50/50 flex flex-col gap-1 transition-all hover:bg-white hover:border-neutral-200 group">
+          <div className="flex-1 p-4 rounded-2xl border border-neutral-100 bg-neutral-50/50 flex flex-col items-center text-center gap-1 transition-all hover:bg-white hover:border-neutral-200 group">
             <div className="flex items-center gap-2">
-              <div className="h-5 w-5 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
-                <TrendingUp size={10} strokeWidth={3} className="rotate-180" />
+              <div className="h-6 w-6 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+                <TrendingUp size={12} strokeWidth={3} className="rotate-180" />
               </div>
-              <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Used</span>
+              <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Used</span>
             </div>
-            <span className="text-sm font-black text-neutral-900 ml-0.5">{balanceData.used} Days</span>
+            <span className="text-base font-black text-neutral-900 mt-1">{balanceData.used} Days</span>
           </div>
         </div>
       </div>
 
-      <div className="mt-auto pt-4 border-t border-neutral-100/50">
+      <div className="mt-auto pt-6 border-t border-neutral-100/50">
         <div className="flex items-center justify-between text-[10px] font-bold text-neutral-400">
           <span>Policy Reset: Jan 1, 2027</span>
           <span className="text-indigo-600 underline cursor-pointer hover:text-indigo-700">View History</span>

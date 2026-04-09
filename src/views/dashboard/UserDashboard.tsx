@@ -22,42 +22,46 @@ export default function UserDashboardPage() {
       {/* 2. Main Bento Grid Section */}
       <section className="flex flex-col gap-6 lg:gap-8">
         
-        {/* Row 1: Primary Actions (Clock Action & Overtime Request) */}
+        {/* ROW 1: Primary Action & Immediate Context */}
+        {/* User paling butuh absen dan lihat status hari ini begitu login */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-          <div className="lg:col-span-7 xl:col-span-8 h-full">
+          <div className="lg:col-span-8 h-full">
             <ClockCard />
           </div>
-          <div className="lg:col-span-5 xl:col-span-4 h-full">
-            <OvertimeRequestCard />
+          <div className="lg:col-span-4 h-full">
+            <TodayStatusCard />
           </div>
         </div>
 
-        {/* Row 2: Leave Management (Balance & Request) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-          <div className="lg:col-span-4 h-full">
+        {/* ROW 2: At-a-Glance Information (Overview Data) */}
+        {/* Menampilkan informasi saldo, info cepat, dan aktivitas terakhir dalam 3 kolom agar seimbang */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+          <div className="flex flex-col h-full">
             <LeaveBalanceCard />
           </div>
+          <div className="flex flex-col h-full">
+            <QuickInfoCard />
+          </div>
+          <div className="flex flex-col h-full">
+            <RecentActivityCard />
+          </div>
+        </div>
+
+        {/* ROW 3: Secondary Actions (Requests / Forms) */}
+        {/* Mengelompokkan semua jenis pengajuan (Cuti & Lembur) di satu tempat */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
           <div className="lg:col-span-8 h-full">
             <LeaveRequestCard />
           </div>
-        </div>
-
-        {/* Row 3: Information & Summary (Bento Sub-items) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          <div className="flex flex-col">
-            <TodayStatusCard />
-          </div>
-          <div className="flex flex-col">
-            <QuickInfoCard />
-          </div>
-          <div className="flex flex-col">
-            <RecentActivityCard />
+          <div className="lg:col-span-4 h-full">
+            <OvertimeRequestCard />
           </div>
         </div>
         
       </section>
 
       {/* 3. Data/Table Section */}
+      {/* Tabel selalu di bawah agar pengguna bisa scroll panjang tanpa mengganggu layout utama */}
       <section className="mt-4">
         <RecentAttendance />
       </section>

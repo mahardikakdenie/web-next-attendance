@@ -1,13 +1,13 @@
 import Image from "next/image";
 
-export default function Avatar({ src }: { src: string }) {
+export default function Avatar({ src, className }: { src: string; className?: string }) {
   return (
     <Image
       src={src}
-      width={20}
-      height={20}
+      width={40}
+      height={40}
       alt=""
-      className="w-8 h-8 rounded-full object-cover"
+      className={className || "w-8 h-8 rounded-full object-cover"}
     />
   );
 }
