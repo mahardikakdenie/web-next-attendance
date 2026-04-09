@@ -1,4 +1,6 @@
 import AuthBootstrap from "@/components/auth/AuthBootstrap";
+import SessionTimeoutWatcher from "@/components/auth/SessionTimeoutWatcher";
+import OfflineIndicator from "@/components/ui/OfflineIndicator";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 
@@ -10,6 +12,8 @@ export default function MainLayout({
   return (
     <div className="flex h-dvh w-full flex-col bg-neutral-50 md:flex-row">
       <AuthBootstrap />
+      <SessionTimeoutWatcher />
+      <OfflineIndicator />
 
       <div className="md:shrink-0 md:z-20">
         <Sidebar />
