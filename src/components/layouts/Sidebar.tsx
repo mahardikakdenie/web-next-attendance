@@ -101,16 +101,9 @@ const MENUS: MenuItem[] = [
       },
       {
         key: "my-payroll",
-        label: "My Salary",
+        label: "My Salary & Slips",
         icon: Wallet,
         path: "/payroll",
-        roles: [ROLES.USER],
-      },
-      {
-        key: "my-profile-update",
-        label: "Update My Data",
-        icon: FileText,
-        path: "/request-profile-update",
         roles: [ROLES.USER],
       },
     ],
@@ -149,13 +142,6 @@ const MENUS: MenuItem[] = [
         label: "Overtime Approvals",
         icon: Clock,
         path: "/overtime",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      },
-      {
-        key: "data-approvals",
-        label: "Update Requests",
-        icon: UserCheck,
-        path: "/request-profile-update",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
       },
     ],
@@ -419,6 +405,7 @@ export default function Sidebar() {
         {/* Bottom Actions Desktop */}
         <div className="hidden md:flex flex-col w-full gap-2 mt-auto border-t border-neutral-100 pt-4">
           <button
+            onClick={() => router.push("/request-profile-update")}
             type="button"
             className={`group flex w-full items-center rounded-2xl py-3.5 transition-all text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 ${
               open ? "px-3 justify-start" : "px-0 justify-center"
@@ -430,7 +417,7 @@ export default function Sidebar() {
                 open ? "opacity-100 ml-3 max-w-37.5" : "opacity-0 max-w-0 ml-0"
               }`}
             >
-              Preferences
+              Account & Settings
             </span>
           </button>
 
