@@ -4,29 +4,38 @@ import type { NextRequest } from "next/server";
 export function proxy(req: NextRequest) {
   const url = req.nextUrl.clone();
   const forceLogin = url.searchParams.get("forceLogin") === "1";
-  const token = req.cookies.get("token")?.value || req.cookies.get("access_token")?.value;
+  
+  // Combine all possible token names
+  const token = req.cookies.get("token")?.value || 
+                req.cookies.get("access_token")?.value ||
+                req.cookies.get("session")?.value;
+                
   const pathname = url.pathname;
 
-  const isAuthPage = pathname === "/login";
-  const isProtectedRoute = pathname === "/" || pathname.startsWith("/attendances");
+  const isAuthPage = pathname.startsWith("/login");
+  const isPublicAsset = pathname.startsWith('/_next') || 
+                        pathname.includes('.') || 
+                        pathname.startsWith('/api');
 
-  if (!token && isProtectedRoute) {
-    url.pathname = "/login";
+  // Handle Force Login (Clear Cookies)
+  if (isAuthPage && forceLogin) {
+    const response = NextResponse.next();
+    response.cookies.set("token", "", { maxAge: 0, path: "/" });
+    response.cookies.set("access_token", "", { maxAge: 0, path: "/" });
+    response.cookies.set("session", "", { maxAge: 0, path: "/" });
+    return response;
+  }
+
+  // 1. If authenticated and trying to access login -> redirect to home
+  if (token && isAuthPage && !forceLogin) {
+    url.pathname = "/";
     url.search = "";
     return NextResponse.redirect(url);
   }
 
-  if (isAuthPage && forceLogin) {
-    const response = NextResponse.next();
-
-    response.cookies.set("token", "", { maxAge: 0, path: "/" });
-    response.cookies.set("access_token", "", { maxAge: 0, path: "/" });
-
-    return response;
-  }
-
-  if (token && isAuthPage && !forceLogin) {
-    url.pathname = "/";
+  // 2. If not authenticated and trying to access protected page -> redirect to login
+  if (!token && !isAuthPage && !isPublicAsset) {
+    url.pathname = "/login";
     url.search = "";
     return NextResponse.redirect(url);
   }
@@ -34,6 +43,9 @@ export function proxy(req: NextRequest) {
   return NextResponse.next();
 }
 
+// Updated matcher to cover all relevant routes while excluding internals
 export const config = {
-  matcher: ["/", "/attendances/:path*", "/login"],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
 };

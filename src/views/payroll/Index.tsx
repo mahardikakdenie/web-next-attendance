@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { 
   Wallet, 
   Search,
@@ -11,18 +11,20 @@ import {
   Users,
   Settings,
   CreditCard,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import { Badge } from "@/components/ui/Badge";
 import Avatar from "@/components/ui/Avatar";
 import { calculatePayroll } from "@/lib/payrollCalculator";
+import { TableSkeleton, Skeleton, CardSkeleton } from "@/components/ui/Skeleton";
 
 import EnhancedPayslipModal from "@/components/ui/EnhancedPayslipModal"; 
 
 // --- TYPESCRIPT DEFINITIONS ---
-// Mendefinisikan struktur data agar TS tidak bingung
 interface PayrollBreakdown {
   grossIncome: number;
   pph21Amount: number;
@@ -38,9 +40,7 @@ interface CalculatedResult {
   breakdown: PayrollBreakdown;
 }
 
-// Gabungan antara data mock awal dengan hasil kalkulasi
 type EmployeePayrollRecord = typeof MOCK_EMPLOYEE_PAYROLL[0] & CalculatedResult;
-// ------------------------------
 
 const MOCK_EMPLOYEE_PAYROLL = [
   {
@@ -85,7 +85,7 @@ const MOCK_EMPLOYEE_PAYROLL = [
 ];
 
 export default function PayrollView() {
-  const { user } = useAuthStore();
+  const { user, loading } = useAuthStore();
   const role = user?.role?.name;
   const isAdmin = role === ROLES.SUPERADMIN || role === ROLES.ADMIN || role === ROLES.HR;
   
@@ -93,19 +93,23 @@ export default function PayrollView() {
   const [searchTerm, setSearchTerm] = useState("");
   const selectedPeriod = "March 2024";
   const [showSlipPreview, setShowSlipPreview] = useState<number | null>(null);
+  const [isMasked, setIsMasked] = useState(true);
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = useCallback((amount: number) => {
+    if (isMasked) {
+      return "Rp ••••••••";
+    }
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(amount);
-  };
+  }, [isMasked]);
 
-  // Terapkan tipe EmployeePayrollRecord[] pada useMemo
+  const toggleMask = () => setIsMasked(!isMasked);
+
   const calculatedData = useMemo<EmployeePayrollRecord[]>(() => {
     return MOCK_EMPLOYEE_PAYROLL.map(emp => {
-      // Kita asumsikan fungsi lib Anda mengembalikan struktur CalculatedResult
       const result = calculatePayroll({
         basicSalary: emp.basic,
         allowances: emp.allowance,
@@ -127,7 +131,6 @@ export default function PayrollView() {
     );
   }, [searchTerm, calculatedData]);
 
-  // Return typenya EmployeePayrollRecord | null
   const selectedEmployeeSlip = useMemo<EmployeePayrollRecord | null>(() => {
     if (!showSlipPreview) return null;
     return calculatedData.find(e => e.id === showSlipPreview) || null;
@@ -137,6 +140,34 @@ export default function PayrollView() {
     alert("System: Generating Bank Transfer File (LLG/RTGS Format)... \nStatus: Success \nFile: payroll_export_march_2024.csv");
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-32 rounded-full" />
+            <Skeleton className="h-10 w-64 rounded-xl" />
+          </div>
+          <div className="flex gap-3">
+            <Skeleton className="h-12 w-32 rounded-2xl" />
+            <Skeleton className="h-12 w-40 rounded-2xl" />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+
+        <div className="bg-white rounded-4xl border border-neutral-100 p-8 shadow-sm">
+          <TableSkeleton rows={6} cols={6} />
+        </div>
+      </div>
+    );
+  }
+
   if (isAdmin) {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-10">
@@ -144,7 +175,16 @@ export default function PayrollView() {
         {/* Header Management */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-black text-neutral-900 tracking-tight">Payroll Operations</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-black text-neutral-900 tracking-tight">Payroll Operations</h1>
+              <button 
+                onClick={toggleMask}
+                className="p-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 rounded-xl transition-all"
+                title={isMasked ? "Show Salary" : "Hide Salary"}
+              >
+                {isMasked ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
             <div className="flex items-center gap-2 mt-1">
               <Badge className="bg-blue-100 text-blue-700 border-none px-2 py-0.5 text-[10px] font-black uppercase">Enterprise Mode</Badge>
               <p className="text-sm text-neutral-500 font-medium">Period: {selectedPeriod}</p>
@@ -334,7 +374,6 @@ export default function PayrollView() {
           </div>
         </div>
 
-        {/* Pemanggilan Komponen Modal Slip Gaji tanpa 'any' */}
         <EnhancedPayslipModal
           showSlipPreview={showSlipPreview}
           setShowSlipPreview={setShowSlipPreview}
