@@ -1,135 +1,121 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, MessageSquare, Send, Plane } from "lucide-react";
-// import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import clsx from "clsx";
-import { Button } from "../ui/Button";
+import { Calendar, MessageSquare, Send, Loader2, Info } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { requestLeave } from "@/service/leave";
+import { toast } from "sonner";
+import { useRefresh } from "@/lib/RefreshContext";
 
 export function LeaveRequestCard() {
+  const [loading, setLoading] = useState(false);
+  const { triggerRefresh } = useRefresh();
   const [formData, setFormData] = useState({
-    startDate: new Date().toISOString().split("T")[0],
-    endDate: new Date().toISOString().split("T")[0],
+    leave_type_id: 1,
+    start_date: "",
+    end_date: "",
     reason: "",
-    type: "Annual Leave",
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Submitting Leave Request:", formData);
+    if (!formData.start_date || !formData.end_date || !formData.reason) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await requestLeave(formData);
+      toast.success("Leave request submitted successfully.");
+      setFormData({
+        leave_type_id: 1,
+        start_date: "",
+        end_date: "",
+        reason: "",
+      });
+      triggerRefresh();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to submit leave request.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="w-full h-full rounded-4xl border border-neutral-200 bg-white p-6 shadow-sm overflow-hidden flex flex-col">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-lg font-black text-neutral-900 tracking-tight">
-            Request Leave
-          </h2>
-          <p className="text-xs font-medium text-neutral-500 mt-0.5">
-            Plan your time off
-          </p>
+    <div className="w-full h-full rounded-[32px] border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm">
+      <div className="mb-8 flex items-center justify-between">
+        <div className="space-y-1">
+          <h2 className="text-xl font-black text-neutral-900 tracking-tight">Request Time Off</h2>
+          <p className="text-sm font-medium text-neutral-400">Apply for your leave or permission.</p>
         </div>
-        <div className="h-10 w-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
-          <Plane size={20} strokeWidth={2.5} />
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+          <Calendar size={24} />
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1">
-        {/* Leave Type Selector - Bento Style */}
-        <div className="group rounded-3xl border border-neutral-100 bg-neutral-50/50 p-4 transition-all hover:bg-white hover:border-neutral-200">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">
-              Leave Category
-            </span>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Leave Type</label>
+            <select 
+              value={formData.leave_type_id}
+              onChange={(e) => setFormData({ ...formData, leave_type_id: Number(e.target.value) })}
+              className="w-full h-12 px-4 bg-neutral-50 border border-neutral-100 rounded-xl text-sm font-bold text-neutral-900 focus:bg-white focus:border-blue-500/20 transition-all outline-none appearance-none"
+            >
+              <option value={1}>Annual Leave</option>
+              <option value={2}>Sick Leave</option>
+              <option value={3}>Unpaid Leave</option>
+            </select>
           </div>
-          <select
-            name="type"
-            value={formData.type}
-            onChange={handleChange}
-            className="w-full bg-white border border-neutral-200 rounded-xl h-10 px-3 text-sm font-bold text-neutral-800 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/5 transition-all appearance-none"
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Date Range</label>
+            <div className="flex items-center gap-2">
+              <input 
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                className="w-full h-12 px-3 bg-neutral-50 border border-neutral-100 rounded-xl text-xs font-bold text-neutral-900 focus:bg-white transition-all outline-none"
+              />
+              <span className="text-neutral-300">-</span>
+              <input 
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                className="w-full h-12 px-3 bg-neutral-50 border border-neutral-100 rounded-xl text-xs font-bold text-neutral-900 focus:bg-white transition-all outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Reason</label>
+          <div className="relative">
+            <MessageSquare className="absolute left-4 top-4 text-neutral-300" size={18} />
+            <textarea 
+              rows={3}
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              placeholder="Tell us why you need this time off..."
+              className="w-full pl-12 pr-4 py-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-medium text-neutral-700 focus:bg-white focus:border-blue-500/20 transition-all outline-none resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg">
+            <Info size={14} />
+            <span className="text-[10px] font-bold uppercase">Subject to Approval</span>
+          </div>
+          <Button 
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 h-12 rounded-xl flex items-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
           >
-            <option>Annual Leave</option>
-            <option>Sick Leave</option>
-            <option>Personal Leave</option>
-            <option>Unpaid Leave</option>
-          </select>
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+            <span className="font-bold">Submit Request</span>
+          </Button>
         </div>
-
-        {/* Date Range - Bento Items */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="group rounded-3xl border border-blue-50 bg-blue-50/30 p-4 transition-all hover:bg-blue-50/60 hover:border-blue-100">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar size={13} className="text-blue-600" strokeWidth={3} />
-              <span className="text-[10px] font-bold text-blue-700 uppercase tracking-widest">
-                Start Date
-              </span>
-            </div>
-            <Input
-              type="date"
-              name="startDate"
-              value={formData.startDate}
-              onChange={handleChange}
-              className="bg-white/80 border-blue-100 focus:border-blue-400 h-10 rounded-xl text-xs sm:text-sm"
-              required
-            />
-          </div>
-
-          <div className="group rounded-3xl border border-rose-50 bg-rose-50/30 p-4 transition-all hover:bg-rose-50/60 hover:border-rose-100">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar size={13} className="text-rose-600" strokeWidth={3} />
-              <span className="text-[10px] font-bold text-rose-700 uppercase tracking-widest">
-                End Date
-              </span>
-            </div>
-            <Input
-              type="date"
-              name="endDate"
-              value={formData.endDate}
-              onChange={handleChange}
-              className="bg-white/80 border-rose-100 focus:border-rose-400 h-10 rounded-xl text-xs sm:text-sm"
-              required
-            />
-          </div>
-        </div>
-
-        {/* Justification - Bento Item */}
-        <div className="flex-1 rounded-3xl border border-neutral-100 bg-neutral-50/50 p-4 transition-all hover:bg-white hover:border-neutral-200 flex flex-col">
-          <div className="flex items-center gap-2 mb-3">
-            <MessageSquare size={14} className="text-neutral-500" strokeWidth={2.5} />
-            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-              Justification
-            </span>
-          </div>
-          <textarea
-            name="reason"
-            value={formData.reason}
-            onChange={handleChange}
-            placeholder="Reason for your leave..."
-            className={clsx(
-              "w-full flex-1 px-4 py-3 rounded-xl text-sm transition-all outline-none placeholder:text-neutral-400 font-medium",
-              "bg-white border border-neutral-100 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/5",
-              "resize-none min-h-20"
-            )}
-            required
-          />
-        </div>
-
-        <Button
-          type="submit"
-          className="w-full flex items-center justify-center gap-2 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black transition-all active:scale-[0.98] mt-2 shadow-xl shadow-emerald-600/20"
-        >
-          <Send size={18} strokeWidth={2.5} />
-          Submit Leave Application
-        </Button>
       </form>
     </div>
   );

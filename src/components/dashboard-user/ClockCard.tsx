@@ -18,9 +18,10 @@ import {
   type AttendanceItem,
   EMPTY_IMAGE,
 } from "@/lib/todayAttendance";
-import { recordAttendances } from "@/service/attendance";
+import { clockAttendance } from "@/service/attendance";
 import { uploadMedia } from "@/service/media";
 import { useAuthStore } from "@/store/auth.store";
+import { useRefresh } from "@/lib/RefreshContext";
 
 type Coordinates = {
   latitude: number;
@@ -38,8 +39,10 @@ const dataUrlToFile = async (dataUrl: string) => {
 
 export default function ClockCard() {
   const user = useAuthStore((state) => state.user);
+  const { triggerRefresh } = useRefresh();
+  const [mounted, setMounted] = useState(false);
   const [attendance, setAttendance] = useState<AttendanceItem[]>([]);
-  const [now, setNow] = useState(dayjs());
+  const [now, setNow] = useState<dayjs.Dayjs | null>(null);
   const [openCamera, setOpenCamera] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<"idle" | "camera" | "processing">("idle");
@@ -48,13 +51,17 @@ export default function ClockCard() {
   const [selectedAction, setSelectedAction] = useState<"clock_in" | "clock_out" | null>(null);
 
   useEffect(() => {
+    setMounted(true);
+    setNow(dayjs());
     const interval = setInterval(() => setNow(dayjs()), 1000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    setAttendance(getTodayAttendanceItems(user));
-  }, [user]);
+    if (mounted) {
+      setAttendance(getTodayAttendanceItems(user));
+    }
+  }, [user, mounted]);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -93,6 +100,16 @@ export default function ClockCard() {
       }
     );
   }, []);
+
+  if (!mounted || !now) {
+    return (
+      <div className="w-full mx-auto rounded-4xl p-6 sm:p-10 bg-white shadow-2xl shadow-slate-200/50 border border-slate-100 flex flex-col gap-10 animate-pulse">
+        <div className="h-40 bg-slate-50 rounded-3xl"></div>
+        <div className="h-60 bg-slate-50 rounded-3xl"></div>
+        <div className="h-20 bg-slate-50 rounded-2xl"></div>
+      </div>
+    );
+  }
 
   const loadImage = (img: HTMLImageElement) =>
     new Promise<void>((resolve, reject) => {
@@ -147,8 +164,8 @@ export default function ClockCard() {
       const file = await dataUrlToFile(img);
       const mediaUrl = await uploadMedia(file);
 
-      await recordAttendances({
-        action: selectedAction,
+      await clockAttendance({
+        action: selectedAction!,
         latitude: coords.latitude,
         longitude: coords.longitude,
         media_url: mediaUrl,
@@ -163,6 +180,7 @@ export default function ClockCard() {
 
       setAttendance((prev) => upsertAttendance(prev, payload));
       setOpenCamera(false);
+      triggerRefresh();
       toast.success(selectedAction === "clock_in" ? "Clock In berhasil" : "Clock Out berhasil");
     } catch (error: unknown) {
       const err = error as { response: { data: { message: string } } };

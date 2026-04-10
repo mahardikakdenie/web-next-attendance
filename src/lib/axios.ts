@@ -1,10 +1,58 @@
 // src/lib/axios.ts
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
 
 export const api = axios.create({
   baseURL: "/api",
   withCredentials: true,
 });
+
+export const getSecurityHeaders = () => {
+  return {
+    "X-Timestamp": Date.now().toString(),
+    "X-Request-ID": crypto.randomUUID(),
+  };
+};
+
+export const getCSRFToken = () => {
+  if (typeof document === "undefined") return undefined;
+  return document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("csrf_token="))
+    ?.split("=")[1];
+};
+
+export const secureRequest = async <T>(
+  method: "get" | "post" | "put" | "delete",
+  url: string,
+  data?: unknown,
+  config: AxiosRequestConfig = {}
+): Promise<T> => {
+  const headers = {
+    ...getSecurityHeaders(),
+    ...(getCSRFToken() ? { "X-CSRF-Token": getCSRFToken() } : {}),
+    ...(config.headers || {}),
+  };
+
+  const res =
+    method === "get" || method === "delete"
+      ? await api.request({
+          method,
+          url,
+          headers,
+          withCredentials: true,
+          ...config,
+        })
+      : await api.request({
+          method,
+          url,
+          data,
+          headers,
+          withCredentials: true,
+          ...config,
+        });
+
+  return res.data;
+};
 
 let isRedirectingToLogin = false;
 

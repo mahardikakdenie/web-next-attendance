@@ -1,67 +1,100 @@
 "use client";
 
-import { Umbrella, Sparkles, TrendingUp } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Calendar, Info } from "lucide-react";
+import { getLeaveBalances } from "@/service/leave";
+import { LeaveBalance } from "@/types/api";
+import { useRefresh } from "@/lib/RefreshContext";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export function LeaveBalanceCard() {
-  const balanceData = {
-    total: 12,
-    used: 4,
-    remaining: 8,
-    accrued: 2,
-  };
+  const [balances, setBalances] = useState<LeaveBalance[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { refreshKey } = useRefresh();
+
+  const fetchBalances = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await getLeaveBalances();
+      setBalances(res.data);
+    } catch (error) {
+      console.error("Failed to fetch leave balances", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBalances();
+  }, [fetchBalances, refreshKey]);
+
+  if (loading) {
+    return (
+      <div className="w-full h-full rounded-[28px] border border-neutral-200 bg-white p-6 space-y-6">
+        <Skeleton className="h-6 w-32" />
+        <div className="space-y-4">
+          <Skeleton className="h-20 rounded-2xl" />
+          <Skeleton className="h-20 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  // Default fallback if no data
+  const displayBalances = balances?.length > 0 ? balances : [
+    { type: "Annual Leave", remaining: 0, total: 12, used: 0 }
+  ];
 
   return (
-    <div className="w-full h-full rounded-4xl border border-neutral-200 bg-white p-6 shadow-sm overflow-hidden flex flex-col">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-base font-bold text-neutral-800 tracking-tight">Time Off Balance</h2>
-          <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest mt-0.5">Annual Leave Cycle</p>
+    <div className="w-full h-full rounded-[28px] border border-neutral-200 bg-white p-6 flex flex-col shadow-sm transition-all hover:shadow-md">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Calendar className="text-blue-600" size={20} />
+          <h2 className="text-base font-bold text-neutral-800">Leave Balance</h2>
         </div>
-        <div className="h-10 w-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-          <Umbrella size={20} strokeWidth={2.5} />
-        </div>
+        <button className="text-neutral-400 hover:text-neutral-600">
+          <Info size={16} />
+        </button>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <div className="relative p-6 rounded-3xl bg-indigo-500 text-white overflow-hidden shadow-xl shadow-indigo-600/20 group">
-          <div className="relative z-10">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Remaining Days</span>
-            <div className="flex items-baseline gap-1 mt-1">
-              <span className="text-4xl font-black tracking-tighter">{balanceData.remaining}</span>
-              <span className="text-xs font-bold opacity-60">/ {balanceData.total} Days</span>
-            </div>
-          </div>
+      <div className="space-y-5 grow">
+        {displayBalances.map((balance, index) => {
+          const percentage = (balance.used / balance.total) * 100;
           
-          <Sparkles size={64} className="absolute -right-4 -bottom-4 text-white/10 rotate-12 group-hover:scale-110 transition-transform duration-700" />
-        </div>
-
-        <div className="flex justify-center gap-5 mt-3 px-4 translate-y-1">
-          <div className="flex-1 p-4 rounded-2xl border border-neutral-100 bg-neutral-50/50 flex flex-col items-center text-center gap-1 transition-all hover:bg-white hover:border-neutral-200 group">
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                <TrendingUp size={12} strokeWidth={3} />
+          return (
+            <div key={index} className="space-y-3">
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-[11px] font-black text-neutral-400 uppercase tracking-widest mb-1">{balance.type}</p>
+                  <h3 className="text-2xl font-black text-neutral-900 leading-none">
+                    {balance.remaining} <span className="text-sm font-bold text-neutral-400">/ {balance.total} Days</span>
+                  </h3>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase">Used</p>
+                  <p className="text-sm font-black text-neutral-700">{balance.used} Days</p>
+                </div>
               </div>
-              <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Accrued</span>
-            </div>
-            <span className="text-base font-black text-neutral-900 mt-1">+{balanceData.accrued} Days</span>
-          </div>
 
-          <div className="flex-1 p-4 rounded-2xl border border-neutral-100 bg-neutral-50/50 flex flex-col items-center text-center gap-1 transition-all hover:bg-white hover:border-neutral-200 group">
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
-                <TrendingUp size={12} strokeWidth={3} className="rotate-180" />
+              <div className="relative h-2.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                <div 
+                  className="absolute top-0 left-0 h-full bg-blue-600 rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${100 - percentage}%` }}
+                />
               </div>
-              <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Used</span>
             </div>
-            <span className="text-base font-black text-neutral-900 mt-1">{balanceData.used} Days</span>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
-      <div className="mt-auto pt-6 border-t border-neutral-100/50">
-        <div className="flex items-center justify-between text-[10px] font-bold text-neutral-400">
-          <span>Policy Reset: Jan 1, 2027</span>
-          <span className="text-indigo-600 underline cursor-pointer hover:text-indigo-700">View History</span>
+      <div className="mt-6 pt-5 border-t border-neutral-100 flex items-center gap-4">
+        <div className="flex items-center gap-1.5">
+          <div className="h-2 w-2 rounded-full bg-blue-600" />
+          <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Remaining</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="h-2 w-2 rounded-full bg-neutral-200" />
+          <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Used</span>
         </div>
       </div>
     </div>
