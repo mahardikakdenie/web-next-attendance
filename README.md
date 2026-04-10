@@ -1,194 +1,96 @@
-# Attendance App
+# Attendance Management System (Enterprise Edition 2026)
 
-Attendance App is a web-based attendance dashboard built with Next.js, React, TypeScript, Tailwind CSS, and Zustand. It provides a modern frontend for login, dashboard monitoring, attendance history, and browser-assisted check-in/check-out flows with selfie capture and face verification.
+A cutting-edge, high-performance Attendance and People Analytics platform built with **Next.js 15+** and **Tailwind CSS 4**. This application is designed for modern enterprises, featuring a "Floating App Shell" architecture and robust biometric verification.
 
-## Overview
+## 🚀 Recent Major Updates
 
-This project uses the App Router and route groups to separate authenticated admin pages from public login pages. It also includes a local API proxy layer under `src/app/api` so the frontend can call the backend through same-origin routes instead of hitting the upstream API directly from the browser.
+### 1. Next-Gen UI/UX Overhaul (2026 Aesthetic)
+- **Floating App Shell:** Abandoned traditional rigid layouts for a sleek, containerized "floating" workspace with `rounded-[40px]` corners and multi-layered soft shadows.
+- **Glassmorphism Integration:** Implemented real-time `backdrop-blur` headers and sidebar elements for a premium, airy feel.
+- **Responsive Sidebar:** Redesigned minimalist sidebar with intelligent active-state indicators and nested navigation support.
 
-The current UI focuses on:
+### 2. Advanced People Analytics
+- **Role-Specific Dashboards:** Custom analytics suites for **Admin, HR, and Finance** roles.
+- **Interactive Heatmaps:** High-density attendance visualization using ApexCharts to identify workforce peak arrival times.
+- **Employee Performance Matrix:** A data-driven approach to tracking punctuality, attendance scores, and behavioral patterns.
+- **Individual Drill-down:** Deep-dive modal for per-employee analytics including behavioral "DNA" radar charts.
 
-- user login flow
-- dashboard summary cards
-- attendance list and filters
-- clock in / clock out flow
-- selfie capture with camera access
-- face recognition helper utilities
-- geolocation-aware attendance status
+### 3. Payroll & Automated Compliance
+- **Modern Payslip Engine:** A redesigned "Digital Receipt" style payslip modal.
+- **Native PDF Export:** Implementation of browser-optimized `@media print` for high-fidelity, selectable PDF generation.
+- **Regulatory Compliance:** Built-in support for Indonesia's latest **TER PPh 21** tax schemes and **BPJS** social security regulations.
 
-## Main Features
+## 🛠 Technology Stack
 
-### 1. Authentication
+- **Framework:** Next.js 15 (Turbopack)
+- **Styling:** Tailwind CSS 4
+- **State Management:** Zustand
+- **Charts:** ApexCharts
+- **Biometrics:** face-api.js (SSD Mobilenet V1 / Face Landmark 68)
+- **HTTP Client:** Axios with Secure Interceptors
+- **Icons:** Lucide React
 
-- login form with client-side loading state
-- auth state management with Zustand
-- current-user fetch after login through `/v1/users/me`
-- typed user session data with `tenant` and `attendances`
-- logout helper for session cleanup
+## 🔄 Application Architecture & Flow
 
-### 2. Dashboard
+The system operates on a secure, role-based access control (RBAC) model.
 
-- greeting and daily attendance summary
-- live clock card for clock in / clock out
-- `ClockCard` reads today attendance from `/v1/users/me` and shows the latest `clock_in` and `clock_out`
-- recent attendance preview
-- quick info panel for work rules and location
-- responsive layout for desktop and mobile
-
-### 3. Attendance Flow
-
-- modern bento-style modal for browser camera access
-- selfie capture with mirrored preview and exact context mapping fix
-- robust camera initialization with loading UI and comprehensive error handling
-- face descriptor matching via `face-api.js`
-- location retrieval using browser geolocation
-
-### 4. API Integration
-
-- Axios client configured to call local `/api` routes
-- catch-all proxy route for backend requests
-- image proxy route for remote image fetching
-
-## Tech Stack
-
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind CSS 4
-- Zustand
-- Axios
-- face-api.js
-- Sonner
-- Lucide React
-
-## Project Structure
-
-```text
-src/
-  app/
-    (admin)/             Authenticated route group
-    login/               Public login route
-    api/                 Next.js API proxy routes
-  components/
-    attendance/          Attendance-specific UI
-    dashboard-user/      Dashboard widgets
-    layouts/             App shell components
-    ui/                  Reusable UI primitives
-  lib/
-    axios.ts             Shared API client
-    faceRecognition.ts   Face model loading and matching helpers
-  service/
-    auth.service.ts      Auth API calls
-  store/
-    auth.store.ts        Auth session state
-  views/
-    attendances/         Attendance page composition
-    dashboard/           Dashboard page composition
-    login/               Login page composition
+```mermaid
+graph TD
+    A[Public Access] -->|Login| B{Auth Store}
+    B -->|Unauthorized| A
+    B -->|Authorized| C[Dashboard Router]
+    
+    C --> D[General User: Attendance & My Workspace]
+    C --> E[HR: People Analytics & Leave Approvals]
+    C --> F[Finance: Payroll & Tax Compliance]
+    C --> G[Admin: Tenant & Platform Management]
+    
+    D --> H[Face + GPS Verification]
+    H -->|Secure POST| I[(Backend API)]
 ```
 
-## Routes
+## 📸 Attendance Verification Flow (GPS + Biometric)
 
-### Public
+To ensure zero-fraud attendance, the system employs a multi-factor verification heuristic.
 
-- `/login` - login page
+```mermaid
+sequenceDiagram
+    participant User
+    |participant Frontend (Face-api.js)
+    participant GPS (Browser API)
+    participant Backend
 
-### Admin / Authenticated UI
-
-- `/` - dashboard page inside the `(admin)` route group
-- `/attendances` - attendance list page
-
-### Internal API
-
-- `/api/[...path]` - proxy to backend API
-- `/api/image` - image proxy endpoint
-
-## Environment Variables
-
-Create a local `.env` file before running the app.
-
-```env
-API_URL=http://localhost:8000
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
+    User->>Frontend: Clicks Clock-In
+    Frontend->>GPS: Request Current Coordinates
+    GPS-->>Frontend: Returns Lat/Long
+    Frontend->>Frontend: Initiate Camera & Load Models
+    Frontend->>User: Capture Selfie
+    Frontend->>Frontend: Scan Face Descriptors & Landmarks
+    Frontend->>Backend: Send Payload (Media + Coords + Action)
+    Backend->>Backend: Verify Geo-fence Radius
+    Backend->>Backend: Store Encrypted Record
+    Backend-->>Frontend: Success Response
+    Frontend-->>User: Show Success Toast
 ```
 
-### Notes
+## 🔗 Backend Integration Details
 
-- `API_URL` is used by the Next.js catch-all proxy route in `src/app/api/[...path]/route.ts`.
-- `NEXT_PUBLIC_API_URL` exists in `.env.example`, but the current Axios setup calls the local `/api` route directly, so `API_URL` is the more important value right now.
-- Adjust the backend URL to match your API server.
+### 1. Secure Request Lifecycle
+All API calls are routed through a secure Axios instance located in `src/lib/axios.ts`.
+- **Interceptors:** Automatically injects CSRF/Security headers.
+- **Auth Handling:** Detects `401 Unauthorized` responses and triggers a graceful redirect to the login flow.
 
-## Getting Started
+### 2. Data Flattening & Pagination
+The system is optimized for large-scale employee data:
+- **Server-side Pagination:** Integrated into the global `DataTable` component using `current_page`, `last_page`, and `total` metadata.
+- **Transformation Layer:** Incoming nested JSON objects (e.g., `user` relation) are flattened during the fetch phase to ensure high-performance rendering and client-side searching.
 
-### 1. Install dependencies
+## 🏁 Getting Started
 
-```bash
-npm install
-```
+1. **Environment Setup:** Copy `.env.example` to `.env` and configure your `NEXT_PUBLIC_API_URL`.
+2. **Install Dependencies:** `npm install`
+3. **Run Development:** `npm run dev`
+4. **Build Production:** `npm run build`
 
-### 2. Configure environment variables
-
-Create `.env` and set your backend API base URL.
-
-### 3. Run the development server
-
-```bash
-npm run dev
-```
-
-### 4. Open the app
-
-Visit [http://localhost:3000](http://localhost:3000).
-
-## Available Scripts
-
-```bash
-npm run dev
-npm run build
-npm run start
-npm run lint
-```
-
-## Browser Requirements
-
-Some attendance features depend on browser APIs and will work best in modern browsers.
-
-- camera access is required for selfie capture
-- geolocation access is required for location-based attendance status
-- face recognition models must be available under `/public/models` for `face-api.js`
-
-If camera, geolocation, or models are unavailable, attendance verification will not work correctly.
-
-## How Authentication Works
-
-1. User submits credentials from the login form.
-2. The frontend sends the request through the local API proxy.
-3. After login, the app requests `/v1/users/me` with `includes=tenant,attendances`.
-4. Zustand stores the authenticated user, tenant, and attendance relations.
-5. Subsequent requests can include the session token through the configured client flow.
-
-## Development Notes
-
-- This repo uses the App Router.
-- Admin pages are grouped under `src/app/(admin)`.
-- Public login pages are separated under `src/app/login`.
-- The UI is already responsive, especially the main layout and sidebar shell.
-- `ClockCard` is wired to current-user attendance data for the current day.
-- `auth.store.ts` is the main source of user session typing used by dashboard widgets.
-
-## Known Gaps
-
-- README setup assumes a compatible backend API is already available.
-- `.env.example` currently documents `NEXT_PUBLIC_API_URL` only; the server proxy also needs `API_URL`.
-- Some dashboard widgets still use static sample values outside the clock card flow.
-
-## Next Improvements
-
-- document backend API contract and required endpoints
-- add screenshots or GIFs for login and attendance flows
-- document expected response payloads for auth and attendance APIs
-- add deployment instructions for staging and production
-
-## License
-
-No license has been defined in this repository yet.
+---
+*Developed with focus on Security, Performance, and Professional Aesthetics.*
