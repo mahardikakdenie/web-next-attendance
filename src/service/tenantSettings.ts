@@ -1,5 +1,6 @@
 // src/service/tenantSettings.ts
 import { secureRequest } from "@/lib/axios";
+import { UpdateTenantSettingPayload } from "@/types/api";
 
 //////////////////////////////////////////////////////////////
 // TYPES
@@ -18,6 +19,10 @@ export type RecordAttendancePayload = {
 
 export const getDataCurrentTenat = async () => {
   return secureRequest("get", "/v1/tenant-setting");
+};
+
+export const updateDataCurrentTenant = async (payload: UpdateTenantSettingPayload) => {
+  return secureRequest("put", "/v1/tenant-setting", payload);
 };
 
 // export const recordAttendances = async (

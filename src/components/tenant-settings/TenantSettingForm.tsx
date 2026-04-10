@@ -12,18 +12,17 @@ import {
   Navigation,
   Camera,
   Layers,
-  Map,
   Search,
   CheckCircle2,
-  Info
 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Switch from "@/components/ui/Switch";
 import CustomTimeSelector from "../ui/CustomTimeSelector";
 import { Button } from "../ui/Button";
-import { getDataCurrentTenat } from "@/service/tenantSettings";
+import { getDataCurrentTenat, updateDataCurrentTenant } from "@/service/tenantSettings";
 
-interface TenantSettingsData {
+export interface TenantSettingsData {
+  id: number;
   tenantId: number;
   officeLatitude: number | string;
   officeLongitude: number | string;
@@ -37,6 +36,16 @@ interface TenantSettingsData {
   clockOutEndTime: string;
   requireSelfie: boolean;
   allowMultipleCheck: boolean;
+  created_at: string;
+  updated_at: string;
+  tenant: {
+    code: string;
+    createdAt: string;
+    id: number;
+    name: string;
+    tenant_settings: string;
+    updatedAt: string;
+  };
 }
 
 interface TenantApiData {
@@ -57,15 +66,21 @@ interface TenantApiData {
   created_at: string;
   updated_at: string;
   tenant?: {
-    ID: number;
-    Name: string;
-    Code: string;
-    CreatedAt: string;
-    UpdatedAt: string;
+    ID?: number;
+    id?: number;
+    Name?: string;
+    name?: string;
+    Code?: string;
+    code?: string;
+    CreatedAt?: string;
+    createdAt?: string;
+    UpdatedAt?: string;
+    updatedAt?: string;
+    tenant_settings?: string;
   };
 }
 
-interface ApiResponse {
+export interface ApiResponse {
   meta: {
     message: string;
     code: number;
@@ -75,6 +90,7 @@ interface ApiResponse {
 }
 
 const INITIAL_DATA: TenantSettingsData = {
+  id: 1,
   tenantId: 1,
   officeLatitude: -6.1339179,
   officeLongitude: 106.8329504,
@@ -88,12 +104,23 @@ const INITIAL_DATA: TenantSettingsData = {
   clockOutEndTime: "23:00",
   requireSelfie: true,
   allowMultipleCheck: false,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  tenant: {
+    code: "string",
+    createdAt: new Date().toISOString(),
+    id: 0,
+    name: "string",
+    tenant_settings: "string",
+    updatedAt: new Date().toISOString()
+  }
 };
 
 export default function TenantSettingForm() {
   const [formData, setFormData] = useState<TenantSettingsData>(INITIAL_DATA);
   const [isLocating, setIsLocating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuccessLocation, setShowSuccessLocation] = useState(false);
 
@@ -185,6 +212,7 @@ export default function TenantSettingForm() {
         if (resp && resp.data) {
           const apiData = resp.data;
           setFormData({
+            id: apiData.id,
             tenantId: apiData.tenant_id,
             officeLatitude: apiData.office_latitude,
             officeLongitude: apiData.office_longitude,
@@ -198,6 +226,16 @@ export default function TenantSettingForm() {
             clockOutEndTime: apiData.clock_out_end_time,
             requireSelfie: apiData.require_selfie,
             allowMultipleCheck: apiData.allow_multiple_check,
+            created_at: apiData.created_at,
+            updated_at: apiData.updated_at,
+            tenant: {
+              code: apiData.tenant?.Code || apiData.tenant?.code || "string",
+              createdAt: apiData.tenant?.CreatedAt || apiData.tenant?.createdAt || new Date().toISOString(),
+              id: apiData.tenant?.ID || apiData.tenant?.id || 0,
+              name: apiData.tenant?.Name || apiData.tenant?.name || "string",
+              tenant_settings: apiData.tenant?.tenant_settings || "string",
+              updatedAt: apiData.tenant?.UpdatedAt || apiData.tenant?.updatedAt || new Date().toISOString()
+            }
           });
         }
       } catch (error) {
@@ -208,231 +246,272 @@ export default function TenantSettingForm() {
     getData();
   }, []);
 
+  const onHandleChange = async () => {
+    setIsSaving(true);
+    try {
+      const payload = {
+        allow_multiple_check: Boolean(formData.allowMultipleCheck),
+        allow_remote: Boolean(formData.allowRemote),
+        clock_in_end_time: String(formData.clockInEndTime),
+        clock_in_start_time: String(formData.clockInStartTime),
+        clock_out_end_time: String(formData.clockOutEndTime),
+        clock_out_start_time: String(formData.clockOutStartTime),
+        created_at: String(formData.created_at),
+        id: Number(formData.id),
+        late_after_minute: Number(formData.lateAfterMinute),
+        max_radius_meter: Number(formData.maxRadiusMeter),
+        office_latitude: Number(formData.officeLatitude),
+        office_longitude: Number(formData.officeLongitude),
+        require_location: Boolean(formData.requireLocation),
+        require_selfie: Boolean(formData.requireSelfie),
+        // tenant: {
+        //   code: String(formData.tenant.code),
+        //   createdAt: String(formData.tenant.createdAt),
+        //   id: Number(formData.tenant.id),
+        //   name: String(formData.tenant.name),
+        //   tenant_settings: String(formData.tenant.tenant_settings),
+        //   updatedAt: String(formData.tenant.updatedAt)
+        // },
+        tenant_id: Number(formData.tenantId),
+        updated_at: new Date().toISOString()
+      };
+
+      await updateDataCurrentTenant(payload);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-8">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="bg-white rounded-4xl border border-neutral-200 p-6 sm:p-8 shadow-sm">
+    <div className="w-full max-w-7xl mx-auto pb-12">
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-neutral-900 tracking-tight">System Settings</h1>
+        <p className="text-sm font-medium text-neutral-500 mt-1">Configure your workspace attendance rules and parameters.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        {/* LEFT COLUMN */}
+        <div className="flex flex-col gap-8">
+          
+          <div className="bg-white rounded-[28px] border border-neutral-200/60 p-7 shadow-sm transition-all hover:shadow-md">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100">
+                <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
                   <Settings size={24} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-neutral-900 tracking-tight">Basic Configuration</h2>
-                  <p className="text-xs font-medium text-neutral-500 mt-0.5">Core identity and basic rules</p>
+                  <h2 className="text-xl font-bold text-neutral-900">Basic Rules</h2>
+                  <p className="text-xs font-medium text-neutral-500 mt-0.5">Tolerance & limits</p>
                 </div>
               </div>
-              <div className="px-3 py-1 rounded-full bg-neutral-100 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
+              <div className="px-3.5 py-1.5 rounded-full bg-neutral-100 border border-neutral-200 text-[11px] font-bold text-neutral-600 uppercase tracking-widest">
                 ID: {formData.tenantId}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="group flex flex-col gap-1.5 rounded-2xl border border-neutral-100 bg-neutral-50/30 p-4 transition-all hover:bg-neutral-50">
-                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Max Radius (Meters)</label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="group flex flex-col gap-2 rounded-2xl border border-neutral-100 bg-neutral-50/50 p-4 transition-all focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 group-focus-within:text-blue-500">Max Radius (Meters)</label>
                 <div className="flex items-center gap-3">
-                  <Zap size={16} className="text-amber-500" />
+                  <Zap size={18} className="text-amber-500 shrink-0" />
                   <Input
                     type="number"
                     value={formData.maxRadiusMeter}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('maxRadiusMeter', e.target.value)}
-                    className="bg-white border-neutral-200 h-10 rounded-xl font-bold w-full"
+                    className="bg-transparent border-none px-0 h-8 text-xl font-black text-neutral-800 w-full focus:ring-0 shadow-none"
                   />
                 </div>
               </div>
 
-              <div className="group flex flex-col gap-1.5 rounded-2xl border border-neutral-100 bg-neutral-50/30 p-4 transition-all hover:bg-neutral-50">
-                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Grace Period (Minutes)</label>
+              <div className="group flex flex-col gap-2 rounded-2xl border border-neutral-100 bg-neutral-50/50 p-4 transition-all focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 group-focus-within:text-blue-500">Grace Period (Mins)</label>
                 <div className="flex items-center gap-3">
-                  <Clock size={16} className="text-rose-500" />
+                  <Clock size={18} className="text-rose-500 shrink-0" />
                   <Input
                     type="number"
                     value={formData.lateAfterMinute}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('lateAfterMinute', e.target.value)}
-                    className="bg-white border-neutral-200 h-10 rounded-xl font-bold w-full"
+                    className="bg-transparent border-none px-0 h-8 text-xl font-black text-neutral-800 w-full focus:ring-0 shadow-none"
                   />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-10 pt-8 border-t border-neutral-100">
-              <div className="flex items-center gap-2 mb-6">
-                <MapPin size={20} className="text-blue-600" strokeWidth={2.5} />
-                <h3 className="text-lg font-black text-neutral-900 tracking-tight">Office Coordinates</h3>
-              </div>
-
-              <div className="flex flex-col gap-6">
-                <div className="w-full h-48 sm:h-64 bg-neutral-100 rounded-3xl overflow-hidden border border-neutral-200 relative">
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    allowFullScreen
-                    src={`https://maps.google.com/maps?q=${formData.officeLatitude},${formData.officeLongitude}&z=16&output=embed`}
-                  ></iframe>
-                  {showSuccessLocation && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg animate-in slide-in-from-top-4 fade-in">
-                      <CheckCircle2 size={14} /> Location Updated
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                  <div className="md:col-span-7 flex flex-col gap-3">
-                    <div className="flex items-start gap-2 bg-sky-50 border border-sky-100 p-3 rounded-2xl">
-                      <Info className="text-sky-500 shrink-0 mt-0.5" size={16} />
-                      <p className="text-[12px] text-sky-800 leading-relaxed">
-                        Search an address, paste a <strong>Google Maps URL</strong>, or click Auto-Detect if you are currently at the office.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Input
-                          placeholder="Search address or paste URL..."
-                          value={searchQuery}
-                          onChange={handleSmartInput}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSearchAddress()}
-                          className="bg-white border-neutral-200 h-12 rounded-xl text-sm pl-11 w-full focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
-                        />
-                        <Map className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={handleSearchAddress}
-                        disabled={isSearching || !searchQuery.trim()}
-                        className="h-12 px-5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl font-bold transition-all"
-                      >
-                        {isSearching ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <Search size={18} />}
-                      </Button>
-                    </div>
-
-                    <Button
-                      type="button"
-                      onClick={handleGetLocation}
-                      disabled={isLocating}
-                      className="w-full flex items-center justify-center gap-2 h-12 bg-white hover:bg-neutral-50 text-neutral-700 border border-neutral-200 rounded-xl font-bold transition-all"
-                    >
-                      {isLocating ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neutral-700"></div>
-                      ) : (
-                        <Navigation size={16} className="text-blue-500" />
-                      )}
-                      <span className="text-blue-500">Auto-Detect My Location</span>
-                    </Button>
-                  </div>
-
-                  <div className="md:col-span-5 bg-neutral-50 p-4 rounded-2xl border border-neutral-100 flex flex-col gap-4 justify-center">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Latitude</label>
-                      <Input
-                        type="number"
-                        step="any"
-                        value={formData.officeLatitude}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('officeLatitude', e.target.value)}
-                        className="bg-white border-neutral-200 h-10 rounded-xl font-mono text-[13px] w-full"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Longitude</label>
-                      <Input
-                        type="number"
-                        step="any"
-                        value={formData.officeLongitude}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('officeLongitude', e.target.value)}
-                        className="bg-white border-neutral-200 h-10 rounded-xl font-mono text-[13px] w-full"
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-4xl border border-neutral-200 p-6 sm:p-8 shadow-sm">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
-                <Clock size={24} strokeWidth={2.5} />
+          <div className="bg-white rounded-[28px] border border-neutral-200/60 p-7 shadow-sm transition-all hover:shadow-md">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
+                <MapPin size={24} strokeWidth={2.5} />
               </div>
               <div>
-                <h2 className="text-xl font-black text-neutral-900 tracking-tight">Working Hours</h2>
-                <p className="text-xs font-medium text-neutral-500 mt-0.5">Define clock-in and clock-out availability</p>
+                <h2 className="text-xl font-bold text-neutral-900">Office Coordinates</h2>
+                <p className="text-xs font-medium text-neutral-500 mt-0.5">Center point for attendance</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-              <div className="rounded-[28px] border border-emerald-100 bg-emerald-50/20 p-5 sm:p-6 flex flex-col gap-4">
+            <div className="flex flex-col gap-5">
+              <div className="w-full h-60 bg-neutral-100 rounded-[20px] overflow-hidden border border-neutral-200 relative group">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  src={`https://maps.google.com/maps?q=${formData.officeLatitude},${formData.officeLongitude}&z=16&output=embed`}
+                ></iframe>
+                {showSuccessLocation && (
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-xl animate-in slide-in-from-top-4 fade-in duration-300">
+                    <CheckCircle2 size={14} className="text-emerald-400" /> Location Updated
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <div className="relative flex-1 group">
+                  <Input
+                    placeholder="Search address or paste maps URL..."
+                    value={searchQuery}
+                    onChange={handleSmartInput}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearchAddress()}
+                    className="bg-neutral-50/80 border-neutral-200 h-12 rounded-xl text-sm pl-11 w-full focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all font-medium"
+                  />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" size={18} strokeWidth={2.5} />
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleSearchAddress}
+                  disabled={isSearching || !searchQuery.trim()}
+                  className="h-12 px-5 bg-neutral-900 hover:bg-indigo-600 text-white rounded-xl font-bold transition-all disabled:opacity-50"
+                >
+                  {isSearching ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : 'Find'}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Latitude</label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={formData.officeLatitude}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('officeLatitude', e.target.value)}
+                    className="bg-white border-neutral-200 h-9 rounded-lg font-mono text-xs w-full shadow-sm"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Longitude</label>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={formData.officeLongitude}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('officeLongitude', e.target.value)}
+                    className="bg-white border-neutral-200 h-9 rounded-lg font-mono text-xs w-full shadow-sm"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleGetLocation}
+                disabled={isLocating}
+                className="w-full flex items-center justify-center gap-2 h-12 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-bold transition-all"
+              >
+                {isLocating ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-700"></div>
+                ) : (
+                  <Navigation size={18} />
+                )}
+                <span>Auto-Detect Current Location</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="flex flex-col gap-8">
+          
+          <div className="bg-white rounded-[28px] border border-neutral-200/60 p-7 shadow-sm transition-all hover:shadow-md">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-inner">
+                <Clock size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-neutral-900">Working Schedule</h2>
+                <p className="text-xs font-medium text-neutral-500 mt-0.5">Define operational hours</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/30 p-4 flex flex-col gap-4">
                 <div className="flex items-center gap-2 text-emerald-700">
                   <div className="h-6 w-6 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <Zap size={12} strokeWidth={3} />
+                    <Clock size={12} strokeWidth={3} />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest">Clock-In Window</span>
+                  <span className="text-[11px] font-bold uppercase tracking-widest">Clock-In</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-2.5">
                   <CustomTimeSelector
                     label="Start"
                     value={formData.clockInStartTime}
                     onChange={(val) => handleInputChange('clockInStartTime', val)}
-                    hoverBorderClass="hover:border-emerald-300 focus-within:border-emerald-500 focus-within:ring-emerald-50"
+                    hoverBorderClass="hover:border-emerald-300 focus-within:border-emerald-400 bg-white shadow-sm rounded-lg"
                   />
                   <CustomTimeSelector
                     label="End"
                     value={formData.clockInEndTime}
                     onChange={(val) => handleInputChange('clockInEndTime', val)}
-                    hoverBorderClass="hover:border-emerald-300 focus-within:border-emerald-500 focus-within:ring-emerald-50"
+                    hoverBorderClass="hover:border-emerald-300 focus-within:border-emerald-400 bg-white shadow-sm rounded-lg"
                   />
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-orange-100 bg-orange-50/20 p-5 sm:p-6 flex flex-col gap-4">
+              <div className="rounded-2xl border border-orange-100 bg-orange-50/30 p-4 flex flex-col gap-4">
                 <div className="flex items-center gap-2 text-orange-700">
                   <div className="h-6 w-6 rounded-lg bg-orange-100 flex items-center justify-center">
-                    <Zap size={12} strokeWidth={3} />
+                    <Clock size={12} strokeWidth={3} />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest">Clock-Out Window</span>
+                  <span className="text-[11px] font-bold uppercase tracking-widest">Clock-Out</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-2.5">
                   <CustomTimeSelector
                     label="Start"
                     value={formData.clockOutStartTime}
                     onChange={(val) => handleInputChange('clockOutStartTime', val)}
-                    hoverBorderClass="hover:border-orange-300 focus-within:border-orange-500 focus-within:ring-orange-50"
+                    hoverBorderClass="hover:border-orange-300 focus-within:border-orange-400 bg-white shadow-sm rounded-lg"
                   />
                   <CustomTimeSelector
                     label="End"
                     value={formData.clockOutEndTime}
                     onChange={(val) => handleInputChange('clockOutEndTime', val)}
-                    hoverBorderClass="hover:border-orange-300 focus-within:border-orange-500 focus-within:ring-orange-50"
+                    hoverBorderClass="hover:border-orange-300 focus-within:border-orange-400 bg-white shadow-sm rounded-lg"
                   />
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="bg-white rounded-4xl border border-neutral-200 p-6 sm:p-8 shadow-sm h-full flex flex-col">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100">
+          <div className="bg-white rounded-[28px] border border-neutral-200/60 p-7 shadow-sm transition-all hover:shadow-md flex flex-col">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 shadow-inner">
                 <ShieldCheck size={24} strokeWidth={2.5} />
               </div>
               <div>
-                <h2 className="text-xl font-black text-neutral-900 tracking-tight">Security</h2>
-                <p className="text-xs font-medium text-neutral-500 mt-0.5">Validation & access rules</p>
+                <h2 className="text-xl font-bold text-neutral-900">Security & Rules</h2>
+                <p className="text-xs font-medium text-neutral-500 mt-0.5">Toggle validation methods</p>
               </div>
             </div>
 
-            <div className="flex flex-col gap-6 flex-1">
-              <div className="p-4 rounded-2xl bg-neutral-50/50 border border-neutral-100 flex items-center justify-between group transition-all hover:bg-white hover:shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-neutral-400 group-hover:text-blue-500 transition-colors">
-                    <Globe size={20} />
+            <div className="flex flex-col border border-neutral-100 rounded-2xl overflow-hidden bg-neutral-50/50">
+              <div className="p-4 flex items-center justify-between border-b border-neutral-100 hover:bg-white transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                    <Globe size={18} strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-neutral-800">Remote Work</span>
-                    <span className="text-[10px] text-neutral-400">Allow WFA attendance</span>
+                    <span className="text-[11px] text-neutral-500 font-medium">Allow WFA attendance</span>
                   </div>
                 </div>
                 <Switch
@@ -442,14 +521,14 @@ export default function TenantSettingForm() {
                 />
               </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50/50 border border-neutral-100 flex items-center justify-between group transition-all hover:bg-white hover:shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-neutral-400 group-hover:text-rose-500 transition-colors">
-                    <Navigation size={20} />
+              <div className="p-4 flex items-center justify-between border-b border-neutral-100 hover:bg-white transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+                    <Navigation size={18} strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-neutral-800">Geolocation</span>
-                    <span className="text-[10px] text-neutral-400">Force GPS verification</span>
+                    <span className="text-[11px] text-neutral-500 font-medium">Force GPS verification</span>
                   </div>
                 </div>
                 <Switch
@@ -459,14 +538,14 @@ export default function TenantSettingForm() {
                 />
               </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50/50 border border-neutral-100 flex items-center justify-between group transition-all hover:bg-white hover:shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-neutral-400 group-hover:text-indigo-500 transition-colors">
-                    <Camera size={20} />
+              <div className="p-4 flex items-center justify-between border-b border-neutral-100 hover:bg-white transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                    <Camera size={18} strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-neutral-800">Face Photo</span>
-                    <span className="text-[10px] text-neutral-400">Mandatory selfie proof</span>
+                    <span className="text-[11px] text-neutral-500 font-medium">Mandatory selfie proof</span>
                   </div>
                 </div>
                 <Switch
@@ -476,14 +555,14 @@ export default function TenantSettingForm() {
                 />
               </div>
 
-              <div className="p-4 rounded-2xl bg-neutral-50/50 border border-neutral-100 flex items-center justify-between group transition-all hover:bg-white hover:shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-white border border-neutral-200 flex items-center justify-center text-neutral-400 group-hover:text-emerald-500 transition-colors">
-                    <Layers size={20} />
+              <div className="p-4 flex items-center justify-between hover:bg-white transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <Layers size={18} strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-neutral-800">Multiple Logs</span>
-                    <span className="text-[10px] text-neutral-400">Allow multiple checks</span>
+                    <span className="text-[11px] text-neutral-500 font-medium">Allow multiple checks</span>
                   </div>
                 </div>
                 <Switch
@@ -494,12 +573,23 @@ export default function TenantSettingForm() {
               </div>
             </div>
 
-            <div className="mt-10 flex flex-col gap-3">
-              <Button className="w-full flex items-center justify-center gap-2 h-14 bg-neutral-900 hover:bg-neutral-800 text-white rounded-2xl font-black transition-all active:scale-[0.98] shadow-xl shadow-neutral-900/10">
-                <Save size={20} strokeWidth={2.5} />
-                Save Changes
+            <div className="mt-8 pt-8 border-t border-neutral-100">
+              <Button 
+                onClick={onHandleChange} 
+                disabled={isSaving}
+                className="w-full flex items-center justify-center gap-2 h-14 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-base font-bold transition-all disabled:opacity-70 shadow-md hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+              >
+                {isSaving ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    <Save size={20} strokeWidth={2.5} />
+                    Save Configuration
+                  </>
+                )}
               </Button>
             </div>
+
           </div>
         </div>
       </div>
