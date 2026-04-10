@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { 
-  Settings, 
-  MapPin, 
-  Clock, 
-  ShieldCheck, 
-  Globe, 
-  Save, 
-  RotateCcw,
+import { useEffect, useState } from "react";
+import {
+  Settings,
+  MapPin,
+  Clock,
+  ShieldCheck,
+  Globe,
+  Save,
   Zap,
   Navigation,
   Camera,
@@ -18,11 +17,11 @@ import {
   CheckCircle2,
   Info
 } from "lucide-react";
-// import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Switch from "@/components/ui/Switch";
 import CustomTimeSelector from "../ui/CustomTimeSelector";
 import { Button } from "../ui/Button";
+import { getDataCurrentTenat } from "@/service/tenantSettings";
 
 interface TenantSettingsData {
   tenantId: number;
@@ -38,6 +37,41 @@ interface TenantSettingsData {
   clockOutEndTime: string;
   requireSelfie: boolean;
   allowMultipleCheck: boolean;
+}
+
+interface TenantApiData {
+  id: number;
+  tenant_id: number;
+  office_latitude: number;
+  office_longitude: number;
+  max_radius_meter: number;
+  allow_remote: boolean;
+  require_location: boolean;
+  clock_in_start_time: string;
+  clock_in_end_time: string;
+  late_after_minute: number;
+  clock_out_start_time: string;
+  clock_out_end_time: string;
+  require_selfie: boolean;
+  allow_multiple_check: boolean;
+  created_at: string;
+  updated_at: string;
+  tenant?: {
+    ID: number;
+    Name: string;
+    Code: string;
+    CreatedAt: string;
+    UpdatedAt: string;
+  };
+}
+
+interface ApiResponse {
+  meta: {
+    message: string;
+    code: number;
+    status: string;
+  };
+  data: TenantApiData;
 }
 
 const INITIAL_DATA: TenantSettingsData = {
@@ -126,7 +160,7 @@ export default function TenantSettingForm() {
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`);
       const data = await res.json();
-      
+
       if (data && data.length > 0) {
         handleInputChange('officeLatitude', parseFloat(data[0].lat).toFixed(7));
         handleInputChange('officeLongitude', parseFloat(data[0].lon).toFixed(7));
@@ -136,13 +170,43 @@ export default function TenantSettingForm() {
         alert("Location not found. Please try a more specific address or paste a Google Maps URL.");
       }
     } catch (error) {
-      console.log(error);
-      
+      console.error(error);
       alert("Failed to search location. Please check your connection.");
     } finally {
       setIsSearching(false);
     }
   };
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const resp = (await getDataCurrentTenat()) as ApiResponse;
+        
+        if (resp && resp.data) {
+          const apiData = resp.data;
+          setFormData({
+            tenantId: apiData.tenant_id,
+            officeLatitude: apiData.office_latitude,
+            officeLongitude: apiData.office_longitude,
+            maxRadiusMeter: apiData.max_radius_meter,
+            allowRemote: apiData.allow_remote,
+            requireLocation: apiData.require_location,
+            clockInStartTime: apiData.clock_in_start_time,
+            clockInEndTime: apiData.clock_in_end_time,
+            lateAfterMinute: apiData.late_after_minute,
+            clockOutStartTime: apiData.clock_out_start_time,
+            clockOutEndTime: apiData.clock_out_end_time,
+            requireSelfie: apiData.require_selfie,
+            allowMultipleCheck: apiData.allow_multiple_check,
+          });
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    getData();
+  }, []);
 
   return (
     <div className="flex flex-col gap-8">
@@ -169,9 +233,9 @@ export default function TenantSettingForm() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Max Radius (Meters)</label>
                 <div className="flex items-center gap-3">
                   <Zap size={16} className="text-amber-500" />
-                  <Input 
-                    type="number" 
-                    value={formData.maxRadiusMeter} 
+                  <Input
+                    type="number"
+                    value={formData.maxRadiusMeter}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('maxRadiusMeter', e.target.value)}
                     className="bg-white border-neutral-200 h-10 rounded-xl font-bold w-full"
                   />
@@ -182,9 +246,9 @@ export default function TenantSettingForm() {
                 <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Grace Period (Minutes)</label>
                 <div className="flex items-center gap-3">
                   <Clock size={16} className="text-rose-500" />
-                  <Input 
-                    type="number" 
-                    value={formData.lateAfterMinute} 
+                  <Input
+                    type="number"
+                    value={formData.lateAfterMinute}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('lateAfterMinute', e.target.value)}
                     className="bg-white border-neutral-200 h-10 rounded-xl font-bold w-full"
                   />
@@ -200,12 +264,12 @@ export default function TenantSettingForm() {
 
               <div className="flex flex-col gap-6">
                 <div className="w-full h-48 sm:h-64 bg-neutral-100 rounded-3xl overflow-hidden border border-neutral-200 relative">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
+                  <iframe
+                    width="100%"
+                    height="100%"
                     style={{ border: 0 }}
-                    loading="lazy" 
-                    allowFullScreen 
+                    loading="lazy"
+                    allowFullScreen
                     src={`https://maps.google.com/maps?q=${formData.officeLatitude},${formData.officeLongitude}&z=16&output=embed`}
                   ></iframe>
                   {showSuccessLocation && (
@@ -223,20 +287,20 @@ export default function TenantSettingForm() {
                         Search an address, paste a <strong>Google Maps URL</strong>, or click Auto-Detect if you are currently at the office.
                       </p>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <div className="relative flex-1">
-                        <Input 
-                          placeholder="Search address or paste URL..." 
+                        <Input
+                          placeholder="Search address or paste URL..."
                           value={searchQuery}
                           onChange={handleSmartInput}
                           onKeyDown={(e) => e.key === 'Enter' && handleSearchAddress()}
-                          className="bg-white border-neutral-200 h-12 rounded-xl text-sm pl-11 w-full focus:border-blue-400 focus:ring-4 focus:ring-blue-50" 
+                          className="bg-white border-neutral-200 h-12 rounded-xl text-sm pl-11 w-full focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
                         />
                         <Map className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
                       </div>
-                      <Button 
-                        type="button" 
+                      <Button
+                        type="button"
                         onClick={handleSearchAddress}
                         disabled={isSearching || !searchQuery.trim()}
                         className="h-12 px-5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl font-bold transition-all"
@@ -245,9 +309,9 @@ export default function TenantSettingForm() {
                       </Button>
                     </div>
 
-                    <Button 
-                      type="button" 
-                      onClick={handleGetLocation} 
+                    <Button
+                      type="button"
+                      onClick={handleGetLocation}
                       disabled={isLocating}
                       className="w-full flex items-center justify-center gap-2 h-12 bg-white hover:bg-neutral-50 text-neutral-700 border border-neutral-200 rounded-xl font-bold transition-all"
                     >
@@ -263,22 +327,22 @@ export default function TenantSettingForm() {
                   <div className="md:col-span-5 bg-neutral-50 p-4 rounded-2xl border border-neutral-100 flex flex-col gap-4 justify-center">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Latitude</label>
-                      <Input 
+                      <Input
                         type="number"
                         step="any"
-                        value={formData.officeLatitude} 
+                        value={formData.officeLatitude}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('officeLatitude', e.target.value)}
-                        className="bg-white border-neutral-200 h-10 rounded-xl font-mono text-[13px] w-full" 
+                        className="bg-white border-neutral-200 h-10 rounded-xl font-mono text-[13px] w-full"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">Longitude</label>
-                      <Input 
+                      <Input
                         type="number"
                         step="any"
-                        value={formData.officeLongitude} 
+                        value={formData.officeLongitude}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('officeLongitude', e.target.value)}
-                        className="bg-white border-neutral-200 h-10 rounded-xl font-mono text-[13px] w-full" 
+                        className="bg-white border-neutral-200 h-10 rounded-xl font-mono text-[13px] w-full"
                       />
                     </div>
                   </div>
@@ -308,14 +372,14 @@ export default function TenantSettingForm() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-3">
                   <CustomTimeSelector
-                    label="Start" 
-                    value={formData.clockInStartTime} 
+                    label="Start"
+                    value={formData.clockInStartTime}
                     onChange={(val) => handleInputChange('clockInStartTime', val)}
                     hoverBorderClass="hover:border-emerald-300 focus-within:border-emerald-500 focus-within:ring-emerald-50"
                   />
-                  <CustomTimeSelector 
-                    label="End" 
-                    value={formData.clockInEndTime} 
+                  <CustomTimeSelector
+                    label="End"
+                    value={formData.clockInEndTime}
                     onChange={(val) => handleInputChange('clockInEndTime', val)}
                     hoverBorderClass="hover:border-emerald-300 focus-within:border-emerald-500 focus-within:ring-emerald-50"
                   />
@@ -330,15 +394,15 @@ export default function TenantSettingForm() {
                   <span className="text-[10px] font-black uppercase tracking-widest">Clock-Out Window</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-3">
-                  <CustomTimeSelector 
-                    label="Start" 
-                    value={formData.clockOutStartTime} 
+                  <CustomTimeSelector
+                    label="Start"
+                    value={formData.clockOutStartTime}
                     onChange={(val) => handleInputChange('clockOutStartTime', val)}
                     hoverBorderClass="hover:border-orange-300 focus-within:border-orange-500 focus-within:ring-orange-50"
                   />
-                  <CustomTimeSelector 
-                    label="End" 
-                    value={formData.clockOutEndTime} 
+                  <CustomTimeSelector
+                    label="End"
+                    value={formData.clockOutEndTime}
                     onChange={(val) => handleInputChange('clockOutEndTime', val)}
                     hoverBorderClass="hover:border-orange-300 focus-within:border-orange-500 focus-within:ring-orange-50"
                   />
@@ -371,10 +435,10 @@ export default function TenantSettingForm() {
                     <span className="text-[10px] text-neutral-400">Allow WFA attendance</span>
                   </div>
                 </div>
-                <Switch 
+                <Switch
                   label=""
-                  checked={formData.allowRemote} 
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSwitchChange('allowRemote', e.target.checked)} 
+                  checked={formData.allowRemote}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSwitchChange('allowRemote', e.target.checked)}
                 />
               </div>
 
@@ -388,9 +452,9 @@ export default function TenantSettingForm() {
                     <span className="text-[10px] text-neutral-400">Force GPS verification</span>
                   </div>
                 </div>
-                <Switch 
+                <Switch
                   label=""
-                  checked={formData.requireLocation} 
+                  checked={formData.requireLocation}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSwitchChange('requireLocation', e.target.checked)}
                 />
               </div>
@@ -405,9 +469,9 @@ export default function TenantSettingForm() {
                     <span className="text-[10px] text-neutral-400">Mandatory selfie proof</span>
                   </div>
                 </div>
-                <Switch 
+                <Switch
                   label=""
-                  checked={formData.requireSelfie} 
+                  checked={formData.requireSelfie}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSwitchChange('requireSelfie', e.target.checked)}
                 />
               </div>
@@ -422,9 +486,9 @@ export default function TenantSettingForm() {
                     <span className="text-[10px] text-neutral-400">Allow multiple checks</span>
                   </div>
                 </div>
-                <Switch 
+                <Switch
                   label=""
-                  checked={formData.allowMultipleCheck} 
+                  checked={formData.allowMultipleCheck}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSwitchChange('allowMultipleCheck', e.target.checked)}
                 />
               </div>
@@ -434,10 +498,6 @@ export default function TenantSettingForm() {
               <Button className="w-full flex items-center justify-center gap-2 h-14 bg-neutral-900 hover:bg-neutral-800 text-white rounded-2xl font-black transition-all active:scale-[0.98] shadow-xl shadow-neutral-900/10">
                 <Save size={20} strokeWidth={2.5} />
                 Save Changes
-              </Button>
-              <Button type="button" onClick={() => setFormData(INITIAL_DATA)} className="w-full flex items-center justify-center gap-2 h-14 bg-neutral-50 border border-neutral-200 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 rounded-2xl font-bold transition-all">
-                <RotateCcw size={18} />
-                Reset Defaults
               </Button>
             </div>
           </div>
