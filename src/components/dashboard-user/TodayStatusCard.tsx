@@ -51,19 +51,7 @@ export default function TodayStatusCard() {
 
   // Logika Kalkulasi Manual
   const calculateDuration = () => {
-    if (!data?.clock_in_time || !now) return "0h 0m";
-
-    const startTime = dayjs(data.clock_in_time);
-    const endTime = data.clock_out_time ? dayjs(data.clock_out_time) : now;
-    
-    // Hindari durasi negatif jika waktu belum sinkron
-    if (endTime.isBefore(startTime)) return "0h 0m";
-
-    const diffMinutes = endTime.diff(startTime, "minute");
-    const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
-
-    return `${hours}h ${minutes}m`;
+    return data?.duration;
   };
 
   const durationText = calculateDuration();
@@ -113,7 +101,7 @@ export default function TodayStatusCard() {
           </div>
           <div className="mt-4">
             <p className="text-2xl font-bold tracking-tight text-neutral-900">
-              {data?.clock_in_time ? dayjs(data.clock_in_time).format("HH:mm") : "--:--"}
+              {data?.clock_in_time ? data.clock_in_time : "--:--"}
             </p>
             <p className="mt-0.5 text-xs font-medium text-neutral-500">Clock In</p>
           </div>
@@ -144,7 +132,7 @@ export default function TodayStatusCard() {
                 data?.clock_out_time ? "text-neutral-900" : "text-neutral-300"
               }`}
             >
-              {data?.clock_out_time ? dayjs(data.clock_out_time).format("HH:mm") : "--:--"}
+              {data?.clock_out_time ? data.clock_out_time : "--:--"}
             </p>
             <p className={`mt-0.5 text-xs font-medium ${
                 data?.clock_out_time ? "text-neutral-500" : "text-neutral-400"
