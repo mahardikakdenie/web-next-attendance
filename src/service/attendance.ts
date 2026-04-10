@@ -1,82 +1,15 @@
-// src/services/attendance.service.ts
-import { api } from "@/lib/axios";
-import type { AxiosRequestConfig } from "axios";
+// src/service/attendance.ts
+import { secureRequest } from "@/lib/axios";
+import { AttendanceToday, AttendanceHistory, ClockPayload, APIResponse } from "@/types/api";
 
-//////////////////////////////////////////////////////////////
-// TYPES
-//////////////////////////////////////////////////////////////
-
-export type RecordAttendancePayload = {
-  action: "clock_in" | "clock_out" | null;
-  latitude: number;
-  longitude: number;
-  media_url: string;
+export const getTodayAttendance = async () => {
+  return secureRequest<APIResponse<AttendanceToday>>("get", "/v1/attendance/today");
 };
 
-//////////////////////////////////////////////////////////////
-// 🔥 HELPER: SECURITY HEADER
-//////////////////////////////////////////////////////////////
-
-const getSecurityHeaders = () => {
-  return {
-    "X-Timestamp": Date.now().toString(),
-    // Tambahkan Request-ID di sini agar Browser yang membuatnya
-    "X-Request-ID": crypto.randomUUID(),
-  };
+export const getAttendanceHistory = async (limit: number = 5) => {
+  return secureRequest<APIResponse<AttendanceHistory[]>>("get", `/v1/attendance/history?limit=${limit}`);
 };
 
-// OPTIONAL (kalau pakai CSRF nanti)
-const getCSRFToken = () => {
-  if (typeof document === "undefined") return undefined;
-
-  return document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("csrf_token="))
-    ?.split("=")[1];
-};
-
-//////////////////////////////////////////////////////////////
-// 🔥 BASE REQUEST WRAPPER (BIAR DRY)
-//////////////////////////////////////////////////////////////
-
-const secureRequest = async <T>(
-  method: "get" | "post",
-  url: string,
-  data?: unknown,
-  config: AxiosRequestConfig = {}
-): Promise<T> => {
-  const headers = {
-    ...getSecurityHeaders(),
-    ...(getCSRFToken() ? { "X-CSRF-Token": getCSRFToken() } : {}),
-    ...(config.headers || {}),
-  };
-
-  const res =
-    method === "get"
-      ? await api.get(url, {
-          withCredentials: true,
-          headers,
-          ...config,
-        })
-      : await api.post(url, data, {
-          withCredentials: true,
-          headers,
-          ...config,
-        });
-
-  return res.data;
-};
-
-//////////////////////////////////////////////////////////////
-// 🔥 API METHODS
-//////////////////////////////////////////////////////////////
-
-export const getDataAttendances = async () => {
-  return secureRequest("get", "/v1/attendance");
-};
-
-export const recordAttendances = async (
-  payload: RecordAttendancePayload
-) => {
-  return secureRequest("post", "/v1/attendance", payload);
+export const clockAttendance = async (payload: ClockPayload) => {
+  return secureRequest<APIResponse<null>>("post", "/v1/attendance", payload);
 };

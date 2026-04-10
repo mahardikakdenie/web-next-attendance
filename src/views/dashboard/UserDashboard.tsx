@@ -9,63 +9,62 @@ import { OvertimeRequestCard } from "@/components/dashboard-user/OvertimeRequest
 import { RecentActivityCard } from "@/components/dashboard-user/RecentlyActivity";
 import { LeaveBalanceCard } from "@/components/dashboard-user/LeaveBalanceCard";
 import { LeaveRequestCard } from "@/components/dashboard-user/LeaveRequestCard";
+import { RefreshProvider } from "@/lib/RefreshContext";
 
 export default function UserDashboardPage() {
   return (
-    <div className="flex flex-col gap-6 md:gap-8 w-full max-w-7xl mx-auto pb-10">
-      
-      {/* 1. Header Section */}
-      <section>
-        <GreetingCard />
-      </section>
-
-      {/* 2. Main Bento Grid Section */}
-      <section className="flex flex-col gap-6 lg:gap-8">
+    <RefreshProvider>
+      <div className="flex flex-col gap-6 md:gap-8 w-full max-w-7xl mx-auto pb-10">
         
-        {/* ROW 1: Primary Action & Immediate Context */}
-        {/* User paling butuh absen dan lihat status hari ini begitu login */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-          <div className="lg:col-span-8 h-full">
-            <ClockCard />
-          </div>
-          <div className="lg:col-span-4 h-full">
-            <TodayStatusCard />
-          </div>
-        </div>
+        {/* 1. Header Section */}
+        <section>
+          <GreetingCard />
+        </section>
 
-        {/* ROW 2: At-a-Glance Information (Overview Data) */}
-        {/* Menampilkan informasi saldo, info cepat, dan aktivitas terakhir dalam 3 kolom agar seimbang */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
-          <div className="flex flex-col h-full">
-            <LeaveBalanceCard />
+        {/* 2. Main Bento Grid Section */}
+        <section className="flex flex-col gap-6 lg:gap-8">
+          
+          {/* ROW 1: Primary Action & Immediate Context */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+            <div className="lg:col-span-8 h-full">
+              <ClockCard />
+            </div>
+            <div className="lg:col-span-4">
+              <TodayStatusCard />
+            </div>
           </div>
-          <div className="flex flex-col h-full">
-            <QuickInfoCard />
-          </div>
-          <div className="flex flex-col h-full">
-            <RecentActivityCard />
-          </div>
-        </div>
 
-        {/* ROW 3: Secondary Actions (Requests / Forms) */}
-        {/* Mengelompokkan semua jenis pengajuan (Cuti & Lembur) di satu tempat */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-          <div className="lg:col-span-8 h-full">
-            <LeaveRequestCard />
+          {/* ROW 2: At-a-Glance Information (Overview Data) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+            <div className="flex flex-col h-full">
+              <LeaveBalanceCard />
+            </div>
+            <div className="flex flex-col h-full">
+              <QuickInfoCard />
+            </div>
+            <div className="flex flex-col h-full">
+              <RecentActivityCard />
+            </div>
           </div>
-          <div className="lg:col-span-4 h-full">
-            <OvertimeRequestCard />
+
+          {/* ROW 3: Secondary Actions (Requests / Forms) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+            <div className="lg:col-span-8 h-full">
+              <LeaveRequestCard />
+            </div>
+            <div className="lg:col-span-4 h-full">
+              <OvertimeRequestCard />
+            </div>
           </div>
-        </div>
-        
-      </section>
+          
+        </section>
 
-      {/* 3. Data/Table Section */}
-      {/* Tabel selalu di bawah agar pengguna bisa scroll panjang tanpa mengganggu layout utama */}
-      <section className="mt-4">
-        <RecentAttendance />
-      </section>
+        {/* 3. Data/Table Section */}
+        <section className="mt-4">
+          <RecentAttendance />
+        </section>
 
-    </div>
+      </div>
+    </RefreshProvider>
   );
 }
