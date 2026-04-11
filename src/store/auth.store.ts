@@ -53,6 +53,7 @@ export const ROLES = {
   SUPERADMIN: "superadmin",
   ADMIN: "admin",
   HR: "hr",
+  FINANCE: "finance",
   USER: "employee", // Menggunakan 'employee' sesuai data dari API sebelumnya
 } as const;
 
@@ -131,7 +132,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ loading: true });
 
-      const res = (await getMeAPI()) as { data: User };
+      const res = (await getMeAPI()) as {data: User};
+      console.log("🚀 ~ res:", res)
       set({
         user: res.data,
         isAuthenticated: true,

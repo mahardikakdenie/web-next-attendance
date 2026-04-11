@@ -1,7 +1,6 @@
 export interface APIResponse<T> {
   data: T;
-  message?: string;
-  success: boolean;
+  meta: MetaResponse;
 }
 
 // Attendance
@@ -34,6 +33,15 @@ export interface LeaveBalance {
   used: number;
   remaining: number;
   type: string;
+}
+
+export interface Balance {
+  id: string;
+  user_id: number;
+  balance: number;
+  leave_type: {
+    name: string;
+  }
 }
 
 export interface LeaveRequestPayload {
@@ -110,4 +118,107 @@ export interface UpdateTenantSettingPayload {
   require_selfie: boolean;
   tenant_id: number;
   updated_at: string;
+}
+
+// Users
+export interface UserAttendance {
+  id: string;
+  clock_in_latitude: number;
+  clock_in_longitude: number;
+  clock_in_media_url: string;
+  clock_in_time: string;
+  clock_out_latitude: number;
+  clock_out_longitude: number;
+  clock_out_media_url: string;
+  clock_out_time: string;
+  status: string;
+  user: UserData;
+  user_id: number;
+  location?: string;
+}
+
+export interface UserRecentActivity {
+  id: number;
+  action: string;
+  title: string;
+  status: string;
+  created_at: string;
+}
+
+export interface UserRole {
+  id: number;
+  name: string;
+}
+
+export interface UserTenantNested {
+  id: number;
+  code: string;
+  name: string;
+  tenant_settings: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserTenantSettings {
+  id: number;
+  tenant_id: number;
+  office_latitude: number;
+  office_longitude: number;
+  max_radius_meter: number;
+  allow_remote: boolean;
+  require_location: boolean;
+  clock_in_start_time: string;
+  clock_in_end_time: string;
+  clock_out_start_time: string;
+  clock_out_end_time: string;
+  late_after_minute: number;
+  require_selfie: boolean;
+  allow_multiple_check: boolean;
+  created_at: string;
+  updated_at: string;
+  tenant: UserTenantNested;
+}
+
+export interface UserTenant {
+  id: number;
+  name: string;
+  tenant_settings: UserTenantSettings;
+}
+
+export interface UserData {
+  id: number;
+  employee_id: string;
+  name: string;
+  email: string;
+  phone_number: string;
+  address: string;
+  department: string;
+  media_url: string;
+  created_at: string;
+  tenant_id: number;
+  role: UserRole;
+  tenant: UserTenant;
+  attendances: UserAttendance[];
+  recent_activities: UserRecentActivity[];
+}
+
+export interface MetaResponse {
+  pagination?: {
+    total: number;
+    current_page: number;
+    last_page: number;
+    per_page: number;
+  }
+  code: number;
+  message: string;
+  status: string;
+  total?: number;
+  current_page?: number;
+  last_page?: number;
+  per_page?: number;
+}
+
+export interface UsersListResponse {
+  data: UserData[];
+  meta: MetaResponse;
 }

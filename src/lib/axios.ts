@@ -41,6 +41,7 @@ export const secureRequest = async <T>(
           headers,
           withCredentials: true,
           ...config,
+          params: data,
         })
       : await api.request({
           method,
