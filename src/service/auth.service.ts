@@ -19,7 +19,9 @@ export const uploadPhotos = async (payload: {media_url: string}) => {
 // 🔥 GET ME
 //////////////////////////////////////////////////////////////
 export const getMeAPI = async () => {
-  return secureRequest("get", "/v1/users/me", undefined, {
+  return secureRequest("get", "/v1/users/me", {
+    includes: "tenant,tenant.tenant_settings,attendances,role",
+  }, {
     params: {
       includes: "tenant,tenant.tenant_settings,attendances,role",
     },

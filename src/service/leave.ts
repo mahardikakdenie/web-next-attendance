@@ -9,3 +9,11 @@ export const getLeaveBalances = async () => {
 export const requestLeave = async (payload: LeaveRequestPayload) => {
   return secureRequest<LeaveBalance[]>('post',"/v1/leaves/request", payload);
 };
+
+export const approveLeave = (id: number, notes?: string) => {
+  return secureRequest<APIResponse<null>>("post", `/v1/leaves/approve/${id}`, { notes });
+};
+
+export const rejectLeave = (id: number, notes?: string) => {
+  return secureRequest<APIResponse<null>>("post", `/v1/leaves/reject/${id}`, { notes });
+};
