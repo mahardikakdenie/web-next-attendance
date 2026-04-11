@@ -36,28 +36,28 @@ The system operates on a secure, role-based access control (RBAC) model.
 
 ```mermaid
 graph TD
-    A[Public Access] -->|Login| B{Auth Store}
+    A["Public Access"] -->|Login| B{Auth Store}
     B -->|Unauthorized| A
     B -->|Authorized| C[Dashboard Router]
-    
-    C --> D[General User: Attendance & My Workspace]
-    C --> E[HR: People Analytics & Leave Approvals]
-    C --> F[Finance: Payroll & Tax Compliance]
-    C --> G[Admin: Tenant & Platform Management]
-    
-    D --> H[Face + GPS Verification]
+
+    C --> D["General User: Attendance & My Workspace"]
+    C --> E["HR: People Analytics & Leave Approvals"]
+    C --> F["Finance: Payroll & Tax Compliance"]
+    C --> G["Admin: Tenant & Platform Management"]
+
+    D --> H["Face + GPS Verification"]
     H -->|Secure POST| I[(Backend API)]
 ```
 
 ## 📸 Attendance Verification Flow (GPS + Biometric)
 
-To ensure zero-fraud attendance, the system employs a multi-factor verification heuristic.
+To ensure zero-fraud attendance, the system employs a multi-factor verification heuristic.   
 
 ```mermaid
 sequenceDiagram
     participant User
-    |participant Frontend (Face-api.js)
-    participant GPS (Browser API)
+    participant Frontend as Frontend (Face-api.js)
+    participant GPS as GPS (Browser API)
     participant Backend
 
     User->>Frontend: Clicks Clock-In
@@ -72,7 +72,6 @@ sequenceDiagram
     Backend-->>Frontend: Success Response
     Frontend-->>User: Show Success Toast
 ```
-
 ## 🔗 Backend Integration Details
 
 ### 1. Secure Request Lifecycle
