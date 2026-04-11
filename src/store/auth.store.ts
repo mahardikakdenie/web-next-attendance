@@ -1,6 +1,8 @@
 // src/store/auth.store.ts
 import { create } from "zustand";
 import { loginAPI, getMeAPI, logoutAPI } from "@/service/auth.service";
+import { UserData } from "@/types/api";
+
 export type TenantSettingsTenant = {
   ID: number;
   Name: string;
@@ -35,56 +37,22 @@ export type Tenant = {
   tenant_settings: TenantSettings;
 };
 
-export type UserAttendance = {
-  id: string;
-  user_id: number;
-  clock_in_time: string;
-  clock_out_time?: string;
-  clock_in_latitude: number;
-  clock_in_longitude: number;
-  clock_out_latitude?: number;
-  clock_out_longitude?: number;
-  clock_in_media_url: string;
-  clock_out_media_url?: string;
-  status: "done" | "late" | string;
-};
-
 export const ROLES = {
+  // PLATFORM LEVEL (Owner of SaaS)
   SUPERADMIN: "superadmin",
-  ADMIN: "admin",
+
+  // TENANT LEVEL (Owner of Company & Staff)
+  ADMIN: "admin", 
   HR: "hr",
   FINANCE: "finance",
-  USER: "employee", // Menggunakan 'employee' sesuai data dari API sebelumnya
+  USER: "employee", 
 } as const;
 
 export type RoleName = typeof ROLES[keyof typeof ROLES];
 
-export type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: {
-    id: number;
-    name: RoleName;
-  };
-  tenant_id: number;
-  employee_id: string;
-  department: {
-    id: number;
-    name: string;
-  };
-  address: string;
-  media_url: string;
-  phone_number: string;
-  created_at: string;
-  tenant?: Tenant;
-  attendances?: UserAttendance[];
-};
+// Re-using UserData from api.ts but allowing some overrides if needed
+export type AuthUser = UserData;
 
-export type UserResponse = {
-  data: User;
-  includes: string[];
-};
 type APIError = {
   response?: {
     data?: {
@@ -94,15 +62,19 @@ type APIError = {
 };
 
 type AuthState = {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   fetchUser: () => Promise<void>;
   logout: () => Promise<void>;
+  /**
+   * RBAC 2.0 Helper: Check if user has a specific permission
+   */
+  hasPermission: (permissionId: string) => boolean;
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   loading: false,
   isAuthenticated: false,
@@ -113,7 +85,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       await loginAPI({ email, password });
 
-      const res = (await getMeAPI()) as { data: User };
+      const res = (await getMeAPI()) as { data: AuthUser };
       set({
         user: res.data,
         isAuthenticated: true,
@@ -132,8 +104,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ loading: true });
 
-      const res = (await getMeAPI()) as {data: User};
-      console.log("🚀 ~ res:", res)
+      const res = (await getMeAPI()) as {data: AuthUser};
       set({
         user: res.data,
         isAuthenticated: true,
@@ -156,4 +127,16 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: false,
     });
   },
+
+  hasPermission: (permissionId: string) => {
+    const user = get().user;
+    if (!user) return false;
+    
+    // Superadmin and Tenant Admin/Owner have all permissions by default
+    if (user.is_owner || user.role?.base_role === 'ADMIN' || user.role?.name === 'superadmin') {
+      return true;
+    }
+
+    return user.permissions?.includes(permissionId) || false;
+  }
 }));
