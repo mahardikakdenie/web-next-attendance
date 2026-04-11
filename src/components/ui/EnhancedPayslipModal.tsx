@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useRef } from "react";
+import React from "react";
 import Image from "next/image";
-import { Download, FileText, CalendarDays, X, Wallet, ShieldCheck, Printer, Building2 } from "lucide-react";
+import { Download, CalendarDays, X, Wallet, ShieldCheck, Printer, Building2 } from "lucide-react";
 
 interface SlipBreakdown {
   grossIncome: number;

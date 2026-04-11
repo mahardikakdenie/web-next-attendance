@@ -37,7 +37,7 @@ export default function FinanceDashboardPage() {
       chart: { type: "radialBar" as const },
       labels: ["Salaries", "Taxes", "Benefits", "Overtime"],
       colors: ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"],
-      legend: { position: "bottom" as const, fontSize: "14px", fontWeight: 600, markers: { radius: 12 } },
+      legend: { position: "bottom" as const, fontSize: "14px", fontWeight: 600, markers: { size: 6 } },
       plotOptions: {
         radialBar: {
           hollow: { size: "40%" },

@@ -16,7 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import Input from "@/components/ui/Input";
-import Switch from "@/components/ui/Switch";
+import { Switch } from "@/components/ui/Switch";
 import CustomTimeSelector from "../ui/CustomTimeSelector";
 import { Button } from "../ui/Button";
 import { getDataCurrentTenat, updateDataCurrentTenant } from "@/service/tenantSettings";

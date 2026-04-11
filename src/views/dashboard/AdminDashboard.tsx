@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
       chart: { type: "donut" as const },
       labels: ["Basic", "Pro", "Enterprise"],
       colors: ["#3b82f6", "#10b981", "#f59e0b"],
-      legend: { position: "bottom" as const, fontSize: "14px", fontWeight: 600, markers: { radius: 12 } },
+      legend: { position: "bottom" as const, fontSize: "14px", fontWeight: 600, markers: { size: 6 } },
       dataLabels: { enabled: false },
       plotOptions: { pie: { donut: { size: "75%", labels: { show: true, name: { show: true }, value: { show: true, fontSize: "24px", fontWeight: "bold" }, total: { show: true, showAlways: true, label: "Total", fontSize: "14px" } } } } },
       stroke: { show: true, colors: ["#ffffff"], width: 4 }

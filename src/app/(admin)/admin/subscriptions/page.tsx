@@ -1,6 +1,6 @@
 "use client";
 
-import { CreditCard, ArrowUpRight, CheckCircle2, AlertCircle, Clock, TrendingUp, Users, DollarSign } from "lucide-react";
+import { CreditCard, CheckCircle2, AlertCircle, Clock, TrendingUp, Users, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DataTable, Column } from "@/components/ui/DataTable";
 
