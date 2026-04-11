@@ -49,3 +49,42 @@ body {
     background: #d4d4d4;
   }
 }
+
+/* Print Styles for Payslip Export */
+@media print {
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Hide everything except the print-container */
+  body > *:not(.print-container) {
+    display: none !important;
+  }
+
+  /* Reset layout for print */
+  .print-container {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Ensure colors and backgrounds render */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide print trigger buttons */
+  .no-print {
+    display: none !important;
+  }
+}
