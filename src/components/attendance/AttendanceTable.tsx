@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import { Eye, MoreVertical, MapPin, Smartphone } from "lucide-react";
+import { DataTable, Column } from "../ui/DataTable";
 
 type AttendanceStatus = "On Time" | "Late" | "Absent" | "On Leave";
 
@@ -14,7 +17,7 @@ interface Attendance {
   location: string;
 }
 
-export const attendanceDummy: Attendance[] = [
+const attendanceDummy: Attendance[] = [
   {
     id: 1,
     name: "Bagus Fikri",
@@ -70,10 +73,11 @@ function StatusBadge({ status }: { status: AttendanceStatus }) {
   );
 }
 
-function AttendanceRow({ item }: { item: Attendance }) {
-  return (
-    <tr className="group border-b border-neutral-100 hover:bg-neutral-50/50 transition-colors">
-      <td className="px-6 py-4">
+export function AttendanceTable() {
+  const columns: Column<Attendance>[] = [
+    {
+      header: "Employee",
+      accessor: (item) => (
         <div className="flex items-center gap-4">
           <div className="relative w-10 h-10 shrink-0">
             <Image
@@ -93,79 +97,62 @@ function AttendanceRow({ item }: { item: Attendance }) {
             </p>
           </div>
         </div>
-      </td>
-
-      <td className="px-6 py-4">
+      ),
+      sortable: true,
+    },
+    {
+      header: "Clock In",
+      accessor: (item) => (
         <div className="flex flex-col">
           <span className="text-sm font-bold text-neutral-700">{item.checkIn}</span>
           <div className="flex items-center gap-1 text-[10px] text-neutral-400 font-bold mt-0.5 uppercase">
             <Smartphone size={10} /> Mobile App
           </div>
         </div>
-      </td>
-
-      <td className="px-6 py-4 text-sm font-bold text-neutral-700">
-        {item.checkOut}
-      </td>
-
-      <td className="px-6 py-4">
+      ),
+      sortable: true,
+    },
+    {
+      header: "Clock Out",
+      accessor: "checkOut",
+      className: "text-sm font-bold text-neutral-700",
+      sortable: true,
+    },
+    {
+      header: "Location",
+      accessor: (item) => (
         <div className="flex items-center gap-1.5 text-neutral-500">
           <MapPin size={14} className="text-neutral-300" />
           <span className="text-xs font-bold">{item.location}</span>
         </div>
-      </td>
+      ),
+      sortable: true,
+    },
+    {
+      header: "Status",
+      accessor: (item) => <StatusBadge status={item.status} />,
+      sortable: true,
+    },
+  ];
 
-      <td className="px-6 py-4">
-        <StatusBadge status={item.status} />
-      </td>
-
-      <td className="px-6 py-4 text-right">
-        <div className="flex items-center justify-end gap-2">
-          <button className="p-2 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-            <Eye size={18} />
-          </button>
-          <button className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all">
-            <MoreVertical size={18} />
-          </button>
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-export function AttendanceTable() {
-  return (
-    <div className="bg-white rounded-[32px] border border-neutral-200 shadow-sm overflow-hidden mt-8">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-neutral-50/50 border-b border-neutral-100">
-              <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Employee</th>
-              <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Clock In</th>
-              <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Clock Out</th>
-              <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Location</th>
-              <th className="px-6 py-5 text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Status</th>
-              <th className="px-6 py-5 text-right font-black text-neutral-400 uppercase tracking-[0.2em]">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-neutral-50">
-            {attendanceDummy.map((item) => (
-              <AttendanceRow key={item.id} item={item} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="px-8 py-5 bg-neutral-50/50 border-t border-neutral-100 flex items-center justify-between">
-        <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-          Showing <span className="text-neutral-900">3</span> of <span className="text-neutral-900">124</span> employees
-        </p>
-        <div className="flex gap-2">
-          <button className="px-4 py-2 text-xs font-black text-neutral-400 hover:text-neutral-900 transition-colors">Previous</button>
-          <button className="px-4 py-2 text-xs font-black bg-white border border-neutral-200 rounded-xl shadow-sm hover:border-blue-500 hover:text-blue-600 transition-all">Next</button>
-        </div>
-      </div>
+  const actions = () => (
+    <div className="flex items-center justify-end gap-2">
+      <button className="p-2 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+        <Eye size={18} />
+      </button>
+      <button className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all">
+        <MoreVertical size={18} />
+      </button>
     </div>
+  );
+
+  return (
+    <DataTable 
+      data={attendanceDummy} 
+      columns={columns} 
+      searchKey="name" 
+      searchPlaceholder="Search attendance by name..."
+      actions={actions}
+    />
   );
 }

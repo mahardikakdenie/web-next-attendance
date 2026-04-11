@@ -24,7 +24,7 @@ export default function AttendanceFilter({
   };
 
   return (
-    <div className="bg-white rounded-[24px] border border-neutral-200 p-3 flex flex-col lg:flex-row gap-4 justify-between items-center shadow-sm">
+    <div className="bg-white rounded-3xl border border-neutral-200 p-3 flex flex-col lg:flex-row gap-4 justify-between items-center shadow-sm">
       <div className="relative w-full lg:max-w-md group">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 w-4 h-4 group-focus-within:text-blue-600 transition-colors" />
         <Input
