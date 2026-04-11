@@ -4,9 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { 
   Calendar, 
   ArrowRight, 
-  History,
-  MoreHorizontal
-} from "lucide-react";
+  History} from "lucide-react";
 import { getAttendanceHistory } from "@/service/attendance";
 import { AttendanceHistory } from "@/types/api";
 import { useRefresh } from "@/lib/RefreshContext";
@@ -22,7 +20,7 @@ export function RecentAttendance() {
     try {
       setLoading(true);
       const res = await getAttendanceHistory(5);
-      setHistory(res.data);
+      setHistory(res.data.splice(0, 5));
     } catch (error) {
       console.error("Failed to fetch attendance history", error);
     } finally {
@@ -73,14 +71,14 @@ export function RecentAttendance() {
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-50">
-            {history.length === 0 ? (
+            {history?.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-8 py-12 text-center text-sm font-medium text-neutral-400">
                   No attendance records found.
                 </td>
               </tr>
             ) : (
-              history.map((row) => (
+              history?.map((row) => (
                 <tr key={row.id} className="hover:bg-neutral-50/30 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-2 text-sm font-bold text-neutral-700">
@@ -106,11 +104,6 @@ export function RecentAttendance() {
                     }`}>
                       {row.status}
                     </Badge>
-                  </td>
-                  <td className="px-8 py-5 text-right">
-                    <button className="p-2 text-neutral-300 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all">
-                      <MoreHorizontal size={18} />
-                    </button>
                   </td>
                 </tr>
               ))

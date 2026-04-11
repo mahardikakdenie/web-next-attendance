@@ -35,15 +35,16 @@ export function LeaveRequestCard() {
         reason: "",
       });
       triggerRefresh();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to submit leave request.");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || "Failed to submit leave request.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full h-full rounded-[32px] border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm">
+    <div className="w-full h-full rounded-4xl border border-neutral-200 bg-white p-6 sm:p-8 shadow-sm">
       <div className="mb-8 flex items-center justify-between">
         <div className="space-y-1">
           <h2 className="text-xl font-black text-neutral-900 tracking-tight">Request Time Off</h2>

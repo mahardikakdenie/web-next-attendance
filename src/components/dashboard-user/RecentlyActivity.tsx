@@ -24,7 +24,8 @@ export function RecentActivityCard() {
     try {
       setLoading(true);
       const res = await getRecentActivities();
-      setActivities(res.data);
+      
+      setActivities(res.data.splice(0,3));
     } catch (error) {
       console.error("Failed to fetch recent activities", error);
     } finally {
@@ -82,7 +83,7 @@ export function RecentActivityCard() {
 
       {/* Content Area */}
       <div className="grid grid-cols-1 gap-3 grow content-start">
-        {activities.length === 0 ? (
+        {activities?.length === 0 ? (
           /* Empty State */
           <div className="h-full min-h-50 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-neutral-100 rounded-2xl bg-neutral-50/50">
             <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-neutral-300 mb-4 shadow-sm border border-neutral-100">
@@ -95,7 +96,7 @@ export function RecentActivityCard() {
           </div>
         ) : (
           /* Activity List */
-          activities.map((activity) => (
+          activities?.map((activity) => (
             <div 
               key={activity.id} 
               className="group relative flex items-start gap-4 p-4 rounded-2xl border border-transparent bg-transparent hover:bg-white hover:border-neutral-100 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300 cursor-pointer overflow-hidden"

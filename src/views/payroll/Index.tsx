@@ -3,9 +3,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { 
   Wallet, 
-  Search,
-  Filter,
-  Plus,
   ArrowUpRight,
   Printer,
   Users,
@@ -13,7 +10,9 @@ import {
   CreditCard,
   FileSpreadsheet,
   Eye,
-  EyeOff
+  EyeOff,
+  Filter,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore, ROLES } from "@/store/auth.store";
@@ -21,6 +20,7 @@ import { Badge } from "@/components/ui/Badge";
 import Avatar from "@/components/ui/Avatar";
 import { calculatePayroll } from "@/lib/payrollCalculator";
 import { TableSkeleton, Skeleton, CardSkeleton } from "@/components/ui/Skeleton";
+import { DataTable, Column } from "@/components/ui/DataTable";
 
 import EnhancedPayslipModal from "@/components/ui/EnhancedPayslipModal"; 
 
@@ -90,7 +90,6 @@ export default function PayrollView() {
   const isAdmin = role === ROLES.SUPERADMIN || role === ROLES.ADMIN || role === ROLES.HR;
   
   const [activeTab, setActiveTab] = useState<"hr" | "finance">("hr");
-  const [searchTerm, setSearchTerm] = useState("");
   const selectedPeriod = "March 2024";
   const [showSlipPreview, setShowSlipPreview] = useState<number | null>(null);
   const [isMasked, setIsMasked] = useState(true);
@@ -124,13 +123,6 @@ export default function PayrollView() {
     });
   }, []);
 
-  const filteredEmployees = useMemo<EmployeePayrollRecord[]>(() => {
-    return calculatedData.filter(emp => 
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.role.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [searchTerm, calculatedData]);
-
   const selectedEmployeeSlip = useMemo<EmployeePayrollRecord | null>(() => {
     if (!showSlipPreview) return null;
     return calculatedData.find(e => e.id === showSlipPreview) || null;
@@ -139,6 +131,112 @@ export default function PayrollView() {
   const handleExportBankFile = () => {
     alert("System: Generating Bank Transfer File (LLG/RTGS Format)... \nStatus: Success \nFile: payroll_export_march_2024.csv");
   };
+
+  const columns: Column<EmployeePayrollRecord>[] = useMemo(() => {
+    const baseCols: Column<EmployeePayrollRecord>[] = [
+      {
+        header: "Employee",
+        accessor: (emp) => (
+          <div className="flex items-center gap-3">
+            <Avatar src={emp.avatar} className="w-10 h-10 rounded-xl" />
+            <div>
+              <p className="text-[13px] font-black text-neutral-900">{emp.name}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider">{emp.role}</span>
+                <span className="w-1 h-1 rounded-full bg-neutral-300" />
+                <span className="text-[10px] font-black text-blue-500">{emp.ptkp}</span>
+              </div>
+            </div>
+          </div>
+        ),
+        sortable: true,
+      }
+    ];
+
+    if (activeTab === "hr") {
+      baseCols.push(
+        {
+          header: "Base Salary",
+          accessor: (emp) => formatCurrency(emp.basic),
+          sortable: true,
+        },
+        {
+          header: "Sync Attendance",
+          accessor: (emp) => (
+            <div className="flex flex-col">
+               <span className="text-[13px] font-black text-neutral-700">{emp.attendanceDays} / {emp.workingDays} Days</span>
+               {emp.unpaidLeave > 0 && <span className="text-[10px] font-bold text-rose-500">Unpaid: {emp.unpaidLeave} Days</span>}
+            </div>
+          ),
+        },
+        {
+          header: "Prorata / Adj.",
+          accessor: (emp) => (
+            <span className={`text-[13px] font-bold ${emp.unpaidLeave > 0 ? "text-rose-500" : "text-green-600"}`}>
+              {emp.unpaidLeave > 0 ? `-${formatCurrency(emp.breakdown.unpaidLeaveDeduction)}` : "No Adjustment"}
+            </span>
+          ),
+        },
+        {
+          header: "Net Salary",
+          accessor: (emp) => formatCurrency(emp.netSalary),
+          sortable: true,
+          className: "font-black text-neutral-900"
+        }
+      );
+    } else {
+      baseCols.push(
+        {
+          header: "Gross Bruto",
+          accessor: (emp) => formatCurrency(emp.breakdown.grossIncome),
+          sortable: true,
+          className: "font-black text-neutral-900"
+        },
+        {
+          header: "PPh 21 (TER)",
+          accessor: (emp) => `-${formatCurrency(emp.breakdown.pph21Amount)}`,
+          className: "font-black text-indigo-600"
+        },
+        {
+          header: "BPJS Total",
+          accessor: (emp) => `-${formatCurrency(emp.breakdown.bpjs.health.employee + emp.breakdown.bpjs.jht.employee)}`,
+          className: "font-bold text-rose-500"
+        },
+        {
+          header: "Net Payable",
+          accessor: (emp) => formatCurrency(emp.netSalary),
+          sortable: true,
+          className: "font-black text-blue-600"
+        }
+      );
+    }
+
+    baseCols.push({
+      header: "Status",
+      accessor: (emp) => (
+        <Badge className={`${emp.status === "Published" ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-500"} border-none text-[9px] font-black uppercase tracking-widest px-2.5`}>
+          {emp.status}
+        </Badge>
+      ),
+      sortable: true,
+    });
+
+    return baseCols;
+  }, [activeTab, formatCurrency]);
+
+  const actions = (emp: EmployeePayrollRecord) => (
+    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button 
+        onClick={() => setShowSlipPreview(emp.id)}
+        className="p-2 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+      >
+        <Printer size={18} />
+      </button>
+      <button className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all">
+        <Settings size={18} />
+      </button>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -176,7 +274,7 @@ export default function PayrollView() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-black text-neutral-900 tracking-tight">Payroll Operations</h1>
+              <h1 className="text-3xl font-black text-neutral-900 tracking-tight">Payroll Operations</h1>
               <button 
                 onClick={toggleMask}
                 className="p-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 rounded-xl transition-all"
@@ -190,44 +288,44 @@ export default function PayrollView() {
               <p className="text-sm text-neutral-500 font-medium">Period: {selectedPeriod}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
              {activeTab === "finance" && (
                 <Button 
                   onClick={handleExportBankFile}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition-all shadow-md shadow-emerald-600/20"
+                  className="flex items-center gap-2 bg-white text-emerald-600 border border-emerald-100 hover:bg-emerald-50 shadow-sm px-5 py-2.5 rounded-2xl transition-all"
                 >
                   <CreditCard size={18} />
-                  <span>Disbursement</span>
+                  <span className="font-bold">Disbursement</span>
                 </Button>
              )}
-            <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-all shadow-md shadow-blue-600/20">
+            <Button className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/20 px-5 py-2.5 rounded-2xl transition-all">
               <Plus size={18} />
-              <span>New Cycle</span>
+              <span className="font-bold">New Cycle</span>
             </Button>
           </div>
         </div>
 
         {/* Custom Role Tabs */}
-        <div className="flex p-1.5 bg-neutral-100 rounded-[20px] w-fit border border-neutral-200/50 shadow-inner">
+        <div className="flex p-1.5 bg-neutral-100 rounded-[22px] w-fit border border-neutral-200/50 shadow-inner">
           <button 
             onClick={() => setActiveTab("hr")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-black transition-all ${activeTab === "hr" ? "bg-white text-blue-600 shadow-md" : "text-neutral-500 hover:text-neutral-900"}`}
+            className={`flex items-center gap-2 px-8 py-2.5 rounded-[18px] text-[11px] font-black uppercase tracking-wider transition-all ${activeTab === "hr" ? "bg-white text-blue-600 shadow-md" : "text-neutral-500 hover:text-neutral-900"}`}
           >
-            <Users size={18} />
+            <Users size={16} />
             <span>HR Administration</span>
           </button>
           <button 
             onClick={() => setActiveTab("finance")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-black transition-all ${activeTab === "finance" ? "bg-white text-indigo-600 shadow-md" : "text-neutral-500 hover:text-neutral-900"}`}
+            className={`flex items-center gap-2 px-8 py-2.5 rounded-[18px] text-[11px] font-black uppercase tracking-wider transition-all ${activeTab === "finance" ? "bg-white text-indigo-600 shadow-md" : "text-neutral-500 hover:text-neutral-900"}`}
           >
-            <Wallet size={18} />
+            <Wallet size={16} />
             <span>Finance & Tax</span>
           </button>
         </div>
 
         {/* Management Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-4xl border border-neutral-100 shadow-sm">
+          <div className="bg-white p-6 rounded-4xl border border-neutral-100 shadow-sm">
             <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Total Net Payout</p>
             <h3 className="text-xl font-black text-neutral-900">{formatCurrency(calculatedData.reduce((acc, curr) => acc + curr.netSalary, 0))}</h3>
             <div className="flex items-center gap-1 mt-2 text-green-600">
@@ -235,17 +333,17 @@ export default function PayrollView() {
                <span className="text-[10px] font-bold">12.5% from last month</span>
             </div>
           </div>
-          <div className="bg-white p-5 rounded-4xl border border-neutral-100 shadow-sm">
+          <div className="bg-white p-6 rounded-4xl border border-neutral-100 shadow-sm">
             <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Tax Liability (PPh 21)</p>
             <h3 className="text-xl font-black text-indigo-600">{formatCurrency(calculatedData.reduce((acc, curr) => acc + curr.breakdown.pph21Amount, 0))}</h3>
             <p className="text-[10px] font-bold text-neutral-400 mt-2">Calculated via TER Scheme</p>
           </div>
-          <div className="bg-white p-5 rounded-4xl border border-neutral-100 shadow-sm">
+          <div className="bg-white p-6 rounded-4xl border border-neutral-100 shadow-sm">
             <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">BPJS Provision</p>
             <h3 className="text-xl font-black text-rose-500">{formatCurrency(1250000)}</h3>
             <p className="text-[10px] font-bold text-neutral-400 mt-2">Comp: 4% | Emp: 1%</p>
           </div>
-          <div className="bg-white p-5 rounded-4xl border border-neutral-100 shadow-sm">
+          <div className="bg-white p-6 rounded-4xl border border-neutral-100 shadow-sm">
             <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-1">Attendance Sync</p>
             <h3 className="text-xl font-black text-neutral-900">98.2%</h3>
             <p className="text-[10px] font-bold text-blue-600 mt-2">Automated Integration Active</p>
@@ -253,125 +351,28 @@ export default function PayrollView() {
         </div>
 
         {/* Main Content Area / Table */}
-        <div className="bg-white rounded-4xl border border-neutral-100 shadow-sm overflow-hidden">
-          {/* Internal Filters */}
-          <div className="p-6 border-b border-neutral-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search by name, role, or ID..." 
-                className="w-full pl-12 pr-4 py-3 bg-neutral-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 transition-all"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2">
-               <Button className="bg-neutral-50 text-neutral-600 hover:bg-neutral-100 border-none px-4 rounded-xl flex items-center gap-2">
-                  <Filter size={16} />
-                  <span>Filters</span>
-               </Button>
-               <Button 
-                onClick={handleExportBankFile}
-                className="bg-neutral-900 text-white px-4 rounded-xl flex items-center gap-2"
-               >
-                  <FileSpreadsheet size={16} />
-                  <span>Export</span>
-               </Button>
-            </div>
+        <div className="space-y-4">
+          <div className="flex gap-2">
+             <Button className="bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200 px-5 rounded-2xl flex items-center gap-2 shadow-sm transition-all">
+                <Filter size={18} />
+                <span className="font-bold">Filters</span>
+             </Button>
+             <Button 
+              onClick={handleExportBankFile}
+              className="bg-neutral-900 text-white px-5 rounded-2xl flex items-center gap-2 shadow-md transition-all"
+             >
+                <FileSpreadsheet size={18} />
+                <span className="font-bold">Export CSV</span>
+             </Button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-neutral-50/30">
-                  <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Employee</th>
-                  {activeTab === "hr" ? (
-                    <>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Base Salary</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Sync Attendance</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Prorata / Adj.</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Net Salary</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Gross Bruto</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">PPh 21 (TER)</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">BPJS Total</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Net Payable</th>
-                    </>
-                  )}
-                  <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Status</th>
-                  <th className="px-6 py-4 text-right"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-50">
-                {filteredEmployees.map((emp) => (
-                  <tr key={emp.id} className="hover:bg-neutral-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar src={emp.avatar} className="w-10 h-10 rounded-xl" />
-                        <div>
-                          <p className="text-[13px] font-black text-neutral-900">{emp.name}</p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] font-black text-neutral-400 uppercase tracking-wider">{emp.role}</span>
-                            <span className="w-1 h-1 rounded-full bg-neutral-300" />
-                            <span className="text-[10px] font-black text-blue-500">{emp.ptkp}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {activeTab === "hr" ? (
-                      <>
-                        <td className="px-6 py-4 text-[13px] font-bold text-neutral-600">{formatCurrency(emp.basic)}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                             <span className="text-[13px] font-black text-neutral-700">{emp.attendanceDays} / {emp.workingDays} Days</span>
-                             {emp.unpaidLeave > 0 && <span className="text-[10px] font-bold text-rose-500">Unpaid: {emp.unpaidLeave} Days</span>}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                           <span className={`text-[13px] font-bold ${emp.unpaidLeave > 0 ? "text-rose-500" : "text-green-600"}`}>
-                             {emp.unpaidLeave > 0 ? `-${formatCurrency(emp.breakdown.unpaidLeaveDeduction)}` : "No Adjustment"}
-                           </span>
-                        </td>
-                        <td className="px-6 py-4 text-[13px] font-black text-neutral-900">{formatCurrency(emp.netSalary)}</td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="px-6 py-4 text-[13px] font-black text-neutral-900">{formatCurrency(emp.breakdown.grossIncome)}</td>
-                        <td className="px-6 py-4 text-[13px] font-black text-indigo-600">-{formatCurrency(emp.breakdown.pph21Amount)}</td>
-                        <td className="px-6 py-4 text-[13px] font-bold text-rose-500">
-                          -{formatCurrency(emp.breakdown.bpjs.health.employee + emp.breakdown.bpjs.jht.employee)}
-                        </td>
-                        <td className="px-6 py-4 text-[14px] font-black text-blue-600">{formatCurrency(emp.netSalary)}</td>
-                      </>
-                    )}
-
-                    <td className="px-6 py-4">
-                       <Badge className={`${emp.status === "Published" ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-500"} border-none text-[9px] font-black uppercase tracking-widest px-2.5`}>
-                          {emp.status}
-                       </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button 
-                          onClick={() => setShowSlipPreview(emp.id)}
-                          className="p-2 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                         >
-                           <Printer size={18} />
-                         </button>
-                         <button className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all">
-                           <Settings size={18} />
-                         </button>
-                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable 
+            data={calculatedData} 
+            columns={columns} 
+            searchKey="name" 
+            searchPlaceholder="Search by name or role..."
+            actions={actions}
+          />
         </div>
 
         <EnhancedPayslipModal
@@ -389,7 +390,7 @@ export default function PayrollView() {
   return (
      <div className="space-y-6 animate-in fade-in duration-500">
         <h1 className="text-2xl font-black text-neutral-900">My Compensation</h1>
-        <div className="bg-neutral-50 p-12 rounded-[40px] text-center">
+        <div className="bg-neutral-50 p-12 rounded-[40px] text-center border border-dashed border-neutral-200">
            <p className="text-neutral-400 font-bold">Accessing Personal Payroll Dashboard...</p>
         </div>
      </div>

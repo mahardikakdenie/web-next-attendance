@@ -3,26 +3,30 @@
 import { useEffect, useState, useCallback } from "react";
 import { Calendar, Info } from "lucide-react";
 import { getLeaveBalances } from "@/service/leave";
-import { LeaveBalance } from "@/types/api";
+import { Balance } from "@/types/api";
 import { useRefresh } from "@/lib/RefreshContext";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { useAuthStore } from "@/store/auth.store";
 
 export function LeaveBalanceCard() {
-  const [balances, setBalances] = useState<LeaveBalance[]>([]);
+  const [balances, setBalances] = useState<Balance[]>([]);
   const [loading, setLoading] = useState(true);
+  const {user} = useAuthStore();
   const { refreshKey } = useRefresh();
 
   const fetchBalances = useCallback(async () => {
     try {
       setLoading(true);
       const res = await getLeaveBalances();
-      setBalances(res.data);
+      const found = res.data?.find(curr => curr.user_id === user?.id);
+      console.log("🚀 ~ LeaveBalanceCard ~ found:", found)
+      setBalances(found ? [found] : []);
     } catch (error) {
       console.error("Failed to fetch leave balances", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchBalances();
@@ -42,7 +46,7 @@ export function LeaveBalanceCard() {
 
   // Default fallback if no data
   const displayBalances = balances?.length > 0 ? balances : [
-    { type: "Annual Leave", remaining: 0, total: 12, used: 0 }
+    { leave_type: {name: "Annual Leave"}, balance: 0, }
   ];
 
   return (
@@ -59,20 +63,20 @@ export function LeaveBalanceCard() {
 
       <div className="space-y-5 grow">
         {displayBalances.map((balance, index) => {
-          const percentage = (balance.used / balance.total) * 100;
+          const percentage = (balance.balance / 12) * 100;
           
           return (
             <div key={index} className="space-y-3">
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[11px] font-black text-neutral-400 uppercase tracking-widest mb-1">{balance.type}</p>
+                  <p className="text-[11px] font-black text-neutral-400 uppercase tracking-widest mb-1">{balance.leave_type.name}</p>
                   <h3 className="text-2xl font-black text-neutral-900 leading-none">
-                    {balance.remaining} <span className="text-sm font-bold text-neutral-400">/ {balance.total} Days</span>
+                    {balance.balance} <span className="text-sm font-bold text-neutral-400">/ 12 Days</span>
                   </h3>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-bold text-neutral-400 uppercase">Used</p>
-                  <p className="text-sm font-black text-neutral-700">{balance.used} Days</p>
+                  <p className="text-sm font-black text-neutral-700">{balance.balance} Days</p>
                 </div>
               </div>
 

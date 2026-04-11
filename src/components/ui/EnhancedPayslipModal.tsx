@@ -1,11 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import Image from "next/image";
-import { Plus, Download, FileText, CalendarDays } from "lucide-react";
-// Sesuaikan path import di bawah dengan struktur folder Anda
-// import Avatar from "@/components/ui/Avatar";
-// import { Button } from "@/components/ui/Button";
+import { Download, FileText, CalendarDays, X, Wallet, ShieldCheck, Printer, Building2 } from "lucide-react";
 
 interface SlipBreakdown {
   grossIncome: number;
@@ -37,7 +34,6 @@ interface PayslipModalProps {
   selectedEmployeeSlip: SelectedEmployeeSlip | null;
 }
 
-// 1. PINDAHKAN KOMPONEN INI KE LUAR
 const SlipRow = ({
   label,
   value,
@@ -50,15 +46,15 @@ const SlipRow = ({
   isBold?: boolean;
 }) => (
   <div
-    className={`flex items-end gap-2 py-1 text-[13px] ${
-      isBold ? "font-bold text-neutral-950" : "font-medium text-neutral-600"
+    className={`flex items-end gap-2 py-2 text-[13px] ${
+      isBold ? "font-black text-slate-900" : "font-semibold text-slate-500"
     }`}
   >
     <span className="shrink-0">{label}</span>
-    <div className="flex-1 border-b border-dotted border-neutral-300 mb-1" />
+    <div className="flex-1 border-b border-dashed border-slate-200 mb-1.5" />
     <span
       className={`shrink-0 ${
-        isDeduction ? "text-rose-600" : "text-neutral-950"
+        isDeduction && value !== "Rp 0" ? "text-rose-500" : "text-slate-900"
       } ${isBold ? "text-sm" : ""}`}
     >
       {isDeduction && value !== "Rp 0" ? "-" : ""}
@@ -94,81 +90,107 @@ export default function EnhancedPayslipModal({
       ? selectedEmployeeSlip.breakdown.unpaidLeaveDeduction
       : 0);
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-neutral-950/50 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-neutral-100">
-        {/* HEADER */}
-        <div className="bg-neutral-950 p-6 sm:p-8 text-white flex justify-between items-center border-b border-neutral-800">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white border border-white/10">
-              <FileText size={24} strokeWidth={2.5} />
-            </div>
-            <div>
-              <h2 className="text-xl font-black tracking-tight">
-                Confidential Payslip
-              </h2>
-              <div className="flex items-center gap-2 text-neutral-400 font-semibold text-sm mt-1">
-                <CalendarDays size={14} />
-                <span>Payroll Period: {selectedPeriod}</span>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300 no-print">
+      {/* Container wrapper for print mode */}
+      <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl shadow-slate-900/20 overflow-hidden animate-in zoom-in-95 duration-500 border border-white ring-1 ring-slate-200/50 print-container">
+        
+        {/* TOP BANNER / HEADER */}
+        <div className="relative overflow-hidden bg-slate-900 p-8 sm:p-10 text-white">
+          {/* Decorative Background */}
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-blue-500 opacity-20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-32 h-32 bg-indigo-500 opacity-10 rounded-full blur-2xl pointer-events-none" />
+          
+          <div className="relative z-10 flex justify-between items-start">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-black tracking-widest uppercase">
+                <ShieldCheck size={14} className="text-blue-400" />
+                Confidential Document
+              </div>
+              <div>
+                <h2 className="text-3xl font-black tracking-tight leading-none">Salary Slip</h2>
+                <p className="text-slate-400 font-bold text-sm mt-2 flex items-center gap-2">
+                  <CalendarDays size={14} />
+                  Period: {selectedPeriod}
+                </p>
               </div>
             </div>
+            
+            <button
+              onClick={() => setShowSlipPreview(null)}
+              className="p-3 hover:bg-white/10 rounded-2xl transition-all text-slate-400 hover:text-white no-print"
+            >
+              <X size={24} />
+            </button>
           </div>
-          <button
-            onClick={() => setShowSlipPreview(null)}
-            className="h-10 w-10 flex items-center justify-center rounded-full bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white transition-colors"
-          >
-            <Plus size={20} className="rotate-45" />
-          </button>
         </div>
 
-        {/* BODY */}
-        <div className="p-6 sm:p-8 bg-neutral-50/50">
-          {/* Employee Info */}
-          <div className="flex items-center gap-5 p-5 bg-white rounded-2xl border border-neutral-100 mb-8 shadow-sm">
-            <Image
-              src={selectedEmployeeSlip.avatar || "https://via.placeholder.com/150"}
-              alt={selectedEmployeeSlip.name}
-              width={64}
-              height={64}
-              className="rounded-2xl border-4 border-white shadow-md bg-neutral-100 object-cover"
-            />
-            <div>
-              <p className="text-[11px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">
-                Employee Details
-              </p>
-              <h3 className="text-xl font-black text-neutral-950">
-                {selectedEmployeeSlip.name}
-              </h3>
-              <p className="text-sm font-semibold text-neutral-500 mt-0.5">
-                {selectedEmployeeSlip.role} • PTKP:{" "}
-                <span className="text-neutral-700 font-bold">
-                  {selectedEmployeeSlip.ptkp}
-                </span>
-              </p>
+        {/* CONTENT BODY */}
+        <div className="p-8 sm:p-10 bg-slate-50/30 space-y-8">
+          
+          {/* Employee & Company Info */}
+          <div className="flex flex-col sm:flex-row gap-6 justify-between">
+            <div className="flex items-center gap-5">
+              <div className="relative w-16 h-16 shrink-0 shadow-xl shadow-slate-200">
+                <Image
+                  src={selectedEmployeeSlip.avatar || "https://via.placeholder.com/150"}
+                  alt={selectedEmployeeSlip.name}
+                  fill
+                  className="rounded-[24px] border-4 border-white object-cover"
+                />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900 leading-tight">
+                  {selectedEmployeeSlip.name}
+                </h3>
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-tight mt-0.5">
+                  {selectedEmployeeSlip.role}
+                </p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-[10px] font-black px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100 uppercase">
+                    PTKP: {selectedEmployeeSlip.ptkp}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-left sm:text-right flex flex-col justify-center">
+               <div className="flex items-center sm:justify-end gap-2 text-slate-900 font-black">
+                  <Building2 size={16} className="text-slate-400" />
+                  <span>Attendance Pro</span>
+               </div>
+               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Enterprise Solutions Ltd.
+               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Ledger Sections */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+            {/* Divider line for desktop */}
+            <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-200/60" />
+
             {/* EARNINGS */}
-            <div className="space-y-4 bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm">
-              <div className="flex items-center gap-2.5 mb-3 pb-3 border-b border-neutral-100">
-                <div className="w-1.5 h-6 rounded-full bg-emerald-500" />
-                <h4 className="text-sm font-bold text-neutral-900 tracking-tight">
+            <div className="space-y-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Wallet size={16} strokeWidth={2.5} />
+                </div>
+                <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">
                   Earnings
                 </h4>
               </div>
               <div className="space-y-1">
-                <SlipRow
-                  label="Basic Salary"
-                  value={formatCurrency(selectedEmployeeSlip.basic)}
-                />
-                <SlipRow
-                  label="Allowances"
-                  value={formatCurrency(selectedEmployeeSlip.allowance)}
-                />
-                <div className="pt-2 mt-2 border-t border-neutral-100">
+                <SlipRow label="Basic Salary" value={formatCurrency(selectedEmployeeSlip.basic)} />
+                <SlipRow label="Fixed Allowances" value={formatCurrency(selectedEmployeeSlip.allowance)} />
+                <SlipRow label="Incentives" value={formatCurrency(0)} />
+                <div className="pt-4 mt-4 border-t border-slate-100">
                   <SlipRow
-                    label="Gross Salary"
+                    label="Gross Income"
                     value={formatCurrency(selectedEmployeeSlip.breakdown.grossIncome)}
                     isBold
                   />
@@ -177,34 +199,26 @@ export default function EnhancedPayslipModal({
             </div>
 
             {/* DEDUCTIONS */}
-            <div className="space-y-4 bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm">
-              <div className="flex items-center gap-2.5 mb-3 pb-3 border-b border-neutral-100">
-                <div className="w-1.5 h-6 rounded-full bg-rose-500" />
-                <h4 className="text-sm font-bold text-neutral-900 tracking-tight">
+            <div className="space-y-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                  <Printer size={16} strokeWidth={2.5} />
+                </div>
+                <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">
                   Deductions
                 </h4>
               </div>
               <div className="space-y-1">
-                <SlipRow
-                  label="PPh 21 (TER)"
-                  value={formatCurrency(selectedEmployeeSlip.breakdown.pph21Amount)}
-                  isDeduction
-                />
-                <SlipRow
-                  label="BPJS (Health & JHT)"
-                  value={formatCurrency(totalBpjsEmployee)}
-                  isDeduction
-                />
+                <SlipRow label="Income Tax (PPh 21)" value={formatCurrency(selectedEmployeeSlip.breakdown.pph21Amount)} isDeduction />
+                <SlipRow label="BPJS Social Security" value={formatCurrency(totalBpjsEmployee)} isDeduction />
                 {selectedEmployeeSlip.unpaidLeave > 0 && (
                   <SlipRow
-                    label={`Unpaid Leave (${selectedEmployeeSlip.unpaidLeave} Days)`}
-                    value={formatCurrency(
-                      selectedEmployeeSlip.breakdown.unpaidLeaveDeduction
-                    )}
+                    label={`Unpaid Leave (${selectedEmployeeSlip.unpaidLeave}d)`}
+                    value={formatCurrency(selectedEmployeeSlip.breakdown.unpaidLeaveDeduction)}
                     isDeduction
                   />
                 )}
-                <div className="pt-2 mt-2 border-t border-neutral-100">
+                <div className="pt-4 mt-4 border-t border-slate-100">
                   <SlipRow
                     label="Total Deductions"
                     value={formatCurrency(totalDeductions)}
@@ -216,21 +230,38 @@ export default function EnhancedPayslipModal({
             </div>
           </div>
 
-          {/* NET SALARY */}
-          <div className="bg-blue-600 rounded-2xl p-6 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl shadow-blue-500/20 border border-blue-700">
-            <div>
-              <p className="text-[11px] font-bold text-blue-100 uppercase tracking-widest mb-1.5 shadow-sm">
-                Take Home Pay
-              </p>
-              <h3 className="text-3xl font-extrabold tracking-tight">
-                {formatCurrency(selectedEmployeeSlip.netSalary)}
-              </h3>
+          {/* NET SALARY CARD */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity" />
+            <div className="relative bg-slate-900 rounded-[32px] p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+              
+              <div className="text-center sm:text-left">
+                <p className="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-2">
+                  Total Take Home Pay
+                </p>
+                <h3 className="text-4xl font-black tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+                  {formatCurrency(selectedEmployeeSlip.netSalary)}
+                </h3>
+              </div>
+
+              <div className="flex gap-3 w-full sm:w-auto no-print">
+                <button 
+                  onClick={handlePrint}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl px-8 h-14 font-black shadow-xl shadow-blue-600/30 transition-all active:scale-95 text-xs uppercase tracking-widest"
+                >
+                  <Download size={18} strokeWidth={3} />
+                  <span>Export PDF</span>
+                </button>
+              </div>
             </div>
-            <button className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-white text-blue-600 hover:bg-blue-50 rounded-xl px-6 h-12 font-bold shadow-md transition-colors text-sm shrink-0">
-              <Download size={18} />
-              <span>Download PDF</span>
-            </button>
           </div>
+
+          {/* Footer Info */}
+          <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+            This is an electronically generated document. No signature is required. <br />
+            Attendance Management System © 2026
+          </p>
         </div>
       </div>
     </div>
