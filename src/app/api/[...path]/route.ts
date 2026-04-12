@@ -10,7 +10,7 @@ type RouteContext = {
   params: Promise<{ path?: string[] }>;
 };
 
-type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 export async function GET(req: NextRequest, ctx: RouteContext) {
   return handler(req, ctx, "GET");
@@ -26,6 +26,10 @@ export async function PUT(req: NextRequest, ctx: RouteContext) {
 
 export async function DELETE(req: NextRequest, ctx: RouteContext) {
   return handler(req, ctx, "DELETE");
+}
+
+export async function PATCH(req: NextRequest, ctx: RouteContext) {
+  return handler(req, ctx, "PATCH");
 }
 
 //////////////////////////////////////////////////////////////
@@ -60,8 +64,13 @@ async function handler(
   ////////////////////////////////////////////////////////////
   // 🔥 3. BODY (RAW BUFFER)
   ////////////////////////////////////////////////////////////
-  const bodyBuffer: ArrayBuffer | undefined =
+  let bodyBuffer: ArrayBuffer | undefined =
     method !== "GET" ? await req.arrayBuffer() : undefined;
+
+  // Ensure body is at least "{}" for signing and forwarding if empty
+  if (method !== "GET" && (!bodyBuffer || bodyBuffer.byteLength === 0)) {
+    bodyBuffer = Buffer.from("{}");
+  }
 
   const rawBody: Buffer =
     bodyBuffer !== undefined

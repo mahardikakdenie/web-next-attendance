@@ -22,7 +22,7 @@ export const getCSRFToken = () => {
 };
 
 export const secureRequest = async <T>(
-  method: "get" | "post" | "put" | "delete",
+  method: "get" | "post" | "put" | "delete" | "patch",
   url: string,
   data?: unknown,
   config: AxiosRequestConfig = {}
@@ -46,7 +46,7 @@ export const secureRequest = async <T>(
       : await api.request({
           method,
           url,
-          data,
+          data: data ?? {}, // Ensure body is at least empty object for non-GET
           headers,
           withCredentials: true,
           ...config,
