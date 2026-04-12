@@ -28,7 +28,6 @@ import {
   Receipt,
   MessageSquare,
   Calendar,
-  ClipboardCheck,
   ListChecks
 } from "lucide-react";
 import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
