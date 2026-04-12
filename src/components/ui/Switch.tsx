@@ -22,12 +22,13 @@ export function Switch({
   disabled = false 
 }: SwitchProps) {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
     if (onChange) onChange(e);
     if (onCheckedChange) onCheckedChange(e.target.checked);
   };
 
   const switchContent = (
-    <div className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-all">
+    <div className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-all ${disabled ? "opacity-50" : "cursor-pointer"}`}>
       <input
         type="checkbox"
         className="sr-only"
@@ -46,7 +47,7 @@ export function Switch({
       
       {/* Knob */}
       <span
-        className={`relative inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out ${
+        className={`relative hide-pointer-events h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out ${
           checked ? "translate-x-5" : "translate-x-1"
         }`}
       />
@@ -58,7 +59,7 @@ export function Switch({
     return (
       <label 
         className={`flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all ${
-          disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:border-slate-300"
+          disabled ? "cursor-not-allowed" : "cursor-pointer hover:border-slate-300"
         }`}
       >
         <div>
@@ -72,10 +73,10 @@ export function Switch({
     );
   }
 
-  // Otherwise return just the switch (bare mode)
+  // Otherwise return just the switch wrapped in a label for clickability
   return (
-    <div className={disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}>
+    <label className={disabled ? "cursor-not-allowed" : "cursor-pointer"}>
       {switchContent}
-    </div>
+    </label>
   );
 }

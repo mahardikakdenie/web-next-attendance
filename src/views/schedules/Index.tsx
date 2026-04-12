@@ -1,79 +1,114 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { 
   Clock, 
   Plus, 
-  Calendar, 
-  Users, 
-  Filter, 
   Search, 
+  Filter,
   ChevronLeft, 
   ChevronRight,
-  MoreHorizontal,
   Settings2,
   Moon,
   Sun,
   Info,
   Briefcase,
   Copy,
-  Trash2,
   Edit,
-  Check
+  Check,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import Image from "next/image";
 import { WorkShift, EmployeeSchedule } from "@/types/schedules";
-
-// --- DUMMY DATA ---
-
-const SHIFTS: WorkShift[] = [
-  { id: "s1", name: "Regular Office", startTime: "08:00", endTime: "17:00", type: "Office", color: "bg-blue-500", isDefault: true },
-  { id: "s2", name: "Morning Shift", startTime: "06:00", endTime: "14:00", type: "Morning", color: "bg-emerald-500", isDefault: false },
-  { id: "s3", name: "Afternoon Shift", startTime: "14:00", endTime: "22:00", type: "Afternoon", color: "bg-amber-500", isDefault: false },
-  { id: "s4", name: "Night Watch", startTime: "22:00", endTime: "06:00", type: "Night", color: "bg-slate-800", isDefault: false },
-  { id: "off", name: "Day Off", startTime: "-", endTime: "-", type: "Flexible", color: "bg-slate-200", isDefault: false },
-];
-
-const ROSTER: EmployeeSchedule[] = [
-  { 
-    id: 1, name: "Bagus Fikri", avatar: "https://i.pravatar.cc/150?u=bagus", department: "Engineering",
-    weeklyRoster: { monday: "s1", tuesday: "s1", wednesday: "s1", thursday: "s1", friday: "s1", saturday: "off", sunday: "off" }
-  },
-  { 
-    id: 2, name: "Sarah Connor", avatar: "https://i.pravatar.cc/150?u=sarah", department: "Operations",
-    weeklyRoster: { monday: "s2", tuesday: "s2", wednesday: "s3", thursday: "s3", friday: "s2", saturday: "s1", sunday: "off" }
-  },
-  { 
-    id: 3, name: "John Doe", avatar: "https://i.pravatar.cc/150?u=john", department: "HR",
-    weeklyRoster: { monday: "s1", tuesday: "s1", wednesday: "s1", thursday: "s1", friday: "s1", saturday: "off", sunday: "off" }
-  },
-  { 
-    id: 4, name: "Linda Sari", avatar: "https://i.pravatar.cc/150?u=linda", department: "Operations",
-    weeklyRoster: { monday: "s3", tuesday: "s3", wednesday: "off", thursday: "s2", friday: "s2", saturday: "s3", sunday: "s3" }
-  },
-];
+import { getShifts, getRoster, saveRoster } from "@/service/schedules";
+import { toast } from "sonner";
+import dayjs from "dayjs";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function SchedulesView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDept, setSelectedDept] = useState("All Departments");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [shifts, setShifts] = useState<WorkShift[]>([]);
+  const [roster, setRoster] = useState<EmployeeSchedule[]>([]);
+  const [currentWeekStart, setCurrentWeekStart] = useState(dayjs().startOf("week"));
+
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const [shiftsResp, rosterResp] = await Promise.all([
+        getShifts(),
+        getRoster(
+          currentWeekStart.format("YYYY-MM-DD"),
+          currentWeekStart.endOf("week").format("YYYY-MM-DD")
+        )
+      ]);
+
+      if (shiftsResp.data) setShifts(shiftsResp.data);
+      if (rosterResp.data) setRoster(rosterResp.data);
+    } catch (error) {
+      console.error("Failed to fetch schedule data:", error);
+      toast.error("Gagal mengambil data jadwal");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentWeekStart]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleSaveRoster = async () => {
+    try {
+      setIsSaving(true);
+      const payload = {
+        start_date: currentWeekStart.format("YYYY-MM-DD"),
+        assignments: roster.map(emp => ({
+          user_id: emp.id,
+          roster: emp.weeklyRoster
+        }))
+      };
+      const resp = await saveRoster(payload);
+      if (resp.success) {
+        toast.success("Roster berhasil disimpan");
+      }
+    } catch (error) {
+      console.error("Failed to save roster:", error);
+      toast.error("Gagal menyimpan roster");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const filteredRoster = useMemo(() => {
-    return ROSTER.filter(emp => {
+    return roster.filter(emp => {
       const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesDept = selectedDept === "All Departments" || emp.department === selectedDept;
       return matchesSearch && matchesDept;
     });
-  }, [searchTerm, selectedDept]);
+  }, [roster, searchTerm, selectedDept]);
 
-  const getShift = (id: string) => SHIFTS.find(s => s.id === id) || SHIFTS[4];
+  const getShift = (id: string) => {
+    if (id === "off") return { name: "Day Off", color: "bg-slate-200", startTime: "-", endTime: "-", type: "Flexible" as const };
+    return shifts.find(s => s.id === id) || { name: "Unknown", color: "bg-slate-100", startTime: "-", endTime: "-", type: "Office" as const };
+  };
+
+  const navigateWeek = (direction: "next" | "prev") => {
+    setCurrentWeekStart(prev => direction === "next" ? prev.add(1, "week") : prev.subtract(1, "week"));
+  };
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto pb-12 animate-in fade-in duration-700">
+    <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto pb-12 animate-in fade-in duration-700 relative">
       
+      {isLoading && (
+        <div className="absolute inset-0 bg-slate-50/50 backdrop-blur-xs z-50 flex items-center justify-center rounded-[40px]">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+        </div>
+      )}
+
       {/* Header */}
       <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-1">
@@ -86,11 +121,11 @@ export default function SchedulesView() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button className="bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 px-5 rounded-2xl flex items-center gap-2 shadow-sm transition-all">
+          <Button variant="secondary" className="px-5 rounded-2xl">
             <Settings2 size={18} />
             <span className="font-bold text-sm">Shift Templates</span>
           </Button>
-          <Button className="bg-blue-600 text-white hover:bg-blue-700 shadow-xl shadow-blue-600/20 px-5 rounded-2xl flex items-center gap-2 transition-all">
+          <Button className="bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-600/20 px-5 rounded-2xl">
             <Plus size={18} strokeWidth={3} />
             <span className="font-bold text-sm">Create Roster</span>
           </Button>
@@ -99,7 +134,7 @@ export default function SchedulesView() {
 
       {/* Quick Shift Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {SHIFTS.filter(s => s.id !== "off").map((shift) => (
+        {shifts.map((shift) => (
           <div key={shift.id} className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm flex flex-col gap-4 group hover:border-blue-200 transition-all">
             <div className="flex justify-between items-start">
               <div className={`w-10 h-10 rounded-xl ${shift.color} text-white flex items-center justify-center shadow-lg`}>
@@ -123,9 +158,11 @@ export default function SchedulesView() {
       <div className="bg-white rounded-[32px] border border-slate-200 p-4 shadow-sm flex flex-col xl:flex-row gap-4 justify-between items-center">
         <div className="flex items-center gap-4 w-full xl:w-auto">
           <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl">
-            <button className="p-1 hover:bg-white rounded-lg transition-all"><ChevronLeft size={16} /></button>
-            <span className="text-xs font-black uppercase tracking-widest px-4">15 Apr - 21 Apr 2024</span>
-            <button className="p-1 hover:bg-white rounded-lg transition-all"><ChevronRight size={16} /></button>
+            <button onClick={() => navigateWeek("prev")} className="p-1 hover:bg-white rounded-lg transition-all"><ChevronLeft size={16} /></button>
+            <span className="text-xs font-black uppercase tracking-widest px-4">
+              {currentWeekStart.format("DD MMM")} - {currentWeekStart.endOf("week").format("DD MMM YYYY")}
+            </span>
+            <button onClick={() => navigateWeek("next")} className="p-1 hover:bg-white rounded-lg transition-all"><ChevronRight size={16} /></button>
           </div>
           <div className="h-8 w-px bg-slate-200 hidden md:block" />
           <div className="flex items-center gap-2">
@@ -168,10 +205,10 @@ export default function SchedulesView() {
                 <th className="p-6 text-left min-w-[240px] sticky left-0 bg-slate-50/50 backdrop-blur-md z-10 border-r border-slate-100/50">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Employee Name</span>
                 </th>
-                {DAYS.map((day) => (
+                {DAYS.map((day, idx) => (
                   <th key={day} className="p-6 text-center min-w-[140px] border-r border-slate-100/50 last:border-none">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{day.substring(0, 3)}</span>
-                    <p className="text-sm font-black text-slate-900 mt-1">15</p> {/* Example static day */}
+                    <p className="text-sm font-black text-slate-900 mt-1">{currentWeekStart.add(idx, 'day').format("DD")}</p>
                   </th>
                 ))}
               </tr>
@@ -192,7 +229,7 @@ export default function SchedulesView() {
                   </td>
                   
                   {DAYS.map((day) => {
-                    const shiftId = emp.weeklyRoster[day.toLowerCase() as keyof typeof emp.weeklyRoster];
+                    const shiftId = (emp.weeklyRoster as Record<string, string>)[day.toLowerCase()];
                     const shift = getShift(shiftId);
                     const isOff = shiftId === "off";
 
@@ -221,31 +258,25 @@ export default function SchedulesView() {
         {/* Footer info for table */}
         <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Morning</span>
-              </div>
-              <div className="flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-blue-500" />
-                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Office</span>
-              </div>
-              <div className="flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-amber-500" />
-                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Afternoon</span>
-              </div>
-              <div className="flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-slate-800" />
-                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Night</span>
-              </div>
+              {shifts.map(s => (
+                <div key={s.id} className="flex items-center gap-2">
+                   <div className={`w-2 h-2 rounded-full ${s.color}`} />
+                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{s.name}</span>
+                </div>
+              ))}
            </div>
            
            <div className="flex gap-2">
-              <Button className="bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 px-4 py-2 h-9 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-xs">
+              <Button variant="secondary" className="px-4 py-2 h-9 rounded-xl shadow-xs">
                 <Copy size={14} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Copy Last Week</span>
               </Button>
-              <Button className="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2 h-9 rounded-xl flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-slate-200">
-                <Check size={14} strokeWidth={3} />
+              <Button 
+                disabled={isSaving}
+                onClick={handleSaveRoster}
+                className="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2 h-9 rounded-xl"
+              >
+                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={3} />}
                 <span className="text-[10px] font-black uppercase tracking-widest">Save Roster</span>
               </Button>
            </div>

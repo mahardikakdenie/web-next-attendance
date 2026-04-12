@@ -353,13 +353,13 @@ export default function PayrollView() {
         {/* Main Content Area / Table */}
         <div className="space-y-4">
           <div className="flex gap-2">
-             <Button className="bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200 px-5 rounded-2xl flex items-center gap-2 shadow-sm transition-all">
+             <Button variant="secondary" className="px-5 rounded-2xl">
                 <Filter size={18} />
                 <span className="font-bold">Filters</span>
              </Button>
              <Button 
               onClick={handleExportBankFile}
-              className="bg-neutral-900 text-white px-5 rounded-2xl flex items-center gap-2 shadow-md transition-all"
+              className="bg-neutral-900 px-5 rounded-2xl flex items-center gap-2 shadow-md"
              >
                 <FileSpreadsheet size={18} />
                 <span className="font-bold">Export CSV</span>

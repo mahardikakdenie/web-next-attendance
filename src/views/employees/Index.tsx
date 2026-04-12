@@ -8,15 +8,19 @@ import {
   Filter,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  ListChecks
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Can } from "@/components/auth/PermissionGuard";
 import Avatar from "@/components/ui/Avatar";
 import { useEffect, useState, useCallback } from "react";
 import { getDataUserslist } from "@/service/users";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { MetaResponse } from "@/types/api";
 import CreateEmployeeModal from "@/components/employees/CreateEmployeeModal";
+import LifecycleModal from "@/components/employees/LifecycleModal";
+import { useAuthStore } from "@/store/auth.store";
 
 export interface EmployeeData {
   id: number;
@@ -35,13 +39,16 @@ export default function EmployeesView() {
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [meta, setMeta] = useState<MetaResponse | undefined>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [lifecycleEmployee, setLifecycleEmployee] = useState<{id: number, name: string} | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isMounted, setIsMounted] = useState(false);
+  const {user} = useAuthStore(); 
 
   const getData = useCallback(async (page: number = 1) => {
     try {
+      if (!user?.id) return;
       const resp = await getDataUserslist({
         page,
+        user_id: user.id,
         limit: 10,
       });
       if (resp.data) {
@@ -51,25 +58,14 @@ export default function EmployeesView() {
     } catch (error) {
       console.error(error);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsMounted(true);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (isMounted) {
-      const timer = setTimeout(() => {
-        getData(currentPage);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [getData, currentPage, isMounted]);
-
-  if (!isMounted) return null;
+    const handle = requestAnimationFrame(() => {
+      getData(currentPage);
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [getData, currentPage]);
 
   const columns: Column<EmployeeData>[] = [
     {
@@ -121,8 +117,15 @@ export default function EmployeesView() {
     },
   ];
 
-  const actions = () => (
+  const actions = (emp: EmployeeData) => (
     <div className="flex items-center justify-end gap-1">
+      <button
+        onClick={() => setLifecycleEmployee({ id: emp.id, name: emp.name })}
+        title="Employee Lifecycle"
+        className="p-2 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+      >
+        <ListChecks size={18} />
+      </button>
       <button
         title="View Profile"
         className="p-2 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
@@ -152,17 +155,19 @@ export default function EmployeesView() {
           <p className="text-sm text-neutral-500 font-medium mt-1">Manage and view your organization&apos;s directory</p>
         </div>
         <div className="flex gap-3">
-          <Button className="flex items-center gap-2 bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50 shadow-sm px-5 py-2.5 rounded-2xl transition-all">
+          <Button variant="secondary" className="px-5 py-2.5 rounded-2xl">
             <Filter size={18} />
             <span className="font-bold">Filter</span>
           </Button>
-          <Button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/20 px-5 py-2.5 rounded-2xl transition-all"
-          >
-            <Users size={18} />
-            <span className="font-bold">Add Employee</span>
-          </Button>
+          <Can permission="user.create">
+            <Button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/20 px-5 py-2.5 rounded-2xl"
+            >
+              <Users size={18} />
+              <span className="font-bold">Add Employee</span>
+            </Button>
+          </Can>
         </div>
       </div>
 
@@ -182,8 +187,17 @@ export default function EmployeesView() {
       <CreateEmployeeModal 
         open={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
-        onSuccess={getData}
+        onSuccess={() => getData(currentPage)}
       />
+
+      {lifecycleEmployee && (
+        <LifecycleModal 
+          open={!!lifecycleEmployee}
+          onClose={() => setLifecycleEmployee(null)}
+          employeeId={lifecycleEmployee.id}
+          employeeName={lifecycleEmployee.name}
+        />
+      )}
     </div>
   );
 }

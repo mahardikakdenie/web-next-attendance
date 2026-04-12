@@ -20,10 +20,12 @@ import { Switch } from "@/components/ui/Switch";
 import CustomTimeSelector from "../ui/CustomTimeSelector";
 import { Button } from "../ui/Button";
 import { getDataCurrentTenat, updateDataCurrentTenant } from "@/service/tenantSettings";
+import Image from "next/image";
 
 export interface TenantSettingsData {
   id: number;
   tenantId: number;
+  tenantLogo?: string;
   officeLatitude: number | string;
   officeLongitude: number | string;
   maxRadiusMeter: number | string;
@@ -51,6 +53,7 @@ export interface TenantSettingsData {
 interface TenantApiData {
   id: number;
   tenant_id: number;
+  tenant_logo?: string;
   office_latitude: number;
   office_longitude: number;
   max_radius_meter: number;
@@ -92,6 +95,7 @@ export interface ApiResponse {
 const INITIAL_DATA: TenantSettingsData = {
   id: 1,
   tenantId: 1,
+  tenantLogo: "",
   officeLatitude: -6.1339179,
   officeLongitude: 106.8329504,
   maxRadiusMeter: 100,
@@ -214,6 +218,7 @@ export default function TenantSettingForm() {
           setFormData({
             id: apiData.id,
             tenantId: apiData.tenant_id,
+            tenantLogo: apiData.tenant_logo,
             officeLatitude: apiData.office_latitude,
             officeLongitude: apiData.office_longitude,
             maxRadiusMeter: apiData.max_radius_meter,
@@ -252,6 +257,7 @@ export default function TenantSettingForm() {
       const payload = {
         allow_multiple_check: Boolean(formData.allowMultipleCheck),
         allow_remote: Boolean(formData.allowRemote),
+        tenant_logo: formData.tenantLogo,
         clock_in_end_time: String(formData.clockInEndTime),
         clock_in_start_time: String(formData.clockInStartTime),
         clock_out_end_time: String(formData.clockOutEndTime),
@@ -264,14 +270,6 @@ export default function TenantSettingForm() {
         office_longitude: Number(formData.officeLongitude),
         require_location: Boolean(formData.requireLocation),
         require_selfie: Boolean(formData.requireSelfie),
-        // tenant: {
-        //   code: String(formData.tenant.code),
-        //   createdAt: String(formData.tenant.createdAt),
-        //   id: Number(formData.tenant.id),
-        //   name: String(formData.tenant.name),
-        //   tenant_settings: String(formData.tenant.tenant_settings),
-        //   updatedAt: String(formData.tenant.updatedAt)
-        // },
         tenant_id: Number(formData.tenantId),
         updated_at: new Date().toISOString()
       };
@@ -494,6 +492,37 @@ export default function TenantSettingForm() {
 
           <div className="bg-white rounded-[28px] border border-neutral-200/60 p-7 shadow-sm transition-all hover:shadow-md flex flex-col">
             <div className="flex items-center gap-4 mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
+                <Globe size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-neutral-900">Tenant Branding</h2>
+                <p className="text-xs font-medium text-neutral-500 mt-0.5">Company identity settings</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 mb-8 p-5 rounded-2xl bg-slate-50 border border-slate-100">
+               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Company Logo URL</label>
+               <div className="flex items-center gap-4">
+                  <div className="relative w-16 h-16 rounded-2xl bg-white border border-slate-200 overflow-hidden shrink-0 shadow-sm">
+                    {formData.tenantLogo ? (
+                      <Image src={formData.tenantLogo} fill alt="Tenant Logo" className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-300">
+                        <Camera size={24} />
+                      </div>
+                    )}
+                  </div>
+                  <Input 
+                    placeholder="https://example.com/logo.png"
+                    value={formData.tenantLogo || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('tenantLogo', e.target.value)}
+                    className="flex-1 h-12 bg-white border-slate-200 rounded-xl text-sm"
+                  />
+               </div>
+            </div>
+
+            <div className="flex items-center gap-4 mb-6 pt-2 border-t border-slate-100">
               <div className="h-12 w-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 shadow-inner">
                 <ShieldCheck size={24} strokeWidth={2.5} />
               </div>

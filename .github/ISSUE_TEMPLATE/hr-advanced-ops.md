@@ -1,36 +1,56 @@
-# Backend Task: Advanced HR Operations (Shifts, Calendar & Lifecycle)
+# 🚀 [BACKEND-TASK] Advanced HR Operations (Shifts, Calendar & Lifecycle)
 
-## 📝 Overview
-To support enterprise-grade workforce management, the backend needs to implement three core operational modules: Shift Management, Public Holidays, and Employee Checklists.
-
----
-
-## 🛠️ API Requirements
-
-### 1. Shift & Schedule Management
-- **Table**: `work_schedules` & `shift_assignments`
-- **GET** `/api/v1/hr/schedules`: List all shift templates.
-- **POST** `/api/v1/hr/schedules/assign`: Assign a shift to a specific user or department for a date range.
-- **Logic**: Attendance calculation must compare `clock_in_time` against the assigned shift's `start_time` instead of the global tenant setting.
-
-### 2. Company & Holiday Calendar
-- **Table**: `company_holidays`
-- **GET** `/api/v1/hr/calendar`: List all marked holidays.
-- **POST** `/api/v1/hr/calendar`: Mark a date as a public holiday or company event.
-- **Logic**: Attendance engine should skip "Absent" marking for users on these dates.
-
-### 3. Employee Lifecycle (Onboarding/Offboarding)
-- **Table**: `lifecycle_tasks`
-- **GET** `/api/v1/hr/employees/{id}/lifecycle`: Get checklist status for an employee.
-- **PATCH** `/api/v1/hr/employees/{id}/lifecycle/{task_id}`: Toggle task completion.
+## 📝 1. Overview
+Implement the core infrastructure for enterprise-grade workforce management. This module allows HR to move beyond fixed office hours into dynamic shift rostering, recognize national holidays, and track employee onboarding/offboarding progress.
 
 ---
 
-## 🚀 Key Integrations in Frontend
-UI placeholders have been added to the Sidebar:
-- `/schedules` -> Work Schedules UI
-- `/tenant-settings/calendar` -> Holiday Management
-- `/tenant-settings/lifecycle` -> Onboarding/Offboarding UI
+## 🛠️ 2. API Contract Specification
+
+### 📅 A. Shift Management
+Manage master data for available work shifts within a company.
+
+- **GET** `/api/v1/hr/shifts` -> List available shifts.
+- **POST** `/api/v1/hr/shifts` -> Create a new shift template.
+- **Payload Structure**:
+```json
+{
+  "name": "Morning Shift",
+  "startTime": "06:00",
+  "endTime": "14:00",
+  "type": "Morning",
+  "color": "bg-emerald-500",
+  "isDefault": false
+}
+```
+
+### 🗓️ B. Weekly Rostering
+Assign shifts to specific employees for a designated week.
+
+- **GET** `/api/v1/hr/roster?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD`
+- **POST** `/api/v1/hr/roster/save` -> Bulk update assignments.
+- **Technical Note**: If a user has no shift assigned for a day, the value should be `"off"`.
+
+### 🏖️ C. Holiday & Event Calendar
+- **GET** `/api/v1/hr/calendar?year=2026`
+- **POST** `/api/v1/hr/calendar`
+- **Logic**: Attendance engine **MUST** bypass "Absent" triggers for dates registered in this calendar.
+
+### 🔄 D. Employee Lifecycle
+- **GET** `/api/v1/hr/employees/{id}/lifecycle` -> Get checklist tasks.
+- **PATCH** `/api/v1/hr/employees/{id}/lifecycle/tasks/{task_id}` -> Toggle completion.
 
 ---
-**Status**: 🎨 UI Menu Integrated | 🔄 Awaiting API Endpoints
+
+## 🏗️ 3. Implementation Status (Frontend)
+- [x] Create Advanced Roster UI (`/schedules`).
+- [x] Implement API Service Layer for Shifts & Roster.
+- [x] Setup Week-to-Week navigation logic.
+- [x] Integrate Dynamic Tenant Branding (Logo).
+- [ ] Backend database implementation.
+- [ ] National holidays attendance bypass logic.
+
+---
+**Status**: 🎨 UI & API CONTRACT READY | 🔄 AWAITING BACKEND
+**Priority**: 🔥 HIGH-PRIORITY
+**Target**: Backend Engineering Team

@@ -13,9 +13,17 @@ export const createCustomRole = (data: Partial<Role> & { permissions: string[] }
   return secureRequest<APIResponse<Role>>("post", "/v1/tenant-roles", data);
 };
 
-export const saveRoleHierarchy = (parent_id: number, child_ids: number[]) => {
+export const updateCustomRole = (id: number, data: Partial<Role> & { permissions: string[] }) => {
+  return secureRequest<APIResponse<Role>>("patch", `/v1/tenant-roles/${id}`, data);
+};
+
+export const deleteCustomRole = (id: number) => {
+  return secureRequest<APIResponse<null>>("delete", `/v1/tenant-roles/${id}`);
+};
+
+export const saveRoleHierarchy = (parent_id: number, child_role_ids: number[]) => {
   return secureRequest<APIResponse<null>>("post", "/v1/tenant-roles/hierarchy", { 
     parent_role_id: parent_id, 
-    child_role_ids: child_ids 
+    child_role_ids: child_role_ids 
   });
 };

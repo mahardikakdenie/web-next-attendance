@@ -1,13 +1,15 @@
-const nextConfig = {
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      { hostname: "i.pravatar.cc" },
-      { hostname: "i.ibb.co.com" },
-      { hostname: "ui-avatars.com" }
-    ],
-    localPatterns: [
       {
-        pathname: "/**",
+        protocol: "https",
+        hostname: "**",
+      },
+      {
+        protocol: "http",
+        hostname: "**",
       },
     ],
   },

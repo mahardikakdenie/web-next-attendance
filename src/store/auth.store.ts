@@ -13,7 +13,9 @@ export type TenantSettingsTenant = {
 
 export type TenantSettings = {
   id: number;
+  name: string;
   tenant_id: number;
+  tenant_logo?: string;
   tenant?: TenantSettingsTenant;
   office_latitude: number;
   office_longitude: number;

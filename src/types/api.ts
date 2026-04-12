@@ -66,6 +66,7 @@ export interface UserTenantNested {
 export interface UserTenantSettings {
   id: number;
   tenant_id: number;
+  tenant_logo?: string;
   office_latitude: number;
   office_longitude: number;
   max_radius_meter: number;
@@ -80,7 +81,7 @@ export interface UserTenantSettings {
   allow_multiple_check: boolean;
   created_at: string;
   updated_at: string;
-  tenant: UserTenantNested;
+  tenant?: UserTenantNested;
 }
 
 export interface UserTenant {
@@ -124,15 +125,17 @@ export interface UserData {
   media_url: string;
   created_at: string;
   tenant_id: number;
+  base_role?: 'SUPERADMIN' | 'ADMIN' | 'HR' | 'FINANCE' | 'EMPLOYEE';
   role?: Role;
   permissions?: string[]; // Array of strings from BE for easy UI toggling
   is_owner: boolean;
   base_salary: number;
   manager_id?: number;
   delegate_id?: number;
-  tenant: UserTenant;
-  attendances: UserAttendance[];
-  recent_activities: UserRecentActivity[];
+  tenant?: UserTenant;
+  tenant_setting?: UserTenantSettings;
+  attendances?: UserAttendance[];
+  recent_activities?: UserRecentActivity[];
 }
 
 export interface UsersListResponse {
@@ -253,6 +256,7 @@ export interface TenantApiData {
 export interface UpdateTenantSettingPayload {
   allow_multiple_check: boolean;
   allow_remote: boolean;
+  tenant_logo?: string;
   clock_in_end_time: string;
   clock_in_start_time: string;
   clock_out_end_time: string;

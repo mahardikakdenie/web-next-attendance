@@ -1,6 +1,7 @@
 // src/service/tenantSettings.ts
 import { secureRequest } from "@/lib/axios";
-import { UpdateTenantSettingPayload } from "@/types/api";
+import { TenantSettings } from "@/store/auth.store";
+import { APIResponse, UpdateTenantSettingPayload } from "@/types/api";
 
 //////////////////////////////////////////////////////////////
 // TYPES
@@ -18,7 +19,7 @@ export type RecordAttendancePayload = {
 //////////////////////////////////////////////////////////////
 
 export const getDataCurrentTenat = async () => {
-  return secureRequest("get", "/v1/tenant-setting");
+  return secureRequest<APIResponse<TenantSettings>>("get", "/v1/tenant-setting");
 };
 
 export const updateDataCurrentTenant = async (payload: UpdateTenantSettingPayload) => {

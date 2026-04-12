@@ -20,6 +20,7 @@ import {
 import { clockAttendance } from "@/service/attendance";
 import { uploadMedia } from "@/service/media";
 import { getDataCurrentTenat } from "@/service/tenantSettings";
+import { getRoster } from "@/service/schedules";
 import { useAuthStore } from "@/store/auth.store";
 import { useRefresh } from "@/lib/RefreshContext";
 import { ApiResponse } from "../tenant-settings/TenantSettingForm";
@@ -54,6 +55,7 @@ export default function ClockCard() {
   const [coords, setCoords] = useState<Coordinates>({ latitude: 0, longitude: 0 });
   const [location, setLocation] = useState<string>("Mencari lokasi...");
   const [selectedAction, setSelectedAction] = useState<"clock_in" | "clock_out" | null>(null);
+  const [isOffToday, setIsOffToday] = useState(false);
   
   const [tenantSettings, setTenantSettings] = useState<TenantSettingsData>({
     allowMultipleCheck: false
@@ -70,6 +72,31 @@ export default function ClockCard() {
     if (mounted) {
       setAttendance(getTodayAttendanceItems(user));
     }
+  }, [user, mounted]);
+
+  useEffect(() => {
+    const checkSchedule = async () => {
+      if (!user) return;
+      try {
+        const today = dayjs();
+        const start = today.startOf("week").format("YYYY-MM-DD");
+        const end = today.endOf("week").format("YYYY-MM-DD");
+        const resp = await getRoster(start, end);
+        
+        if (resp.data) {
+          const mySchedule = resp.data.find(s => s.id === user.id);
+          if (mySchedule) {
+            const todayShift = (mySchedule.weeklyRoster as Record<string, string>)[today.format("dddd").toLowerCase()];
+            if (todayShift === "off") {
+              setIsOffToday(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check schedule:", error);
+      }
+    };
+    if (mounted) checkSchedule();
   }, [user, mounted]);
 
   useEffect(() => {
@@ -144,8 +171,75 @@ export default function ClockCard() {
 
   const handleClockClick = (type: "clock_in" | "clock_out") => {
     setSelectedAction(type);
-    setStatus("camera");
-    setOpenCamera(true);
+    
+    const settings = user?.tenant?.tenant_settings;
+    
+    // 1. Geofencing Pre-check (Client side)
+    if (settings?.require_location && !settings?.allow_remote) {
+      const officeLat = Number(settings.office_latitude);
+      const officeLng = Number(settings.office_longitude);
+      const radius = Number(settings.max_radius_meter);
+      
+      if (coords.latitude !== 0 && officeLat !== 0) {
+        // Simple distance calculation (approximate)
+        const R = 6371e3; // meters
+        const phi1 = coords.latitude * Math.PI/180;
+        const phi2 = officeLat * Math.PI/180;
+        const deltaPhi = (officeLat-coords.latitude) * Math.PI/180;
+        const deltaLambda = (officeLng-coords.longitude) * Math.PI/180;
+
+        const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+                Math.cos(phi1) * Math.cos(phi2) *
+                Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+
+        if (distance > radius) {
+          toast.error(`Anda berada di luar radius kantor (${Math.round(distance)}m). Batas: ${radius}m`);
+          return;
+        }
+      }
+    }
+
+    // 2. Decide if selfie/face recognition is needed
+    if (settings?.require_selfie) {
+      setStatus("camera");
+      setOpenCamera(true);
+    } else {
+      // Direct clocking without camera
+      handleDirectClock(type);
+    }
+  };
+
+  const handleDirectClock = async (type: "clock_in" | "clock_out") => {
+    try {
+      setLoading(true);
+      const mediaUrl = ""; // No image provided
+
+      await clockAttendance({
+        action: type,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        media_url: mediaUrl,
+      });
+
+      const payload: AttendanceItem = {
+        type,
+        image: mediaUrl,
+        time: dayjs().format("HH:mm:ss"),
+        location,
+      };
+
+      setAttendance((prev) => [...prev, payload]);
+      triggerRefresh();
+      toast.success(type === "clock_in" ? "Clock In berhasil" : "Clock Out berhasil");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { meta?: { message?: string }, message?: string } } };
+      const apiMessage = err.response?.data?.meta?.message || err.response?.data?.message;
+      toast.error(apiMessage || "Terjadi kesalahan saat absen.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCapture = async (img: string) => {
@@ -209,9 +303,13 @@ export default function ClockCard() {
       triggerRefresh();
       toast.success(selectedAction === "clock_in" ? "Clock In berhasil" : "Clock Out berhasil");
     } catch (error: unknown) {
-      const err = error as { response: { data: { message: string } } };
-      if (err.response?.data?.message === "Request expired") {
+      const err = error as { response?: { data?: { meta?: { message?: string }, message?: string } } };
+      const apiMessage = err.response?.data?.meta?.message || err.response?.data?.message;
+      
+      if (apiMessage === "Request expired") {
         toast.error("Koneksi lambat. Silakan coba lagi.");
+      } else if (apiMessage) {
+        toast.error(apiMessage);
       } else {
         toast.error("Terjadi kesalahan saat absen.");
       }
@@ -250,6 +348,15 @@ export default function ClockCard() {
     <>
       <div className="w-full mx-auto rounded-4xl p-6 sm:p-8 bg-white shadow-2xl shadow-slate-200/40 border border-slate-100 flex flex-col gap-8 relative overflow-hidden">
         
+        {isOffToday && (
+          <div className="absolute inset-x-0 top-0 z-20 bg-amber-500 text-white py-2 px-4 text-center text-[10px] font-black uppercase tracking-[0.2em] animate-in slide-in-from-top duration-500">
+            <div className="flex items-center justify-center gap-2">
+              <ShieldCheck size={14} />
+              Hari ini Anda Libur (OFF)
+            </div>
+          </div>
+        )}
+
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-blue-50 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
 
         <div className="flex flex-col items-center text-center space-y-4 relative z-10">

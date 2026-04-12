@@ -2,6 +2,7 @@
 
 import { startTransition, useMemo, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -31,6 +32,7 @@ import {
   ListChecks
 } from "lucide-react";
 import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
+import { getDataCurrentTenat } from "@/service/tenantSettings";
 
 interface MenuItem {
   key: string;
@@ -42,6 +44,7 @@ interface MenuItem {
   }>;
   path?: string;
   roles: RoleName[];
+  permission?: string;
   children?: MenuItem[];
 }
 
@@ -80,6 +83,7 @@ const MENUS: MenuItem[] = [
         icon: ShieldAlert,
         path: "/admin/roles",
         roles: [ROLES.SUPERADMIN],
+        permission: "platform.roles.view",
       },
       {
         key: "support-desk",
@@ -87,6 +91,7 @@ const MENUS: MenuItem[] = [
         icon: MessageSquare,
         path: "/admin/support",
         roles: [ROLES.SUPERADMIN],
+        permission: "support.manage",
       },
     ],
   },
@@ -105,6 +110,7 @@ const MENUS: MenuItem[] = [
     icon: TrendingUp,
     path: "/analytics",
     roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE],
+    permission: "analytics.view",
   },
 
   // TENANT LEVEL - MANAGEMENT
@@ -120,6 +126,7 @@ const MENUS: MenuItem[] = [
         icon: CalendarDays,
         path: "/attendances",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+        permission: "attendance.view",
       },
       {
         key: "all-employees",
@@ -127,6 +134,7 @@ const MENUS: MenuItem[] = [
         icon: Users,
         path: "/employees",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+        permission: "user.view",
       },
       {
         key: "work-schedules",
@@ -134,6 +142,7 @@ const MENUS: MenuItem[] = [
         icon: Clock,
         path: "/schedules",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+        permission: "schedule.view",
       },
       {
         key: "manage-leaves",
@@ -141,6 +150,7 @@ const MENUS: MenuItem[] = [
         icon: CalendarX,
         path: "/leaves",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+        permission: "leave.view",
       },
       {
         key: "manage-overtime",
@@ -148,6 +158,7 @@ const MENUS: MenuItem[] = [
         icon: Clock,
         path: "/overtime",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+        permission: "overtime.view",
       },
     ],
   },
@@ -165,6 +176,7 @@ const MENUS: MenuItem[] = [
         icon: FileText,
         path: "/payroll",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+        permission: "payroll.view",
       },
       {
         key: "payroll-calc",
@@ -172,6 +184,7 @@ const MENUS: MenuItem[] = [
         icon: Calculator,
         path: "/payroll/calculator",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+        permission: "payroll.calculate",
       },
     ],
   },
@@ -189,6 +202,7 @@ const MENUS: MenuItem[] = [
         icon: Receipt,
         path: "/finance/expenses",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+        permission: "expense.view",
       },
       {
         key: "loans",
@@ -196,6 +210,7 @@ const MENUS: MenuItem[] = [
         icon: Landmark,
         path: "/finance/loans",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+        permission: "loan.view",
       },
     ],
   },
@@ -213,6 +228,7 @@ const MENUS: MenuItem[] = [
         icon: Building2,
         path: "/tenant-settings",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+        permission: "tenant.settings.view",
       },
       {
         key: "company-calendar",
@@ -220,13 +236,15 @@ const MENUS: MenuItem[] = [
         icon: Calendar,
         path: "/tenant-settings/calendar",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+        permission: "calendar.manage",
       },
       {
         key: "employee-lifecycle",
-        label: "Lifecycle Checklists",
+        label: "Lifecycle Master",
         icon: ListChecks,
         path: "/tenant-settings/lifecycle",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+        permission: "lifecycle.manage",
       },
       {
         key: "tenant-roles",
@@ -234,6 +252,7 @@ const MENUS: MenuItem[] = [
         icon: ShieldAlert,
         path: "/tenant-settings/roles",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+        permission: "role.view",
       },
     ],
   },
@@ -270,15 +289,23 @@ const MENUS: MenuItem[] = [
   },
 ];
 
-const filterMenuByRole = (menuList: MenuItem[], userRole: RoleName): MenuItem[] => {
+const filterMenuByRole = (
+  menuList: MenuItem[], 
+  userRole: RoleName, 
+  hasPermission: (id: string) => boolean
+): MenuItem[] => {
   const normalizedRole = userRole.toLowerCase();
   return menuList
-    .filter((menu) => menu.roles.map(r => r.toLowerCase()).includes(normalizedRole))
+    .filter((menu) => {
+      const roleAllowed = menu.roles.map(r => r.toLowerCase()).includes(normalizedRole);
+      const permissionAllowed = menu.permission ? hasPermission(menu.permission) : true;
+      return roleAllowed && permissionAllowed;
+    })
     .map((menu) => {
       if (menu.children) {
         return {
           ...menu,
-          children: filterMenuByRole(menu.children, userRole),
+          children: filterMenuByRole(menu.children, userRole, hasPermission),
         };
       }
       return menu;
@@ -293,8 +320,10 @@ export default function Sidebar() {
   const [isMounted, setIsMounted] = useState(false);
   const [open, setOpen] = useState<boolean>(true);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
+  const [tenantLogo, setTenantLogo] = useState<string | null>(null);
+  const [tenantName, setTenantName] = useState<string>("Attendance");
 
-  const { logout, user } = useAuthStore();
+  const { logout, user, hasPermission } = useAuthStore();
   const role = user?.role?.name as RoleName | undefined;
 
   useEffect(() => {
@@ -304,10 +333,25 @@ export default function Sidebar() {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const fetchTenantData = async () => {
+      try {
+        const resp = await getDataCurrentTenat();
+        if (resp?.data) {
+          setTenantLogo(resp.data.tenant_logo || null);
+          setTenantName(resp.data.tenant?.Name || "Attendance");
+        }
+      } catch (error) {
+        console.error("Failed to fetch tenant settings in sidebar:", error);
+      }
+    };
+    if (isMounted) fetchTenantData();
+  }, [isMounted]);
+
   const filteredMenus = useMemo(() => {
     if (!isMounted || !role) return [];
-    return filterMenuByRole(MENUS, role);
-  }, [role, isMounted]);
+    return filterMenuByRole(MENUS, role, hasPermission);
+  }, [role, isMounted, hasPermission]);
 
   const isActive = useCallback((path?: string) => (path ? pathname === path : false), [pathname]);
 
@@ -445,16 +489,25 @@ export default function Sidebar() {
         }`}
       >
         <div className="flex items-center gap-3 overflow-hidden cursor-pointer group" onClick={() => router.push('/')}>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 font-black text-white shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">
-            A
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 font-black text-white shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform overflow-hidden relative text-lg">
+            {tenantLogo ? (
+              <Image 
+                src={tenantLogo} 
+                alt="Logo" 
+                fill
+                className="object-cover"
+              />
+            ) : (
+              tenantName.charAt(0).toUpperCase()
+            )}
           </div>
           <div
             className={`flex flex-col transition-all duration-300 overflow-hidden ${
               open ? "opacity-100 max-w-[150px]" : "opacity-0 max-w-0"
             }`}
           >
-            <p className="text-[15px] font-black text-slate-900 whitespace-nowrap tracking-tight">
-              Attendance
+            <p className="text-[15px] font-black text-slate-900 whitespace-nowrap tracking-tight truncate">
+              {tenantName}
             </p>
             <p className="text-[10px] font-bold text-slate-400 whitespace-nowrap tracking-[0.15em] uppercase">
               Workspace

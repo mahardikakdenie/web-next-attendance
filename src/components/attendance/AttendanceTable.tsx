@@ -3,97 +3,76 @@
 import Image from "next/image";
 import { Eye, MoreVertical, MapPin, Smartphone } from "lucide-react";
 import { DataTable, Column } from "../ui/DataTable";
+import { UserAttendance } from "@/types/api";
+import dayjs from "dayjs";
 
 type AttendanceStatus = "On Time" | "Late" | "Absent" | "On Leave";
 
-interface Attendance {
-  id: number;
-  name: string;
-  avatar: string;
-  checkIn: string;
-  checkOut: string;
-  overtime: string;
-  status: AttendanceStatus;
-  location: string;
+interface AttendanceTableProps {
+  data: UserAttendance[];
+  total: number;
+  limit: number;
+  offset: number;
+  onPageChange: (newOffset: number) => void;
+  isLoading?: boolean;
 }
 
-const attendanceDummy: Attendance[] = [
-  {
-    id: 1,
-    name: "Bagus Fikri",
-    avatar: "https://i.pravatar.cc/150?u=bagus",
-    checkIn: "08:52 AM",
-    checkOut: "05:30 PM",
-    overtime: "0h 30m",
-    status: "On Time",
-    location: "Main Office"
-  },
-  {
-    id: 2,
-    name: "Ihdizein",
-    avatar: "https://i.pravatar.cc/150?u=ihdizein",
-    checkIn: "09:30 AM",
-    checkOut: "06:12 PM",
-    overtime: "1h 30m",
-    status: "Late",
-    location: "Remote / Home"
-  },
-  {
-    id: 3,
-    name: "Mufti Hidayat",
-    avatar: "https://i.pravatar.cc/150?u=mufti",
-    checkIn: "08:45 AM",
-    checkOut: "05:00 PM",
-    overtime: "-",
-    status: "On Time",
-    location: "Main Office"
-  },
-];
-
-function StatusBadge({ status }: { status: AttendanceStatus }) {
-  const styles = {
+function StatusBadge({ status }: { status: string }) {
+  const normalizedStatus = (status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()) as AttendanceStatus;
+  
+  const styles: Record<AttendanceStatus, string> = {
     "On Time": "bg-emerald-50 text-emerald-700 border-emerald-100",
     "Late": "bg-amber-50 text-amber-700 border-amber-100",
     "Absent": "bg-rose-50 text-rose-700 border-rose-100",
     "On Leave": "bg-blue-50 text-blue-700 border-blue-100"
   };
 
-  const dots = {
+  const dots: Record<AttendanceStatus, string> = {
     "On Time": "bg-emerald-500",
     "Late": "bg-amber-500",
     "Absent": "bg-rose-500",
     "On Leave": "bg-blue-500"
   };
 
+  const currentStyle = styles[normalizedStatus] || "bg-neutral-50 text-neutral-700 border-neutral-100";
+  const currentDot = dots[normalizedStatus] || "bg-neutral-500";
+
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded-full border ${styles[status]}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dots[status]}`} />
-      {status}
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-[11px] font-black uppercase tracking-wider rounded-full border ${currentStyle}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${currentDot}`} />
+      {normalizedStatus}
     </span>
   );
 }
 
-export function AttendanceTable() {
-  const columns: Column<Attendance>[] = [
+export function AttendanceTable({
+  data,
+  total,
+  limit,
+  offset,
+  onPageChange,
+  isLoading = false
+}: AttendanceTableProps) {
+  const columns: Column<UserAttendance>[] = [
     {
       header: "Employee",
       accessor: (item) => (
         <div className="flex items-center gap-4">
           <div className="relative w-10 h-10 shrink-0">
             <Image
-              src={item.avatar}
+              src={item.user?.media_url || "https://i.pravatar.cc/150"}
               fill
               sizes="40px"
-              alt={item.name}
+              alt={item.user?.name || "User"}
               className="rounded-xl object-cover ring-2 ring-white shadow-sm"
             />
           </div>
           <div>
             <p className="text-sm font-black text-neutral-900 group-hover:text-blue-600 transition-colors">
-              {item.name}
+              {item.user?.name || "Unknown"}
             </p>
             <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-tight">
-              EMP-{item.id.toString().padStart(3, "0")}
+              {item.user?.employee_id || "EMP-???"}
             </p>
           </div>
         </div>
@@ -104,7 +83,9 @@ export function AttendanceTable() {
       header: "Clock In",
       accessor: (item) => (
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-neutral-700">{item.checkIn}</span>
+          <span className="text-sm font-bold text-neutral-700">
+            {item.clock_in_time ? dayjs(item.clock_in_time).format("HH:mm A") : "--:--"}
+          </span>
           <div className="flex items-center gap-1 text-[10px] text-neutral-400 font-bold mt-0.5 uppercase">
             <Smartphone size={10} /> Mobile App
           </div>
@@ -114,8 +95,11 @@ export function AttendanceTable() {
     },
     {
       header: "Clock Out",
-      accessor: "checkOut",
-      className: "text-sm font-bold text-neutral-700",
+      accessor: (item) => (
+        <span className="text-sm font-bold text-neutral-700">
+          {item.clock_out_time ? dayjs(item.clock_out_time).format("HH:mm A") : "--:--"}
+        </span>
+      ),
       sortable: true,
     },
     {
@@ -123,7 +107,7 @@ export function AttendanceTable() {
       accessor: (item) => (
         <div className="flex items-center gap-1.5 text-neutral-500">
           <MapPin size={14} className="text-neutral-300" />
-          <span className="text-xs font-bold">{item.location}</span>
+          <span className="text-xs font-bold">{item.location || "Office"}</span>
         </div>
       ),
       sortable: true,
@@ -146,13 +130,20 @@ export function AttendanceTable() {
     </div>
   );
 
+  const currentPage = Math.floor(offset / limit) + 1;
+  const totalPages = Math.ceil(total / limit);
+
   return (
     <DataTable 
-      data={attendanceDummy} 
+      data={data} 
       columns={columns} 
-      searchKey="name" 
-      searchPlaceholder="Search attendance by name..."
+      searchKey="id" 
+      searchPlaceholder="Search attendance..."
       actions={actions}
+      isLoading={isLoading}
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onPageChange={(page) => onPageChange((page - 1) * limit)}
     />
   );
 }

@@ -17,24 +17,29 @@ export const clockAttendance = async (payload: ClockPayload) => {
 };
 
 export const getDataAttendances = async (
-  page: number = 1, 
   limit: number = 10, 
+  offset: number = 0,
   status: string = '', 
   date_from: string = '', 
   date_to: string = '', 
-  offset: number = 0,
   search: string = ''
 ) => {
-  return secureRequest<APIResponse<UserAttendance[]>>("get", "/v1/attendance", {
-    page,
-    limit,
-    status,
-    date_from,
-    date_to,
-    offset,
-    search,
-    include: "user"
-  });
+  return secureRequest<APIResponse<{ data: UserAttendance[]; meta: { total: number; limit: number; offset: number } }>>(
+    "get", 
+    "/v1/attendance", 
+    undefined, 
+    {
+      params: {
+        limit,
+        offset,
+        status,
+        date_from,
+        date_to,
+        search,
+        include: "user"
+      }
+    }
+  );
 };
 
 export const getDataSummary = async (_currentFilters: AttendanceFilterParams) => {

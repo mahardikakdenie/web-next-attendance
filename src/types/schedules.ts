@@ -1,5 +1,3 @@
-import { LucideIcon } from "lucide-react";
-
 export type ShiftType = "Office" | "Morning" | "Afternoon" | "Night" | "Flexible";
 
 export interface WorkShift {

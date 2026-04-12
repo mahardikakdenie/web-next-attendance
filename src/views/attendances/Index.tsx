@@ -5,19 +5,20 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { 
   Users, 
-  FileDown, 
-  Plus, 
   Eye, 
   MoreVertical, 
   MapPin, 
   Smartphone,
   SearchX,
-  RotateCcw
+  RotateCcw,
+  Download,
+  CalendarDays
 } from "lucide-react";
 import AttendanceFilter from "@/components/attendance/AttendanceFilter";
 import SummarySection from "@/components/attendance/SummarySection";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import { Button } from "@/components/ui/Button";
+import { Can } from "@/components/auth/PermissionGuard";
 import { TableSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { getDataAttendances, getDataSummary } from "@/service/attendance";
 import { DataTable, Column } from "@/components/ui/DataTable";
@@ -70,7 +71,6 @@ function StatusBadge({ status }: { status: string }) {
     }
   };
 
-  // Support for legacy or mapped display names if needed
   const displayConfig = config[normalizedStatus] || 
     (normalizedStatus.includes("time") ? config.working : null) ||
     (normalizedStatus.includes("done") ? config.done : null) ||
@@ -92,7 +92,6 @@ export default function AttendancesView() {
   const { user, loading: authLoading } = useAuthStore();
   const router = useRouter();
 
-  // --- States ---
   const [data, setData] = useState<UserAttendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,8 +106,6 @@ export default function AttendancesView() {
 
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
-
-  // --- Fetch Handlers ---
 
   const fetchSummary = useCallback(async (currentFilters: AttendanceFilterParams) => {
     setIsSummaryLoading(true);
@@ -130,18 +127,22 @@ export default function AttendancesView() {
   const fetchData = useCallback(async (page: number, currentFilters: AttendanceFilterParams) => {
     setIsLoading(true);
     try {
+      const limit = 10;
+      const offset = (page - 1) * limit;
+      
       const resp = await getDataAttendances(
-        page, 
-        10, 
+        limit,
+        offset,
         currentFilters.status.toLowerCase(), 
         currentFilters.date_from, 
         currentFilters.date_to,
-        0,
         currentFilters.search
       );
 
-      if (resp && resp.data && Array.isArray(resp.data) && resp.data.length > 0) {
-        const rawData = resp.data;
+      if (resp && resp.data) {
+        // Backend returns { data: UserAttendance[], meta: { total, limit, offset } }
+        const rawData = resp.data.data || [];
+        const meta = resp.data.meta;
 
         const normalizedData: UserAttendance[] = rawData.map((item) => {
           return {
@@ -157,12 +158,8 @@ export default function AttendancesView() {
 
         setData(normalizedData);
         
-        if (resp.meta) {
-          if (resp.meta.pagination) {
-            setTotalPages(resp.meta.pagination.last_page);
-          } else if (resp.meta.last_page) {
-            setTotalPages(resp.meta.last_page);
-          }
+        if (meta) {
+          setTotalPages(Math.ceil(meta.total / limit));
         }
       } else {
         setData([]);
@@ -176,8 +173,6 @@ export default function AttendancesView() {
     }
   }, []);
 
-  // --- Effects ---
-
   useEffect(() => {
     if (!authLoading && user && user.role?.name === ROLES.USER) {
       router.replace("/");
@@ -188,8 +183,6 @@ export default function AttendancesView() {
     fetchData(currentPage, filters);
     fetchSummary(filters);
   }, [currentPage, filters, fetchData, fetchSummary]);
-
-  // --- Event Handlers ---
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -209,8 +202,6 @@ export default function AttendancesView() {
     });
     setCurrentPage(1);
   };
-
-  // --- Table Configuration ---
 
   const columns: Column<UserAttendance>[] = useMemo(() => [
     {
@@ -323,16 +314,22 @@ export default function AttendancesView() {
           <h1 className="text-4xl font-black text-neutral-900 tracking-tight">Real-time Activity</h1>
           <p className="text-neutral-500 font-medium">Monitor and manage employee presence across all work locations.</p>
         </div>
-
-        <div className="flex items-center gap-3">
-          <Button className="flex items-center gap-2 bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50 shadow-sm px-5 py-2.5 rounded-2xl transition-all active:scale-95">
-            <FileDown size={18} />
-            <span className="font-bold">Export Logs</span>
-          </Button>
-          <Button className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/20 px-5 py-2.5 rounded-2xl transition-all active:scale-95">
-            <Plus size={18} />
-            <span className="font-bold">Add Manual Entry</span>
-          </Button>
+        <div className="flex gap-3">
+          <Can permission="attendance.export">
+            <Button variant="secondary" className="px-5 py-2.5 rounded-2xl">
+              <Download size={18} />
+              <span className="font-bold">Export Logs</span>
+            </Button>
+          </Can>
+          <Can permission="schedule.view">
+            <Button 
+              onClick={() => router.push("/schedules")}
+              className="bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-600/20 px-5 py-2.5 rounded-2xl"
+            >
+              <CalendarDays size={18} />
+              <span className="font-bold">View Schedules</span>
+            </Button>
+          </Can>
         </div>
       </div>
 

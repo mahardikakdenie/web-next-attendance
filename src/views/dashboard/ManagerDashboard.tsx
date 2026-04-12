@@ -168,7 +168,7 @@ export default function ManagerDashboardPage() {
 
       {/* RIGHT: Personal Focus */}
       <div className="xl:col-span-4 space-y-8">
-        <div className="sticky top-8">
+        <div className="sticky top-8 z-30">
           <div className="flex items-center gap-2 px-2 mb-4">
             <ShieldCheck size={16} className="text-blue-600" />
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Personal Workspace</span>

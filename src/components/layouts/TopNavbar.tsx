@@ -242,7 +242,18 @@ export default function TopNavbar() {
         {/* Multi-Tenant Switcher */}
         {isPlatformAdmin && !isLoading && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-xl border border-blue-100/50 cursor-pointer hover:bg-blue-50 transition-colors group">
-            <Building2 size={14} className="text-blue-500" />
+            <div className="relative w-5 h-5 rounded-md overflow-hidden flex items-center justify-center bg-white border border-blue-100 shadow-xs">
+              {user?.tenant_setting?.tenant_logo ? (
+                <Image 
+                  src={user.tenant_setting.tenant_logo} 
+                  alt="Tenant Logo" 
+                  fill 
+                  className="object-cover"
+                />
+              ) : (
+                <Building2 size={12} className="text-blue-500" />
+              )}
+            </div>
             <span className="text-xs font-bold text-blue-700 leading-tight">{user?.tenant?.name ?? 'Global System'}</span>
             <ChevronDown size={12} className="text-blue-400 group-hover:translate-y-0.5 transition-transform" />
           </div>

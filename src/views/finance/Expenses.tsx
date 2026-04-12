@@ -7,7 +7,7 @@ import {
   Check, 
   X, 
   MoreHorizontal, 
-  Download,
+  Filter,
   Wallet,
   Clock,
   CheckCircle2
@@ -128,11 +128,11 @@ export default function ExpensesView() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button className="bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 px-5 rounded-2xl flex items-center gap-2 shadow-sm transition-all">
-            <Download size={18} />
-            <span className="font-bold text-sm">Export</span>
+          <Button variant="secondary" className="px-5 rounded-2xl">
+            <Filter size={18} />
+            <span className="font-bold text-sm">Filter Status</span>
           </Button>
-          <Button className="bg-blue-600 text-white hover:bg-blue-700 shadow-xl shadow-blue-600/20 px-5 rounded-2xl flex items-center gap-2 transition-all">
+          <Button className="bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-600/20 px-5 rounded-2xl">
             <Plus size={18} strokeWidth={3} />
             <span className="font-bold text-sm">New Claim</span>
           </Button>
