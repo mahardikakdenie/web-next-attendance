@@ -50,41 +50,76 @@ body {
   }
 }
 
-/* Print Styles for Payslip Export */
+/* 
+ * PRINT OPTIMIZATION FOR PAYSLIP EXPORT
+ * ---------------------------------------------------------
+ */
 @media print {
-  body {
-    background: white !important;
-    padding: 0 !important;
+  /* Hide every single element by default */
+  html, body, #__next, [data-nextjs-scroll-focus-boundary] {
+    background: #fff !important;
     margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  /* Hide everything except the print-container */
-  body > *:not(.print-container) {
-    display: none !important;
+  /* Use visibility to hide everything but keep the DOM tree structure for inheritance */
+  body * {
+    visibility: hidden !important;
+    overflow: visible !important;
   }
 
-  /* Reset layout for print */
+  /* Selectively show the print container and all its descendants */
+  .print-container, 
+  .print-container * {
+    visibility: visible !important;
+  }
+
+  /* Position the printable content at the absolute top-left of the physical page */
   .print-container {
+    visibility: visible !important;
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
-    height: auto !important;
-    padding: 0 !important;
     margin: 0 !important;
+    padding: 40px !important; /* Professional padding for paper edges */
     background: white !important;
     box-shadow: none !important;
     border: none !important;
+    border-radius: 0 !important;
+    display: block !important;
+    z-index: 99999 !important;
   }
 
-  /* Ensure colors and backgrounds render */
+  /* Force background colors and images to print */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
-  /* Hide print trigger buttons */
-  .no-print {
+  /* Hide common UI elements that might still have visibility:visible or take space */
+  .no-print, 
+  button, 
+  header, 
+  aside, 
+  nav, 
+  .fixed,
+  .sticky {
     display: none !important;
+  }
+
+  /* Override fixed/absolute parents that might clip the print-container */
+  .fixed, .absolute, .relative {
+    position: static !important;
+    display: block !important;
+  }
+
+  /* Re-fix the print container after static override */
+  .print-container {
+    position: absolute !important;
   }
 }

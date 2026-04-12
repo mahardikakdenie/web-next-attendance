@@ -58,8 +58,6 @@ export default function SalaryCalculatorView() {
   const grossSalary = result.breakdown.grossIncome;
   const netPercentage = grossSalary > 0 ? (result.netSalary / grossSalary) * 100 : 0;
   
-  const totalCompanyCost = grossSalary + result.breakdown.bpjs.health.company + result.breakdown.bpjs.jht.company + result.breakdown.bpjs.jkk + result.breakdown.bpjs.jkm;
-
   return (
     <div className="max-w-6xl mx-auto pb-20 animate-in fade-in zoom-in-95 duration-700 font-sans">
       <div className="mb-12 flex flex-col items-center text-center space-y-4">
@@ -139,7 +137,7 @@ export default function SalaryCalculatorView() {
                         onChange={(e) => setPtkpStatus(e.target.value as PayrollInput["ptkpStatus"])}
                         className="w-full h-14 pl-11 pr-4 bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none rounded-xl text-lg font-bold text-neutral-900 transition-all appearance-none cursor-pointer"
                       >
-                        {["TK/0", "TK/1", "K/0", "K/1", "K/2", "K/3"].map(status => (
+                        {["TK/0", "TK/1", "TK/2", "TK/3", "K/0", "K/1", "K/2", "K/3"].map(status => (
                           <option key={status} value={status}>{status}</option>
                         ))}
                       </select>
@@ -210,16 +208,16 @@ export default function SalaryCalculatorView() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-neutral-800">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">PPH 21 (TER)</p>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest text-wrap">PPh 21 ({result.breakdown.terRate.toFixed(2)}%)</p>
                   <p className="text-sm font-bold text-rose-400">{formatCurrency(result.breakdown.pph21Amount)}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">BPJS Emp.</p>
-                  <p className="text-sm font-bold text-amber-400">{formatCurrency(result.breakdown.bpjs.health.employee + result.breakdown.bpjs.jht.employee)}</p>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">BPJS Health</p>
+                  <p className="text-sm font-bold text-amber-400">{formatCurrency(result.breakdown.bpjs.health.employee)}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Unpaid Leave</p>
-                  <p className="text-sm font-bold text-rose-400">{formatCurrency(result.breakdown.unpaidLeaveDeduction)}</p>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">BPJS TK (JHT+JP)</p>
+                  <p className="text-sm font-bold text-amber-400">{formatCurrency(result.breakdown.bpjs.jht.employee + result.breakdown.bpjs.jp.employee)}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Total Cut</p>
@@ -243,10 +241,11 @@ export default function SalaryCalculatorView() {
 
               <div className="space-y-4 flex-1">
                 {[
-                  { label: "PPh 21 (TER)", value: result.breakdown.pph21Amount },
+                  { label: `PPh 21 (TER ${result.breakdown.terRate.toFixed(2)}%)`, value: result.breakdown.pph21Amount },
                   { label: "BPJS Kesehatan (1%)", value: result.breakdown.bpjs.health.employee },
                   { label: "BPJS TK JHT (2%)", value: result.breakdown.bpjs.jht.employee },
-                  { label: "Unpaid Leave", value: result.breakdown.unpaidLeaveDeduction },
+                  { label: "BPJS TK JP (1%)", value: result.breakdown.bpjs.jp.employee },
+                  { label: "Unpaid Leave Deduction", value: result.breakdown.unpaidLeaveDeduction },
                 ].map((item, idx) => (
                   <div key={idx} className="flex justify-between items-center">
                     <span className="text-sm font-medium text-neutral-600">{item.label}</span>
@@ -276,6 +275,7 @@ export default function SalaryCalculatorView() {
                 {[
                   { label: "BPJS Kesehatan (4%)", value: result.breakdown.bpjs.health.company },
                   { label: "BPJS TK JHT (3.7%)", value: result.breakdown.bpjs.jht.company },
+                  { label: "BPJS TK JP (2%)", value: result.breakdown.bpjs.jp.company },
                   { label: "BPJS TK JKK (0.24%)", value: result.breakdown.bpjs.jkk },
                   { label: "BPJS TK JKM (0.3%)", value: result.breakdown.bpjs.jkm },
                 ].map((item, idx) => (
@@ -287,8 +287,8 @@ export default function SalaryCalculatorView() {
               </div>
               
               <div className="pt-4 mt-6 border-t border-slate-200 flex justify-between items-center">
-                <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Total Cost</span>
-                <span className="text-lg font-bold text-blue-700">{formatCurrency(totalCompanyCost)}</span>
+                <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Total Employer Cost</span>
+                <span className="text-lg font-bold text-blue-700">{formatCurrency(result.totalCompanyCost)}</span>
               </div>
             </div>
           </div>
@@ -298,9 +298,10 @@ export default function SalaryCalculatorView() {
               <Info size={20} />
             </div>
             <div className="space-y-1.5">
-              <p className="text-sm font-bold text-blue-900">Regulatory Compliance Notice</p>
+              <p className="text-sm font-bold text-blue-900">Regulatory Compliance Notice (Update 2024)</p>
               <p className="text-xs text-blue-800/70 leading-relaxed font-medium">
-                Sistem menggunakan <strong>Tarif Efektif Rata-rata (TER)</strong> sesuai PP 58/2023. Kalkulasi BPJS otomatis menghitung limit batas atas gaji. Nilai ini bersifat simulasi dan dapat berbeda tergantung kebijakan spesifik internal perusahaan Anda.
+                Kalkulasi ini menggunakan <strong>Tarif Efektif Rata-rata (TER)</strong> sesuai PP 58/2023 yang berlaku mulai 1 Januari 2024. 
+                Termasuk iuran <strong>Jaminan Pensiun (JP)</strong> dengan batas atas gaji Rp 10.042.300 dan <strong>BPJS Kesehatan</strong> dengan batas atas Rp 12.000.000.
               </p>
             </div>
           </div>

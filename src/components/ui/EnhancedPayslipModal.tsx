@@ -1,8 +1,16 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Download, CalendarDays, X, Wallet, ShieldCheck, Printer, Building2 } from "lucide-react";
+import { Download, CalendarDays, X, Wallet, ShieldCheck, Printer, Building2, Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
+import { PayslipPDFDocument } from "./PayslipPDFDocument";
+
+// --- DYNAMIC IMPORTS TO PREVENT SSR ERRORS ---
+const PDFDownloadLink = dynamic(
+  () => import("@react-pdf/renderer").then((mod) => mod.PDFDownloadLink),
+  { ssr: false }
+);
 
 interface SlipBreakdown {
   grossIncome: number;
@@ -69,6 +77,15 @@ export default function EnhancedPayslipModal({
   selectedPeriod,
   selectedEmployeeSlip,
 }: PayslipModalProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   if (!showSlipPreview || !selectedEmployeeSlip) return null;
 
   const formatCurrency = (amount: number) => {
@@ -90,18 +107,12 @@ export default function EnhancedPayslipModal({
       ? selectedEmployeeSlip.breakdown.unpaidLeaveDeduction
       : 0);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300 no-print">
-      {/* Container wrapper for print mode */}
-      <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl shadow-slate-900/20 overflow-hidden animate-in zoom-in-95 duration-500 border border-white ring-1 ring-slate-200/50 print-container">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl shadow-slate-900/20 overflow-hidden animate-in zoom-in-95 duration-500 border border-white ring-1 ring-slate-200/50">
         
         {/* TOP BANNER / HEADER */}
         <div className="relative overflow-hidden bg-slate-900 p-8 sm:p-10 text-white">
-          {/* Decorative Background */}
           <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-blue-500 opacity-20 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-32 h-32 bg-indigo-500 opacity-10 rounded-full blur-2xl pointer-events-none" />
           
@@ -122,7 +133,7 @@ export default function EnhancedPayslipModal({
             
             <button
               onClick={() => setShowSlipPreview(null)}
-              className="p-3 hover:bg-white/10 rounded-2xl transition-all text-slate-400 hover:text-white no-print"
+              className="p-3 hover:bg-white/10 rounded-2xl transition-all text-slate-400 hover:text-white"
             >
               <X size={24} />
             </button>
@@ -131,8 +142,6 @@ export default function EnhancedPayslipModal({
 
         {/* CONTENT BODY */}
         <div className="p-8 sm:p-10 bg-slate-50/30 space-y-8">
-          
-          {/* Employee & Company Info */}
           <div className="flex flex-col sm:flex-row gap-6 justify-between">
             <div className="flex items-center gap-5">
               <div className="relative w-16 h-16 shrink-0 shadow-xl shadow-slate-200">
@@ -169,12 +178,9 @@ export default function EnhancedPayslipModal({
             </div>
           </div>
 
-          {/* Ledger Sections */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
-            {/* Divider line for desktop */}
             <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-200/60" />
 
-            {/* EARNINGS */}
             <div className="space-y-5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -198,7 +204,6 @@ export default function EnhancedPayslipModal({
               </div>
             </div>
 
-            {/* DEDUCTIONS */}
             <div className="space-y-5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
@@ -230,7 +235,6 @@ export default function EnhancedPayslipModal({
             </div>
           </div>
 
-          {/* NET SALARY CARD */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity" />
             <div className="relative bg-slate-900 rounded-[32px] p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 overflow-hidden">
@@ -245,19 +249,30 @@ export default function EnhancedPayslipModal({
                 </h3>
               </div>
 
-              <div className="flex gap-3 w-full sm:w-auto no-print">
-                <button 
-                  onClick={handlePrint}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl px-8 h-14 font-black shadow-xl shadow-blue-600/30 transition-all active:scale-95 text-xs uppercase tracking-widest"
-                >
-                  <Download size={18} strokeWidth={3} />
-                  <span>Export PDF</span>
-                </button>
+              <div className="flex gap-3 w-full sm:w-auto">
+                {isMounted && (
+                  <PDFDownloadLink
+                    document={
+                      <PayslipPDFDocument 
+                        selectedPeriod={selectedPeriod} 
+                        selectedEmployeeSlip={selectedEmployeeSlip} 
+                      />
+                    }
+                    fileName={`payslip-${selectedEmployeeSlip.name.replace(/\s+/g, '_')}-${selectedPeriod.replace(/\s+/g, '_')}.pdf`}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl px-8 h-14 font-black shadow-xl shadow-blue-600/30 transition-all active:scale-95 text-xs uppercase tracking-widest"
+                  >
+                    {({ loading }) => (
+                      <>
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download size={18} strokeWidth={3} />}
+                        <span>{loading ? "Preparing..." : "Export PDF"}</span>
+                      </>
+                    )}
+                  </PDFDownloadLink>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Footer Info */}
           <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
             This is an electronically generated document. No signature is required. <br />
             Attendance Management System © 2026
