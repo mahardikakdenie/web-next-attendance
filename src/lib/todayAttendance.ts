@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import type { User, UserAttendance } from "@/store/auth.store";
+import { UserData, UserAttendance } from "@/types/api";
 
 export type AttendanceType = "clock_in" | "clock_out" | null;
 
@@ -24,11 +24,11 @@ export const EMPTY_IMAGE =
 
 const formatCoordinate = (value?: number | string) => value ?? "-";
 
-const getTodayRecord = (user?: User | null): UserAttendance | null => {
+const getTodayRecord = (user?: UserData | null): UserAttendance | null => {
   if (!user?.attendances?.length) return null;
 
   const today = dayjs().startOf("day");
-  const todayRecords = user.attendances.filter((item) => {
+  const todayRecords = user.attendances.filter((item: UserAttendance) => {
     const date = item.clock_in_time;
     return dayjs(date).isSame(today, "day");
   });
@@ -58,7 +58,7 @@ const mapClockOut = (attendance: UserAttendance): AttendanceItem | null => {
   };
 };
 
-export const getTodayAttendanceItems = (user?: User | null): AttendanceItem[] => {
+export const getTodayAttendanceItems = (user?: UserData | null): AttendanceItem[] => {
   const todayRecord = getTodayRecord(user);
   if (!todayRecord) return [];
 
@@ -69,7 +69,7 @@ export const getTodayAttendanceItems = (user?: User | null): AttendanceItem[] =>
   return items;
 };
 
-export const getTodayAttendanceSummary = (user?: User | null): TodayAttendanceSummary => {
+export const getTodayAttendanceSummary = (user?: UserData | null): TodayAttendanceSummary => {
   const todayRecord = getTodayRecord(user);
   const clockIn = todayRecord ? mapClockIn(todayRecord) : null;
   const clockOut = todayRecord ? mapClockOut(todayRecord) : null;

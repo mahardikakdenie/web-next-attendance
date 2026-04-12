@@ -22,6 +22,14 @@ import {
   UserCheck,
   FileText,
   TrendingUp,
+  ShieldAlert,
+  Coins,
+  Landmark,
+  Receipt,
+  MessageSquare,
+  Calendar,
+  ClipboardCheck,
+  ListChecks
 } from "lucide-react";
 import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
 
@@ -39,7 +47,7 @@ interface MenuItem {
 }
 
 const MENUS: MenuItem[] = [
-  // PLATFORM GROUP - SUPERADMIN ONLY
+  // PLATFORM LEVEL - SUPERADMIN (Owner of SaaS)
   {
     key: "platform-group",
     label: "Platform Admin",
@@ -67,13 +75,27 @@ const MENUS: MenuItem[] = [
         path: "/admin/accounts",
         roles: [ROLES.SUPERADMIN],
       },
+      {
+        key: "platform-roles",
+        label: "Roles & Permissions",
+        icon: ShieldAlert,
+        path: "/admin/roles",
+        roles: [ROLES.SUPERADMIN],
+      },
+      {
+        key: "support-desk",
+        label: "Support Desk",
+        icon: MessageSquare,
+        path: "/admin/support",
+        roles: [ROLES.SUPERADMIN],
+      },
     ],
   },
 
-  // COMMON
+  // COMMON - ACCESSIBLE BY ALL AUTHORIZED STAFF
   {
     key: "dashboard",
-    label: "Dashboard",
+    label: "Attendance",
     icon: LayoutDashboard,
     path: "/",
     roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
@@ -86,7 +108,138 @@ const MENUS: MenuItem[] = [
     roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE],
   },
 
-  // EMPLOYEE / USER WORKSPACE
+  // TENANT LEVEL - MANAGEMENT
+  {
+    key: "management-group",
+    label: "Management",
+    icon: Users,
+    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+    children: [
+      {
+        key: "all-attendance",
+        label: "Attendance List",
+        icon: CalendarDays,
+        path: "/attendances",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+      },
+      {
+        key: "all-employees",
+        label: "Employees",
+        icon: Users,
+        path: "/employees",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+      },
+      {
+        key: "work-schedules",
+        label: "Work Schedules",
+        icon: Clock,
+        path: "/schedules",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+      },
+      {
+        key: "manage-leaves",
+        label: "Leave Approvals",
+        icon: CalendarX,
+        path: "/leaves",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+      },
+      {
+        key: "manage-overtime",
+        label: "Overtime Approvals",
+        icon: Clock,
+        path: "/overtime",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+      },
+    ],
+  },
+
+  // TENANT LEVEL - PAYROLL
+  {
+    key: "payroll-group",
+    label: "Payroll Center",
+    icon: Wallet,
+    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+    children: [
+      {
+        key: "payroll-list",
+        label: "Payroll & Slips",
+        icon: FileText,
+        path: "/payroll",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+      },
+      {
+        key: "payroll-calc",
+        label: "Salary Calculator",
+        icon: Calculator,
+        path: "/payroll/calculator",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+      },
+    ],
+  },
+
+  // TENANT LEVEL - FINANCE OPERATIONS
+  {
+    key: "finance-ops-group",
+    label: "Finance Operations",
+    icon: Coins,
+    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+    children: [
+      {
+        key: "expenses",
+        label: "Expenses & Claims",
+        icon: Receipt,
+        path: "/finance/expenses",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+      },
+      {
+        key: "loans",
+        label: "Loans & Advances",
+        icon: Landmark,
+        path: "/finance/loans",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
+      },
+    ],
+  },
+
+  // ORGANIZATION SETTINGS - ACCESSIBLE BY TENANT OWNER (ADMIN) & SUPERADMIN
+  {
+    key: "tenant-settings-group",
+    label: "Organization Settings",
+    icon: Settings,
+    roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+    children: [
+      {
+        key: "tenant-settings-general",
+        label: "General Rules",
+        icon: Building2,
+        path: "/tenant-settings",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+      },
+      {
+        key: "company-calendar",
+        label: "Holiday Calendar",
+        icon: Calendar,
+        path: "/tenant-settings/calendar",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+      },
+      {
+        key: "employee-lifecycle",
+        label: "Lifecycle Checklists",
+        icon: ListChecks,
+        path: "/tenant-settings/lifecycle",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+      },
+      {
+        key: "tenant-roles",
+        label: "Roles & Permissions",
+        icon: ShieldAlert,
+        path: "/tenant-settings/roles",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+      },
+    ],
+  },
+
+  // PERSONAL WORKSPACE - FOR ALL EMPLOYEES
   {
     key: "my-workspace",
     label: "My Workspace",
@@ -116,82 +269,12 @@ const MENUS: MenuItem[] = [
       },
     ],
   },
-
-  // HR & ADMIN MANAGEMENT
-  {
-    key: "management-group",
-    label: "Management",
-    icon: Users,
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-    children: [
-      {
-        key: "all-attendance",
-        label: "Attendance List",
-        icon: CalendarDays,
-        path: "/attendances",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      },
-      {
-        key: "all-employees",
-        label: "Employees",
-        icon: Users,
-        path: "/employees",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      },
-      {
-        key: "manage-leaves",
-        label: "Leave Approvals",
-        icon: CalendarX,
-        path: "/leaves",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      },
-      {
-        key: "manage-overtime",
-        label: "Overtime Approvals",
-        icon: Clock,
-        path: "/overtime",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      },
-    ],
-  },
-
-  // PAYROLL GROUP - HR & ADMIN
-  {
-    key: "payroll-group",
-    label: "Payroll Center",
-    icon: Wallet,
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-    children: [
-      {
-        key: "payroll-list",
-        label: "Payroll & Slips",
-        icon: FileText,
-        path: "/payroll",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      },
-      {
-        key: "payroll-calc",
-        label: "Salary Calculator",
-        icon: Calculator,
-        path: "/payroll/calculator",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-      },
-    ],
-  },
-
-  // SETTINGS - ADMIN & SUPERADMIN
-  {
-    key: "tenant-settings",
-    label: "Tenant Settings",
-    icon: Building2,
-    path: "/tenant-settings",
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
-  },
 ];
 
 const filterMenuByRole = (menuList: MenuItem[], userRole: RoleName): MenuItem[] => {
+  const normalizedRole = userRole.toLowerCase();
   return menuList
-    .filter((menu) => menu.roles.includes(userRole))
+    .filter((menu) => menu.roles.map(r => r.toLowerCase()).includes(normalizedRole))
     .map((menu) => {
       if (menu.children) {
         return {
@@ -213,7 +296,7 @@ export default function Sidebar() {
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
   const { logout, user } = useAuthStore();
-  const role = user?.role?.name;
+  const role = user?.role?.name as RoleName | undefined;
 
   useEffect(() => {
     const timer = setTimeout(() => {
