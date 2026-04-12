@@ -66,7 +66,8 @@ const MOCK_LEAVES: LeaveRequest[] = [
 ];
 
 export default function LeavesView() {
-  const { user } = useAuthStore();
+  const { user, hasPermission } = useAuthStore();
+  const canApprove = hasPermission('leave.approve');
   const isAdmin = user?.role?.name === ROLES.SUPERADMIN || user?.role?.name === ROLES.ADMIN || user?.role?.name === ROLES.HR;
   
   const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved">("all");
@@ -135,7 +136,7 @@ export default function LeavesView() {
 
   const actions = (leave: LeaveRequest) => (
     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-      {isAdmin && leave.status === "Pending" ? (
+      {canApprove && leave.status === "Pending" ? (
         <>
           <button className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="Approve">
             <Check size={18} strokeWidth={3} />

@@ -12,10 +12,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getDataUserslist } from "@/service/users";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { MetaResponse } from "@/types/api";
+import CreateEmployeeModal from "@/components/employees/CreateEmployeeModal";
 
 export interface EmployeeData {
   id: number;
@@ -32,24 +33,43 @@ export interface EmployeeData {
 
 export default function EmployeesView() {
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
-  const [currentPage, setCurrentPage] = useState<number>(1);
   const [meta, setMeta] = useState<MetaResponse | undefined>();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    const getData = async () => {
-      try {
-        const resp = (await getDataUserslist({
-          limit: 2,
-        }));
+  const getData = useCallback(async (page: number = 1) => {
+    try {
+      const resp = await getDataUserslist({
+        page,
+        limit: 10,
+      });
+      if (resp.data) {
         setEmployees(resp.data);
         setMeta(resp.meta);
-        
-      } catch (error) {
-        console.error(error);
       }
-    };
-    getData();
+    } catch (error) {
+      console.error(error);
+    }
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      const timer = setTimeout(() => {
+        getData(currentPage);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [getData, currentPage, isMounted]);
+
+  if (!isMounted) return null;
 
   const columns: Column<EmployeeData>[] = [
     {
@@ -136,7 +156,10 @@ export default function EmployeesView() {
             <Filter size={18} />
             <span className="font-bold">Filter</span>
           </Button>
-          <Button className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/20 px-5 py-2.5 rounded-2xl transition-all">
+          <Button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/20 px-5 py-2.5 rounded-2xl transition-all"
+          >
             <Users size={18} />
             <span className="font-bold">Add Employee</span>
           </Button>
@@ -149,12 +172,17 @@ export default function EmployeesView() {
         searchKey="name" 
         searchPlaceholder="Search employee by name..."
         actions={actions}
-        currentPage={currentPage}
-        totalPages={meta?.last_page}
+        currentPage={meta?.pagination?.current_page}
+        totalPages={meta?.pagination?.last_page}
         onPageChange={(page) => {
-          console.log(page);
           setCurrentPage(page);
         }}
+      />
+
+      <CreateEmployeeModal 
+        open={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+        onSuccess={getData}
       />
     </div>
   );

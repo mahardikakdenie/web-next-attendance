@@ -37,6 +37,7 @@ export interface Permission {
 
 export interface Role {
   id: number;
+  tenant_id: number | null; // NULL for System Roles, ID for Custom Tenant Roles
   name: 'superadmin' | 'admin' | 'hr' | 'finance' | 'employee' | string;
   description: string;
   base_role: 'ADMIN' | 'HR' | 'FINANCE' | 'EMPLOYEE';
@@ -334,6 +335,18 @@ export interface HeatmapQueryParams {
   date_to?: string;
 }
 
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  employee_id: string;
+  department: string;
+  phone_number: string;
+  address: string;
+  base_salary: number;
+  role_id: number;
+  password?: string;
+}
+
 export interface AttendanceSummary {
   total_record: number;
   total_record_diff: number;
@@ -347,4 +360,5 @@ export interface AttendanceFilterParams {
   status: string;
   date_from: string;
   date_to: string;
+  search?: string;
 }

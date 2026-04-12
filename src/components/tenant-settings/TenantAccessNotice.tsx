@@ -1,7 +1,8 @@
-import { User, ROLES } from "@/store/auth.store";
+import { ROLES } from "@/store/auth.store";
+import { UserData } from "@/types/api";
 import { ShieldCheck, ShieldAlert, Info } from "lucide-react";
 
-export default function TenantAccessNotice({ user }: { user: User | null }) {
+export default function TenantAccessNotice({ user }: { user: UserData | null }) {
   const isAdmin = user?.role?.name === ROLES.ADMIN || user?.role?.name === ROLES.SUPERADMIN;
   const hasAccess = Boolean(user?.tenant_id && isAdmin);
 

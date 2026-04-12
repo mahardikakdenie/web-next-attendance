@@ -70,7 +70,7 @@ export default function ProfileUpdateView() {
     email: user?.email,
     phoneNumber: user?.phone_number || "+62 812-1111-2222",
     employeeId: user?.employee_id || "EMP-2024-017",
-    department: user?.department?.name || "Engineering",
+    department: user?.department || "Engineering",
     address: user?.address || "Jakarta, Indonesia",
   }), [user]);
 
