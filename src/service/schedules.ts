@@ -29,7 +29,7 @@ export interface SaveRosterRequest {
 }
 
 export const saveRoster = async (payload: SaveRosterRequest) => {
-  return secureRequest<APIResponse<null>>("post", "/v1/roster/save", payload);
+  return secureRequest<APIResponse<null>>("post", "/v1/hr/roster/save", payload);
 };
 
 /**
