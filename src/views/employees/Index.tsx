@@ -17,26 +17,14 @@ import Avatar from "@/components/ui/Avatar";
 import { useEffect, useState, useCallback } from "react";
 import { getDataUserslist } from "@/service/users";
 import { DataTable, Column } from "@/components/ui/DataTable";
-import { MetaResponse } from "@/types/api";
+import { MetaResponse, UserData } from "@/types/api";
+import { getRoleBadgeColor } from "@/lib/utils";
 import CreateEmployeeModal from "@/components/employees/CreateEmployeeModal";
 import LifecycleModal from "@/components/employees/LifecycleModal";
 import { useAuthStore } from "@/store/auth.store";
 
-export interface EmployeeData {
-  id: number;
-  name: string;
-  email: string;
-  tenant_id: number;
-  employee_id: string;
-  department: string;
-  address: string;
-  media_url: string;
-  phone_number: string;
-  created_at: string;
-}
-
 export default function EmployeesView() {
-  const [employees, setEmployees] = useState<EmployeeData[]>([]);
+  const [employees, setEmployees] = useState<UserData[]>([]);
   const [meta, setMeta] = useState<MetaResponse | undefined>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [lifecycleEmployee, setLifecycleEmployee] = useState<{id: number, name: string} | null>(null);
@@ -67,7 +55,7 @@ export default function EmployeesView() {
     return () => cancelAnimationFrame(handle);
   }, [getData, currentPage]);
 
-  const columns: Column<EmployeeData>[] = [
+  const columns: Column<UserData>[] = [
     {
       header: "Employee",
       accessor: (emp) => (
@@ -82,9 +70,20 @@ export default function EmployeesView() {
       sortable: true,
     },
     {
+      header: "Role",
+      accessor: (emp) => (
+        <div className="flex items-center gap-2">
+          <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${getRoleBadgeColor(emp.role?.base_role)}`}>
+            {emp.role?.name || 'N/A'}
+          </span>
+        </div>
+      ),
+      sortable: true,
+    },
+    {
       header: "Department",
       accessor: (emp) => (
-        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-neutral-100 text-neutral-600">
+        <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-neutral-100 text-neutral-600 border border-neutral-200/50">
           {emp.department}
         </span>
       ),
@@ -110,14 +109,14 @@ export default function EmployeesView() {
       accessor: (emp) => (
         <div className="flex items-center gap-1.5 text-neutral-600">
           <MapPin size={14} className="text-neutral-400" />
-          <span className="text-[12px] font-bold">{emp.address}</span>
+          <span className="text-[12px] font-bold">{emp.address || 'Not set'}</span>
         </div>
       ),
       sortable: true,
     },
   ];
 
-  const actions = (emp: EmployeeData) => (
+  const actions = (emp: UserData) => (
     <div className="flex items-center justify-end gap-1">
       <button
         onClick={() => setLifecycleEmployee({ id: emp.id, name: emp.name })}
@@ -139,8 +138,9 @@ export default function EmployeesView() {
         <Edit size={18} />
       </button>
       <button
+        disabled={emp.id === user?.id || emp.role?.name === 'superadmin'}
         title="Delete Record"
-        className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+        className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all disabled:opacity-20 disabled:cursor-not-allowed"
       >
         <Trash2 size={18} />
       </button>

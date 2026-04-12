@@ -116,7 +116,7 @@ export default function ManagerDashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {data?.stats.at_risk_users.slice(0, 3).map((user, i) => (
+            {(data?.stats?.at_risk_users || []).slice(0, 3).map((user, i) => (
               <div key={i} className="flex items-center justify-between p-4 rounded-3xl bg-slate-50/50 border border-transparent hover:border-slate-100 hover:bg-white transition-all group">
                 <div className="flex items-center gap-4">
                   <div className="relative w-12 h-12 shrink-0 shadow-sm">
@@ -139,7 +139,7 @@ export default function ManagerDashboardPage() {
               onClick={() => router.push('/leaves')}
               className="w-full py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-blue-600 transition-colors"
             >
-              View All 12 Pending Requests
+              View All {data?.stats?.pending_leave || 0} Pending Requests
             </button>
           </div>
         </section>
@@ -150,7 +150,7 @@ export default function ManagerDashboardPage() {
           <div className="relative z-10">
             <h2 className="text-xl font-black tracking-tight mb-6">Punctuality Champions</h2>
             <div className="flex items-center gap-6 overflow-x-auto no-scrollbar pb-2">
-              {data?.top_performers.slice(0, 4).map((emp, i) => (
+              {(data?.top_performers || []).slice(0, 4).map((emp, i) => (
                 <div key={i} className="flex flex-col items-center gap-2 shrink-0">
                   <div className="relative w-16 h-16 shadow-2xl">
                     <Image src={emp.avatar} fill alt={emp.name} className="rounded-[20px] object-cover border-2 border-white/20" />

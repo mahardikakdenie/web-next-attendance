@@ -33,6 +33,7 @@ import {
 import { Role } from "@/types/api";
 import { getTenantRoles, createCustomRole, updateCustomRole, deleteCustomRole, saveRoleHierarchy } from "@/service/roles";
 import { toast } from "sonner";
+import { getRoleBadgeColor } from "@/lib/utils";
 
 // --- PERMISSION MODULES CONFIGURATION ---
 const PERMISSION_MODULES: PermissionModule[] = [
@@ -358,10 +359,21 @@ export default function TenantRolesView() {
                       {role.tenant_id === null ? "System Role" : "Custom Role"}
                     </span>
                     <span className="w-1 h-1 rounded-full bg-slate-200" />
-                    <span className="text-[10px] font-bold text-blue-500/70 uppercase">{role.base_role}</span>
+                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${getRoleBadgeColor(role.base_role)}`}>
+                      {role.base_role}
+                    </span>
                   </div>
                 </div>
-                <ChevronRight size={18} className={`transition-all ${selectedRoleId === role.id ? "text-blue-500 translate-x-0" : "text-slate-300 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0"}`} />
+                    {!role.is_system && role.tenant_id !== null && (
+                      <button 
+                        onClick={() => handleDeleteRole(role.id)}
+                        className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                    <ChevronRight size={18} className={`transition-all ${selectedRoleId === role.id ? "text-blue-500 translate-x-0" : "text-slate-300 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0"}`} />
+
               </button>
             )) : (
               <div className="p-10 text-center bg-slate-50 rounded-[32px] border border-dashed border-slate-200">
@@ -497,7 +509,7 @@ export default function TenantRolesView() {
                           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Visual Tree</span>
                           <div className="bg-slate-50 rounded-[32px] p-8 border border-slate-100 flex flex-col items-center">
                              <div className="w-48 p-4 rounded-2xl bg-white border border-blue-200 shadow-xl shadow-blue-500/5 flex flex-col items-center text-center">
-                                <Badge className="bg-blue-50 text-blue-600 border-none mb-2">{selectedRole.base_role}</Badge>
+                                <Badge className={`border-none mb-2 ${getRoleBadgeColor(selectedRole.base_role)}`}>{selectedRole.base_role}</Badge>
                                 <p className="font-black text-sm text-slate-900">{selectedRole.name}</p>
                              </div>
                              <div className="h-12 w-px bg-slate-200"></div>

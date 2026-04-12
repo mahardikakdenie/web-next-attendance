@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { 
   X, 
   UserPlus, 
@@ -13,7 +13,9 @@ import {
   Briefcase,
   IdCard,
   Lock,
-  Loader2
+  Loader2,
+  ChevronDown,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -21,12 +23,99 @@ import { toast } from "sonner";
 import { getTenantRoles } from "@/service/roles";
 import { Role, CreateUserPayload } from "@/types/api";
 import { createUser } from "@/service/users";
+import { getRoleBadgeColor } from "@/lib/utils";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
+
+// --- CUSTOM ROLE SELECTOR COMPONENT ---
+interface RoleSelectorProps {
+  value: number;
+  roles: Role[];
+  onChange: (roleId: number) => void;
+  disabled?: boolean;
+}
+
+const RoleSelector = ({ value, roles, onChange, disabled }: RoleSelectorProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedRole = useMemo(() => 
+    roles.find(r => r.id === value) || null
+  , [value, roles]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full h-14 pl-5 pr-5 rounded-2xl flex items-center justify-between transition-all duration-300 border bg-white shadow-sm
+          ${isOpen ? 'border-blue-600 ring-4 ring-blue-600/10' : 'border-neutral-200 hover:border-neutral-300'}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        <div className="flex items-center gap-3 overflow-hidden">
+          {selectedRole ? (
+            <>
+              <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border shrink-0 ${getRoleBadgeColor(selectedRole.base_role)}`}>
+                {selectedRole.base_role}
+              </span>
+              <span className="text-[15px] font-bold text-neutral-900 truncate">
+                {selectedRole.name}
+              </span>
+            </>
+          ) : (
+            <span className="text-neutral-400 font-medium">Select a role...</span>
+          )}
+        </div>
+        <ChevronDown className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} size={18} />
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 p-2 z-[110] animate-in zoom-in-95 duration-200">
+          <div className="max-h-[240px] overflow-y-auto custom-scrollbar space-y-1">
+            {roles.map((role) => (
+              <button
+                key={role.id}
+                type="button"
+                onClick={() => { onChange(role.id); setIsOpen(false); }}
+                className={`w-full flex flex-col gap-1 p-3 rounded-xl transition-all ${value === role.id ? 'bg-blue-50/50' : 'hover:bg-slate-50'}`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase border ${getRoleBadgeColor(role.base_role)}`}>
+                      {role.base_role}
+                    </span>
+                    <span className="text-sm font-black text-slate-900 tracking-tight">{role.name}</span>
+                  </div>
+                  {value === role.id && <Check size={14} className="text-blue-600" strokeWidth={3} />}
+                </div>
+                {role.description && (
+                  <p className="text-[10px] text-slate-400 font-medium leading-tight text-left pl-1">
+                    {role.description}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props) {
   const [isLoading, setIsLoading] = useState(false);
@@ -49,10 +138,13 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
         try {
           const resp = await getTenantRoles();
           if (resp.data) {
-            setRoles(resp.data);
-            // Set default role if available
-            if (resp.data.length > 0) {
-              setFormData(prev => ({ ...prev, role_id: resp.data[0].id }));
+            // FILTER: Jangan tampilkan superadmin jika bukan di level platform
+            const availableRoles = resp.data.filter(r => r.name !== 'superadmin');
+            setRoles(availableRoles);
+            
+            // Set default role if available and not already set
+            if (availableRoles.length > 0 && formData.role_id === 0) {
+              setFormData(prev => ({ ...prev, role_id: availableRoles[0].id }));
             }
           }
         } catch (error) {
@@ -61,7 +153,7 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
       };
       fetchRoles();
     }
-  }, [open]);
+  }, [open, formData.role_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,19 +275,12 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
 
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Assign Role</label>
-              <div className="relative">
-                <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 z-10" />
-                <select 
-                  required
-                  className="w-full h-14 pl-12 pr-5 rounded-2xl text-[15px] font-bold bg-white border border-neutral-200 shadow-sm hover:border-neutral-300 transition-all outline-none appearance-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10"
-                  value={formData.role_id}
-                  onChange={e => setFormData(prev => ({ ...prev, role_id: Number(e.target.value) }))}
-                >
-                  {roles.map(role => (
-                    <option key={role.id} value={role.id}>{role.name} ({role.base_role})</option>
-                  ))}
-                </select>
-              </div>
+              <RoleSelector 
+                value={formData.role_id}
+                roles={roles}
+                onChange={roleId => setFormData(prev => ({ ...prev, role_id: roleId }))}
+                disabled={isLoading}
+              />
             </div>
 
             {/* Employment Details Group */}
