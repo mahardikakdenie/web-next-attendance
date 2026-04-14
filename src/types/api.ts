@@ -40,7 +40,7 @@ export interface Role {
   tenant_id: number | null; // NULL for System Roles, ID for Custom Tenant Roles
   name: 'superadmin' | 'admin' | 'hr' | 'finance' | 'employee' | string;
   description: string;
-  base_role: 'ADMIN' | 'HR' | 'FINANCE' | 'EMPLOYEE';
+  base_role: 'SUPERADMIN' | 'ADMIN' | 'HR' | 'FINANCE' | 'EMPLOYEE';
   is_system: boolean;
   permissions?: Permission[];
 }
@@ -365,4 +365,35 @@ export interface AttendanceFilterParams {
   date_from: string;
   date_to: string;
   search?: string;
+}
+
+/**
+ * ATTENDANCE CORRECTION
+ */
+
+export interface AttendanceCorrectionPayload {
+  attendance_id?: string;
+  date: string;
+  clock_in_time: string;
+  clock_out_time: string;
+  reason: string;
+}
+
+export interface AttendanceCorrectionData {
+  id: string;
+  attendance_id?: string;
+  user_id: number;
+  date: string;
+  clock_in_time: string;
+  clock_out_time: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  admin_notes?: string;
+  user?: UserData;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApprovalPayload {
+  admin_notes: string;
 }

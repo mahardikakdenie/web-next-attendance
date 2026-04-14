@@ -21,6 +21,7 @@ import CustomTimeSelector from "../ui/CustomTimeSelector";
 import { Button } from "../ui/Button";
 import { getDataCurrentTenat, updateDataCurrentTenant } from "@/service/tenantSettings";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export interface TenantSettingsData {
   id: number;
@@ -198,11 +199,11 @@ export default function TenantSettingForm() {
         triggerSuccessFeedback();
         setSearchQuery("");
       } else {
-        alert("Location not found. Please try a more specific address or paste a Google Maps URL.");
+        toast.error("Location not found. Please try a more specific address.");
       }
     } catch (error) {
       console.error(error);
-      alert("Failed to search location. Please check your connection.");
+      toast.error("Failed to search location. Please check your connection.");
     } finally {
       setIsSearching(false);
     }
@@ -275,8 +276,10 @@ export default function TenantSettingForm() {
       };
 
       await updateDataCurrentTenant(payload);
+      toast.success("Configuration updated successfully!");
     } catch (error) {
       console.error(error);
+      toast.error("Failed to update configuration. Please try again.");
     } finally {
       setIsSaving(false);
     }

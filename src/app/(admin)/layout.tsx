@@ -4,6 +4,7 @@ import "../globals.css";
 import MainLayout from "@/components/layouts/MainLayout";
 import { Toaster } from "sonner";
 import { RefreshProvider } from "@/lib/RefreshContext";
+import ReactQueryProvider from "@/lib/ReactQueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +32,13 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <RefreshProvider>
-          <MainLayout>
-            {children}
-          </MainLayout>
-        </RefreshProvider>
+        <ReactQueryProvider>
+          <RefreshProvider>
+            <MainLayout>
+              {children}
+            </MainLayout>
+          </RefreshProvider>
+        </ReactQueryProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>

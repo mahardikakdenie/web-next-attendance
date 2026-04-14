@@ -9,62 +9,59 @@ import { OvertimeRequestCard } from "@/components/dashboard-user/OvertimeRequest
 import { RecentActivityCard } from "@/components/dashboard-user/RecentlyActivity";
 import { LeaveBalanceCard } from "@/components/dashboard-user/LeaveBalanceCard";
 import { LeaveRequestCard } from "@/components/dashboard-user/LeaveRequestCard";
-import { RefreshProvider } from "@/lib/RefreshContext";
 
 export default function UserDashboardPage() {
   return (
-    <RefreshProvider>
-      <div className="flex flex-col gap-6 md:gap-8 w-full max-w-7xl mx-auto pb-10">
+    <div className="flex flex-col gap-8 w-full pb-10 animate-in fade-in duration-700">
+      
+      {/* 1. Header Section */}
+      <section>
+        <GreetingCard />
+      </section>
+
+      {/* 2. Main Bento Grid Section */}
+      <section className="flex flex-col gap-8">
         
-        {/* 1. Header Section */}
-        <section>
-          <GreetingCard />
-        </section>
-
-        {/* 2. Main Bento Grid Section */}
-        <section className="flex flex-col gap-6 lg:gap-8">
-          
-          {/* ROW 1: Primary Action & Immediate Context */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-            <div className="lg:col-span-8 h-full">
-              <ClockCard />
-            </div>
-            <div className="lg:col-span-4">
-              <TodayStatusCard />
-            </div>
+        {/* ROW 1: Primary Action & Immediate Context */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+          <div className="lg:col-span-8 h-full">
+            <ClockCard />
           </div>
-
-          {/* ROW 2: At-a-Glance Information (Overview Data) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
-            <div className="flex flex-col h-full">
-              <LeaveBalanceCard />
-            </div>
-            <div className="flex flex-col h-full">
-              <QuickInfoCard />
-            </div>
-            <div className="flex flex-col h-full">
-              <RecentActivityCard />
-            </div>
+          <div className="lg:col-span-4">
+            <TodayStatusCard />
           </div>
+        </div>
 
-          {/* ROW 3: Secondary Actions (Requests / Forms) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-            <div className="lg:col-span-8 h-full">
-              <LeaveRequestCard />
-            </div>
-            <div className="lg:col-span-4 h-full">
-              <OvertimeRequestCard />
-            </div>
+        {/* ROW 2: At-a-Glance Information (Overview Data) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+          <div className="flex flex-col h-full">
+            <LeaveBalanceCard />
           </div>
-          
-        </section>
+          <div className="flex flex-col h-full">
+            <QuickInfoCard />
+          </div>
+          <div className="flex flex-col h-full">
+            <RecentActivityCard />
+          </div>
+        </div>
 
-        {/* 3. Data/Table Section */}
-        <section className="mt-4">
-          <RecentAttendance />
-        </section>
+        {/* ROW 3: Secondary Actions (Requests / Forms) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+          <div className="lg:col-span-8 h-full">
+            <LeaveRequestCard />
+          </div>
+          <div className="lg:col-span-4 h-full">
+            <OvertimeRequestCard />
+          </div>
+        </div>
+        
+      </section>
 
-      </div>
-    </RefreshProvider>
+      {/* 3. Data/Table Section */}
+      <section className="mt-4">
+        <RecentAttendance />
+      </section>
+
+    </div>
   );
 }

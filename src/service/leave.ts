@@ -2,6 +2,39 @@
 import { secureRequest } from "@/lib/axios";
 import { APIResponse, Balance, LeaveBalance, LeaveRequestPayload } from "@/types/api";
 
+export interface LeaveRequestData {
+  id: number;
+  user_id: number;
+  leave_type_id: number;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  notes?: string;
+  total_days: number;
+  created_at: string;
+  user?: {
+    name: string;
+    media_url: string;
+    employee_id: string;
+  };
+  leave_type?: {
+    name: string;
+  };
+  // Compatibility fields for flat structure
+  user_name?: string;
+  user_avatar?: string;
+  leave_type_name?: string;
+}
+
+export const getLeaveRequests = async (params?: { limit?: number; offset?: number; status?: string; search?: string; page: number; }) => {
+  return secureRequest<APIResponse<LeaveRequestData[]>>(
+    'get', 
+    "/v1/leaves", 
+    params
+  );
+};
+
 export const getLeaveBalances = async () => {
   return secureRequest<APIResponse<Balance[]>>('get',"/v1/leaves/balances");
 };

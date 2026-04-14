@@ -1,13 +1,12 @@
 "use client";
 
-import { useAuthStore, ROLES } from "@/store/auth.store";
-import UserDashboardPage from "@/views/dashboard/UserDashboard";
-import ManagerDashboardPage from "@/views/dashboard/ManagerDashboard";
+import { useAuthStore } from "@/store/auth.store";
+import DashboardRouter from "@/views/dashboard/DashboardRouter";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 export default function Page() {
-  const { user, loading } = useAuthStore();
+  const { loading } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -21,26 +20,14 @@ export default function Page() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-        <p className="font-bold text-slate-400 tracking-widest uppercase text-xs">Preparing Workspace...</p>
+        <p className="font-bold text-slate-400 tracking-widest uppercase text-xs">Preparing Dashboard...</p>
       </div>
     );
   }
 
-  // PLATFORM LEVEL
-  if (user?.role?.name === ROLES.SUPERADMIN) {
-    return <ManagerDashboardPage />; 
-  }
-
-  // TENANT LEVEL - MANAGEMENT
-  if (user?.role?.name === ROLES.ADMIN || user?.role?.name === ROLES.HR) {
-    return <ManagerDashboardPage />;
-  }
-
-  // TENANT LEVEL - FINANCE
-  if (user?.role?.name === ROLES.FINANCE) {
-    return <ManagerDashboardPage />; 
-  }
-
-  // DEFAULT: EMPLOYEE
-  return <UserDashboardPage />;
+  return (
+    <div className="w-full animate-in fade-in duration-700">
+      <DashboardRouter />
+    </div>
+  );
 }

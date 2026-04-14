@@ -12,7 +12,10 @@ import {
   SearchX,
   RotateCcw,
   Download,
-  CalendarDays
+  CalendarDays,
+  FileEdit,
+  History,
+  CheckCircle2
 } from "lucide-react";
 import AttendanceFilter from "@/components/attendance/AttendanceFilter";
 import SummarySection from "@/components/attendance/SummarySection";
@@ -22,7 +25,10 @@ import { Can } from "@/components/auth/PermissionGuard";
 import { TableSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { getDataAttendances, getDataSummary } from "@/service/attendance";
 import { DataTable, Column } from "@/components/ui/DataTable";
-import { UserAttendance } from "@/types/api";
+import { UserAttendance, AttendanceFilterParams, AttendanceSummary } from "@/types/api";
+import CorrectionRequestModal from "@/components/attendance/CorrectionRequestModal";
+import CorrectionsView from "./Corrections";
+import { useQuery } from "@tanstack/react-query";
 
 export interface SummaryData {
   total_record: number;
@@ -31,13 +37,6 @@ export interface SummaryData {
   ontime_summary_diff: number;
   late_summary: number;
   late_summary_diff: number;
-}
-
-export interface AttendanceFilterParams {
-  status: string;
-  date_from: string;
-  date_to: string;
-  search?: string;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -92,11 +91,10 @@ export default function AttendancesView() {
   const { user, loading: authLoading } = useAuthStore();
   const router = useRouter();
 
-  const [data, setData] = useState<UserAttendance[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"logs" | "corrections">("logs");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  
+  const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+
   const [filters, setFilters] = useState<AttendanceFilterParams>({
     status: '',
     date_from: '',
@@ -104,85 +102,53 @@ export default function AttendancesView() {
     search: ''
   });
 
-  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
-  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const limit = 10;
+  const offset = (currentPage - 1) * limit;
 
-  const fetchSummary = useCallback(async (currentFilters: AttendanceFilterParams) => {
-    setIsSummaryLoading(true);
-    try {
-      const resp = await getDataSummary(currentFilters);
-      if (resp && resp.data) {
-        setSummaryData(resp.data as unknown as SummaryData);
-      } else {
-        setSummaryData(null);
+  // React Query: Summary Data
+  const { data: summaryResp, isLoading: isSummaryLoading } = useQuery({
+    queryKey: ["attendance-summary", filters],
+    queryFn: () => getDataSummary(filters),
+    enabled: activeTab === "logs",
+  });
+
+  const summaryData = summaryResp?.data as unknown as SummaryData | null;
+
+  // React Query: Attendance List
+  const { data: attendanceResp, isLoading: isAttendanceLoading } = useQuery({
+    queryKey: ["attendance-list", currentPage, filters],
+    queryFn: () => getDataAttendances(
+      limit,
+      offset,
+      filters.status.toLowerCase(), 
+      filters.date_from, 
+      filters.date_to,
+      filters.search
+    ),
+    enabled: activeTab === "logs",
+  });
+
+  const rawData = attendanceResp?.data?.data || [];
+  const meta = attendanceResp?.data?.meta;
+  const totalPages = meta ? Math.ceil(meta.total / limit) : 1;
+
+  const data: UserAttendance[] = useMemo(() => {
+    return rawData.map((item) => ({
+      ...item,
+      id: item.id || `att-${item.user_id}-${item.clock_in_time}`,
+      user: item.user || { 
+        name: "Unknown User", 
+        employee_id: String(item.user_id),
+        media_url: "/profile.jpg"
       }
-    } catch (error) {
-      console.error("Failed to fetch summary:", error);
-      setSummaryData(null);
-    } finally {
-      setIsSummaryLoading(false);
-    }
-  }, []);
-
-  const fetchData = useCallback(async (page: number, currentFilters: AttendanceFilterParams) => {
-    setIsLoading(true);
-    try {
-      const limit = 10;
-      const offset = (page - 1) * limit;
-      
-      const resp = await getDataAttendances(
-        limit,
-        offset,
-        currentFilters.status.toLowerCase(), 
-        currentFilters.date_from, 
-        currentFilters.date_to,
-        currentFilters.search
-      );
-
-      if (resp && resp.data) {
-        // Backend returns { data: UserAttendance[], meta: { total, limit, offset } }
-        const rawData = resp.data.data || [];
-        const meta = resp.data.meta;
-
-        const normalizedData: UserAttendance[] = rawData.map((item) => {
-          return {
-            ...item,
-            id: item.id || `att-${item.user_id}-${item.clock_in_time}`,
-            user: item.user || { 
-              name: "Unknown User", 
-              employee_id: String(item.user_id),
-              media_url: "/profile.jpg"
-            }
-          } as UserAttendance;
-        });
-
-        setData(normalizedData);
-        
-        if (meta) {
-          setTotalPages(Math.ceil(meta.total / limit));
-        }
-      } else {
-        setData([]);
-        setTotalPages(1);
-      }
-    } catch (error) {
-      console.error("Failed to fetch attendances:", error);
-      setData([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    } as UserAttendance));
+  }, [rawData]);
 
   useEffect(() => {
     if (!authLoading && user && user.role?.name === ROLES.USER) {
       router.replace("/");
     }
   }, [user, authLoading, router]);
-
-  useEffect(() => {
-    fetchData(currentPage, filters);
-    fetchSummary(filters);
-  }, [currentPage, filters, fetchData, fetchSummary]);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -311,10 +277,24 @@ export default function AttendancesView() {
             <Users size={20} strokeWidth={2.5} />
             <span className="text-[11px] font-black uppercase tracking-[0.2em]">Attendance System</span>
           </div>
-          <h1 className="text-4xl font-black text-neutral-900 tracking-tight">Real-time Activity</h1>
-          <p className="text-neutral-500 font-medium">Monitor and manage employee presence across all work locations.</p>
+          <h1 className="text-4xl font-black text-neutral-900 tracking-tight">
+            {activeTab === "logs" ? "Real-time Activity" : "Correction Requests"}
+          </h1>
+          <p className="text-neutral-500 font-medium">
+            {activeTab === "logs" 
+              ? "Monitor and manage employee presence across all work locations."
+              : "Review and approve attendance adjustment requests from employees."}
+          </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          <Button 
+            onClick={() => setShowCorrectionModal(true)}
+            variant="secondary" 
+            className="px-5 py-2.5 rounded-2xl border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+          >
+            <FileEdit size={18} />
+            <span className="font-bold">Request Correction</span>
+          </Button>
           <Can permission="attendance.export">
             <Button variant="secondary" className="px-5 py-2.5 rounded-2xl">
               <Download size={18} />
@@ -333,40 +313,81 @@ export default function AttendancesView() {
         </div>
       </div>
 
-      <SummarySection data={summaryData} isLoading={isSummaryLoading} />
-
-      <div className="space-y-6">
-        <AttendanceFilter onFilterChange={handleFilterChange} currentFilters={filters} />
-        
-        {data.length === 0 && !isLoading ? (
-          <div className="bg-white rounded-[40px] border border-neutral-100 p-20 flex flex-col items-center text-center shadow-sm animate-in zoom-in-95 duration-500">
-            <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 ring-8 ring-slate-50/50">
-              <SearchX size={48} className="text-slate-200" />
-            </div>
-            <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">No Matching Records</h3>
-            <p className="text-slate-400 font-medium max-w-sm leading-relaxed mb-10 text-sm">
-              We couldn&apos;t find any attendance logs matching your current filters. Try searching for something else or reset the view.
-            </p>
-            <Button 
-              onClick={resetFilters}
-              className="flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 px-8 py-4 rounded-2xl transition-all shadow-xl shadow-slate-200 active:scale-95"
-            >
-              <RotateCcw size={18} strokeWidth={2.5} />
-              <span className="font-black uppercase tracking-widest text-xs">Reset All Filters</span>
-            </Button>
-          </div>
-        ) : (
-          <DataTable
-            data={data}
-            columns={columns}
-            actions={actions}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            isLoading={isLoading}
-          />
-        )}
+      {/* Main Tabs */}
+      <div className="flex items-center gap-1 bg-white p-1.5 rounded-[22px] border border-neutral-100 w-fit shadow-xs">
+        <button
+          onClick={() => setActiveTab("logs")}
+          className={`px-8 py-2.5 rounded-[18px] text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+            activeTab === "logs" 
+              ? "bg-slate-900 text-white shadow-md" 
+              : "text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50"
+          }`}
+        >
+          <History size={14} />
+          Real-time Logs
+        </button>
+        <button
+          onClick={() => setActiveTab("corrections")}
+          className={`px-8 py-2.5 rounded-[18px] text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+            activeTab === "corrections" 
+              ? "bg-slate-900 text-white shadow-md" 
+              : "text-neutral-400 hover:text-neutral-600 hover:bg-neutral-50"
+          }`}
+        >
+          <CheckCircle2 size={14} />
+          Corrections
+        </button>
       </div>
+
+      {activeTab === "logs" ? (
+        <>
+          <SummarySection data={summaryData} isLoading={isSummaryLoading} />
+
+          <div className="space-y-6">
+            <AttendanceFilter onFilterChange={handleFilterChange} currentFilters={filters} />
+            
+            {data.length === 0 && !isAttendanceLoading ? (
+              <div className="bg-white rounded-[40px] border border-neutral-100 p-20 flex flex-col items-center text-center shadow-sm animate-in zoom-in-95 duration-500">
+                <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 ring-8 ring-slate-50/50">
+                  <SearchX size={48} className="text-slate-200" />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">No Matching Records</h3>
+                <p className="text-slate-400 font-medium max-w-sm leading-relaxed mb-10 text-sm">
+                  We couldn&apos;t find any attendance logs matching your current filters. Try searching for something else or reset the view.
+                </p>
+                <Button 
+                  onClick={resetFilters}
+                  className="flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 px-8 py-4 rounded-2xl transition-all shadow-xl shadow-slate-200 active:scale-95"
+                >
+                  <RotateCcw size={18} strokeWidth={2.5} />
+                  <span className="font-black uppercase tracking-widest text-xs">Reset All Filters</span>
+                </Button>
+              </div>
+            ) : (
+              <DataTable
+                data={data}
+                columns={columns}
+                actions={actions}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                isLoading={isAttendanceLoading}
+              />
+            )}
+          </div>
+        </>
+      ) : (
+        <CorrectionsView />
+      )}
+
+      <CorrectionRequestModal
+        open={showCorrectionModal}
+        onClose={() => setShowCorrectionModal(false)}
+        onSuccess={() => {
+          // If we are on corrections tab, it will auto-refetch if we use react-query there too
+          // Or we can use queryClient.invalidateQueries(["corrections-list"])
+        }}
+      />
     </div>
   );
 }

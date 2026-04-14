@@ -138,8 +138,13 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
         try {
           const resp = await getTenantRoles();
           if (resp.data) {
-            // FILTER: Jangan tampilkan superadmin jika bukan di level platform
-            const availableRoles = resp.data.filter(r => r.name !== 'superadmin');
+            // FILTER: Jangan tampilkan role Admin atau Superadmin di form pendaftaran karyawan biasa
+            const availableRoles = resp.data.filter(r => 
+              r.base_role !== 'ADMIN' && 
+              r.base_role !== 'SUPERADMIN' &&
+              r.name.toLowerCase() !== 'superadmin' &&
+              r.name.toLowerCase() !== 'admin'
+            );
             setRoles(availableRoles);
             
             // Set default role if available and not already set

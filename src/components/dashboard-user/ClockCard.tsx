@@ -20,10 +20,11 @@ import {
 import { clockAttendance } from "@/service/attendance";
 import { uploadMedia } from "@/service/media";
 import { getDataCurrentTenat } from "@/service/tenantSettings";
-import { getRoster } from "@/service/schedules";
+import { getRoster, getShifts } from "@/service/schedules";
 import { useAuthStore } from "@/store/auth.store";
 import { useRefresh } from "@/lib/RefreshContext";
 import { ApiResponse } from "../tenant-settings/TenantSettingForm";
+import { WorkShift } from "@/types/schedules";
 
 type Coordinates = {
   latitude: number;
@@ -32,6 +33,10 @@ type Coordinates = {
 
 interface TenantSettingsData {
   allowMultipleCheck: boolean;
+  clockInStart?: string;
+  clockInEnd?: string;
+  clockOutStart?: string;
+  clockOutEnd?: string;
 }
 
 const dataUrlToFile = async (dataUrl: string) => {
@@ -56,6 +61,7 @@ export default function ClockCard() {
   const [location, setLocation] = useState<string>("Mencari lokasi...");
   const [selectedAction, setSelectedAction] = useState<"clock_in" | "clock_out" | null>(null);
   const [isOffToday, setIsOffToday] = useState(false);
+  const [shiftInfo, setShiftInfo] = useState<string>("Memuat jadwal...");
   
   const [tenantSettings, setTenantSettings] = useState<TenantSettingsData>({
     allowMultipleCheck: false
@@ -75,45 +81,77 @@ export default function ClockCard() {
   }, [user, mounted]);
 
   useEffect(() => {
-    const checkSchedule = async () => {
+    const initData = async () => {
       if (!user) return;
       try {
+        // Fetch Shifts and Tenant Settings in parallel
+        const [shiftResp, settingsResp] = await Promise.all([
+          getShifts(),
+          getDataCurrentTenat() as Promise<ApiResponse>
+        ]);
+
+        let currentShifts: WorkShift[] = [];
+        if (shiftResp.data) {
+          currentShifts = shiftResp.data;
+        }
+
+        let currentSettings: TenantSettingsData = { allowMultipleCheck: false };
+        if (settingsResp && settingsResp.data) {
+          currentSettings = {
+            allowMultipleCheck: Boolean(settingsResp.data.allow_multiple_check),
+            clockInStart: settingsResp.data.clock_in_start_time,
+            clockInEnd: settingsResp.data.clock_in_end_time,
+            clockOutStart: settingsResp.data.clock_out_start_time,
+            clockOutEnd: settingsResp.data.clock_out_end_time,
+          };
+          setTenantSettings(currentSettings);
+        }
+
+        // Now check Roster
         const today = dayjs();
         const start = today.startOf("week").format("YYYY-MM-DD");
         const end = today.endOf("week").format("YYYY-MM-DD");
-        const resp = await getRoster(start, end);
+        const rosterResp = await getRoster(start, end);
         
-        if (resp.data) {
-          const mySchedule = resp.data.find(s => s.id === user.id);
+        if (rosterResp.data) {
+          const mySchedule = rosterResp.data.find(s => s.id === user.id);
           if (mySchedule) {
-            const todayShift = (mySchedule.weeklyRoster as Record<string, string>)[today.format("dddd").toLowerCase()];
-            if (todayShift === "off") {
-              setIsOffToday(true);
+            const todayName = today.format("dddd").toLowerCase();
+            const todayShiftValue = (mySchedule.weeklyRoster as Record<string, string>)[todayName];
+            const isWeekend = todayName === "saturday" || todayName === "sunday";
+            
+            if (todayShiftValue === "off") {
+              if (isWeekend) {
+                setIsOffToday(true);
+                setShiftInfo("Status: Libur Akhir Pekan");
+              } else {
+                setIsOffToday(false);
+                setShiftInfo(`Jadwal Standar Kantor (Sesi Masuk: ${currentSettings.clockInStart} - ${currentSettings.clockInEnd})`);
+              }
+            } else {
+              setIsOffToday(false);
+              // Try to find shift details
+              const shiftDetail = currentShifts.find(s => String(s.id) === String(todayShiftValue) || s.name === todayShiftValue);
+              if (shiftDetail) {
+                setShiftInfo(`Shift ${shiftDetail.name} (${shiftDetail.startTime} - ${shiftDetail.endTime})`);
+              } else {
+                // If todayShiftValue is "work_shift_tenant" or similar, fallback to proper wording
+                setShiftInfo(`Jadwal Standar Kantor (Sesi Masuk: ${currentSettings.clockInStart} - ${currentSettings.clockInEnd})`);
+              }
             }
+          } else {
+            setShiftInfo(`Jadwal Standar Kantor (Sesi Masuk: ${currentSettings.clockInStart} - ${currentSettings.clockInEnd})`);
           }
+        } else {
+          setShiftInfo(`Jadwal Standar Kantor (Sesi Masuk: ${currentSettings.clockInStart} - ${currentSettings.clockInEnd})`);
         }
       } catch (error) {
-        console.error("Failed to check schedule:", error);
+        console.error("Failed to initialize schedule:", error);
+        setShiftInfo("Gagal memuat jadwal");
       }
     };
-    if (mounted) checkSchedule();
+    if (mounted) initData();
   }, [user, mounted]);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const resp = (await getDataCurrentTenat()) as ApiResponse;
-        if (resp && resp.data) {
-          setTenantSettings({
-            allowMultipleCheck: Boolean(resp.data.allow_multiple_check)
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch tenant settings:", error);
-      }
-    };
-    fetchSettings();
-  }, []);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -173,6 +211,7 @@ export default function ClockCard() {
     setSelectedAction(type);
     
     const settings = user?.tenant?.tenant_settings;
+    console.log("settings : ", settings);
     
     // 1. Geofencing Pre-check (Client side)
     if (settings?.require_location && !settings?.allow_remote) {
@@ -340,9 +379,7 @@ export default function ClockCard() {
     ? "Memproses verifikasi wajah..."
     : status === "camera"
       ? "Ambil selfie absensi"
-      : attendance.length === 0
-        ? "Sistem Absensi Aktif"
-        : `Terekam ${attendance.length} Log Absensi`;
+      : `${shiftInfo} • ${attendance.length === 0 ? "Sistem Absensi Aktif" : `Terekam ${attendance.length} Log`}`;
 
   return (
     <>

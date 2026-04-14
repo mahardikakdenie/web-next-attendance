@@ -1,6 +1,6 @@
 // src/service/attendance.ts
 import { secureRequest } from "@/lib/axios";
-import { AttendanceToday, AttendanceHistory, ClockPayload, APIResponse, UserAttendance, AttendanceSummary, AttendanceFilterParams } from "@/types/api";
+import { AttendanceToday, AttendanceHistory, ClockPayload, APIResponse, UserAttendance, AttendanceSummary, AttendanceFilterParams, AttendanceCorrectionPayload, AttendanceCorrectionData, ApprovalPayload } from "@/types/api";
 
 export const getTodayAttendance = async () => {
   return secureRequest<APIResponse<AttendanceToday>>("get", "/v1/attendance/today");
@@ -44,4 +44,25 @@ export const getDataAttendances = async (
 
 export const getDataSummary = async (_currentFilters: AttendanceFilterParams) => {
   return secureRequest<APIResponse<AttendanceSummary>>('get', '/v1/attendance/summary', _currentFilters);
+};
+
+export const submitCorrection = async (payload: AttendanceCorrectionPayload) => {
+  return secureRequest<APIResponse<AttendanceCorrectionData>>("post", "/v1/attendance/corrections", payload);
+};
+
+export const getCorrections = async (params?: { status?: string; limit?: number; offset?: number }) => {
+  return secureRequest<APIResponse<{ data: AttendanceCorrectionData[]; meta: { total: number } }>>(
+    "get", 
+    "/v1/attendance/corrections", 
+    undefined,
+    { params }
+  );
+};
+
+export const approveCorrection = async (id: string, payload: ApprovalPayload) => {
+  return secureRequest<APIResponse<AttendanceCorrectionData>>("post", `/v1/attendance/corrections/${id}/approve`, payload);
+};
+
+export const rejectCorrection = async (id: string, payload: ApprovalPayload) => {
+  return secureRequest<APIResponse<AttendanceCorrectionData>>("post", `/v1/attendance/corrections/${id}/reject`, payload);
 };
