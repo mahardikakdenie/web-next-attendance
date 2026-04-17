@@ -23,7 +23,7 @@ export const getMeAPI = async () => {
     includes: "tenant,tenant.tenant_settings,attendances,role",
   }, {
     params: {
-      includes: "tenant,tenant.tenant_settings,attendances,role",
+      includes: "tenant,tenant.tenant_settings,attendances,role,shift",
     },
   });
 };

@@ -2,7 +2,8 @@ export type ExpenseStatus = "Pending" | "Approved" | "Rejected";
 export type ExpenseCategory = "Travel" | "Medical" | "Supplies" | "Equipment" | "Other";
 
 export interface ExpenseClaim {
-  id: string;
+  id: number;
+  claimID: string; // Display ID like EXP-001
   employeeName: string;
   avatar: string;
   category: ExpenseCategory;

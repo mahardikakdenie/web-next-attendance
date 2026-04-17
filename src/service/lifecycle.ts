@@ -47,10 +47,11 @@ export const updateLifecycleTaskStatus = async (
 /**
  * Lifecycle Master Templates (Global for Tenant)
  */
-export const getLifecycleTemplates = async () => {
+export const getLifecycleTemplates = async (category?: string) => {
   return secureRequest<APIResponse<LifecycleTemplate[]>>(
     "get",
-    "/v1/hr/lifecycle-templates"
+    "/v1/hr/lifecycle-templates",
+    category ? { category } : undefined
   );
 };
 

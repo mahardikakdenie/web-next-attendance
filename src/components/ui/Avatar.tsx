@@ -6,7 +6,7 @@ export default function Avatar({ src, className }: { src: string; className?: st
       src={src}
       width={40}
       height={40}
-      alt=""
+      alt={src}
       className={className || "w-8 h-8 rounded-full object-cover"}
     />
   );

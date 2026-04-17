@@ -40,10 +40,21 @@ const ShiftSelector = ({ currentShiftId, shifts, onSelect, disabled }: ShiftSele
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const isWorkShiftTenant = currentShiftId?.includes("work_shift_tenant");
+  
+  const isLeave = useMemo(() => {
+    if (!currentShiftId || currentShiftId === "off" || isWorkShiftTenant) return false;
+    return !shifts.find(s => s.id === currentShiftId);
+  }, [currentShiftId, shifts, isWorkShiftTenant]);
+
   const currentShift = useMemo(() => {
     if (currentShiftId === "off") return { name: "OFF", color: "bg-slate-200", startTime: "", endTime: "", type: "Flexible" };
-    return shifts.find(s => s.id === currentShiftId) || { name: "???", color: "bg-slate-100", startTime: "", endTime: "", type: "Office" };
-  }, [currentShiftId, shifts]);
+    if (isWorkShiftTenant) return { name: "Work Standar Tenant", color: "bg-indigo-600", startTime: "08:00", endTime: "17:00", type: "Office" };
+    const found = shifts.find(s => s.id === currentShiftId);
+    if (found) return found;
+    if (isLeave) return { name: "LEAVE", color: "bg-amber-100 !text-amber-700 border-amber-200", startTime: "", endTime: "", type: "Office" };
+    return { name: "???", color: "bg-slate-100", startTime: "", endTime: "", type: "Office" };
+  }, [currentShiftId, shifts, isWorkShiftTenant, isLeave]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -59,21 +70,25 @@ const ShiftSelector = ({ currentShiftId, shifts, onSelect, disabled }: ShiftSele
     <div className="relative w-full" ref={containerRef}>
       <button
         type="button"
-        disabled={disabled}
+        title={isLeave ? "Sedang Leave/Cuti" : ""}
+        disabled={(disabled && !isWorkShiftTenant) || isLeave}
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full h-16 rounded-[24px] border-2 px-3 flex flex-col items-center justify-center transition-all duration-300 group relative
           ${currentShiftId === "off" 
             ? 'bg-slate-50 border-dashed border-slate-200 text-slate-400 hover:bg-slate-100' 
             : `${currentShift.color} border-transparent text-white shadow-lg shadow-slate-200/50 hover:scale-[1.02] active:scale-95`
-          } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          } ${(disabled && !isWorkShiftTenant) || isLeave ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
-        <span className="font-black uppercase text-[10px] tracking-widest leading-none">
-          {currentShift.name.split(' ')[0]}
+        <span className="font-black uppercase text-[10px] tracking-widest leading-none text-center">
+          {isLeave ? "LEAVE" : (isWorkShiftTenant ? "Work Standar Tenant" : currentShift.name.split(' ')[0])}
         </span>
-        {currentShiftId !== "off" && (
+        {currentShiftId !== "off" && !isLeave && (
           <span className="text-[9px] font-bold mt-1 opacity-80">{currentShift.startTime} - {currentShift.endTime}</span>
         )}
-        {!disabled && (
+        {isLeave && (
+          <span className="text-[8px] font-bold mt-1 opacity-80 text-center leading-tight">Sedang Leave/Cuti</span>
+        )}
+        {(!disabled || isWorkShiftTenant) && !isLeave && (
           <ChevronDown 
             className={`absolute right-3 top-1/2 -translate-y-1/2 transition-transform duration-300 opacity-40 ${isOpen ? 'rotate-180' : ''}`} 
             size={14} 
@@ -81,10 +96,28 @@ const ShiftSelector = ({ currentShiftId, shifts, onSelect, disabled }: ShiftSele
         )}
       </button>
 
-      {isOpen && !disabled && (
+      {isOpen && (!disabled || isWorkShiftTenant) && !isLeave && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 p-2 z-[100] animate-in zoom-in-95 duration-200 min-w-[200px]">
           <div className="max-h-[280px] overflow-y-auto custom-scrollbar space-y-1">
-            <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Available Shifts</p>
+            <p className="px-3 py-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Available Options</p>
+            
+            <button
+              type="button"
+              onClick={() => { onSelect("work_shift_tenant"); setIsOpen(false); }}
+              className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${isWorkShiftTenant ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}
+            >
+              <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                <Briefcase size={16} />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <p className="text-[11px] font-black text-slate-900 leading-none mb-1">Shift Kantor</p>
+                <p className="text-[9px] font-bold text-slate-400 uppercase">Ikuti jam shift kantor</p>
+              </div>
+              {isWorkShiftTenant && <Check size={14} className="text-blue-600" strokeWidth={3} />}
+            </button>
+
+            <div className="h-px bg-slate-100 my-1 mx-2" />
+
             {shifts.map((s) => (
               <button
                 key={s.id}
@@ -192,10 +225,25 @@ export default function SchedulesView() {
       setIsSaving(true);
       const payload = {
         start_date: currentWeekStart.format("YYYY-MM-DD"),
-        assignments: roster.map(emp => ({
-          user_id: emp.id,
-          roster: emp.weeklyRoster
-        }))
+        assignments: roster.map(emp => {
+          // Transform roster values: empty string for tenant shifts and leaves
+          const processedRoster: Record<string, string> = {};
+          Object.entries(emp.weeklyRoster).forEach(([day, shiftId]) => {
+            const isWorkShiftTenant = shiftId?.includes("work_shift_tenant");
+            const isLeave = shiftId?.includes("leave") || (!shifts.find(s => s.id === shiftId) && shiftId !== "off" && shiftId !== "");
+            
+            if (isWorkShiftTenant || isLeave) {
+              processedRoster[day] = "";
+            } else {
+              processedRoster[day] = shiftId;
+            }
+          });
+
+          return {
+            user_id: emp.id,
+            roster: processedRoster
+          };
+        })
       };
       const resp = await saveRoster(payload);
       if (resp.success) {

@@ -12,6 +12,7 @@ const getBadgeClassName = (status: string) => {
   if (status === "On Time") return "bg-emerald-50 text-emerald-600 border border-emerald-100/50";
   if (status === "Late") return "bg-amber-50 text-amber-600 border border-amber-100/50";
   if (status === "Absent") return "bg-rose-50 text-rose-600 border border-rose-100/50";
+  if (status === "On Leave") return "bg-blue-50 text-blue-600 border border-blue-100/50";
   return "bg-neutral-50 text-neutral-500 border border-neutral-200/50";
 };
 

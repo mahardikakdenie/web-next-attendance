@@ -29,7 +29,9 @@ import {
   Receipt,
   MessageSquare,
   Calendar,
-  ListChecks
+  ListChecks,
+  Target,
+  Star
 } from "lucide-react";
 import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
 import { getDataCurrentTenat } from "@/service/tenantSettings";
@@ -159,6 +161,22 @@ const MENUS: MenuItem[] = [
         path: "/overtime",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
         permission: "overtime.view",
+      },
+      {
+        key: "performance-goals",
+        label: "Goal Management",
+        icon: Target,
+        path: "/performance/goals",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+        permission: "performance.manage",
+      },
+      {
+        key: "performance-appraisals",
+        label: "Appraisals",
+        icon: Star,
+        path: "/performance/appraisals",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.USER],
+        permission: "performance.view",
       },
     ],
   },

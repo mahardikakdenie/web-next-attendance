@@ -30,6 +30,9 @@ interface DataTableProps<T> {
   totalPages?: number;
   onPageChange?: (page: number) => void;
   isLoading?: boolean;
+  limit?: number;
+  onLimitChange?: (limit: number) => void;
+  limitOptions?: number[];
 }
 
 export function DataTable<T extends { id: string | number }>({
@@ -42,7 +45,10 @@ export function DataTable<T extends { id: string | number }>({
   currentPage,
   totalPages,
   onPageChange,
-  isLoading = false
+  isLoading = false,
+  limit,
+  onLimitChange,
+  limitOptions = [10, 25, 50, 100]
 }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{ key: keyof T; direction: "asc" | "desc" } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -185,11 +191,31 @@ export function DataTable<T extends { id: string | number }>({
         </div>
 
         {/* Pagination */}
-        {totalPages && totalPages && currentPage !== undefined && onPageChange && (
-          <div className="px-6 py-4 border-t border-neutral-100 flex items-center justify-between bg-neutral-50/30">
-            <p className="text-xs font-bold text-neutral-500 uppercase tracking-tight">
-              Page {currentPage} of {totalPages}
-            </p>
+        {totalPages && totalPages > 0 && currentPage !== undefined && onPageChange && (
+          <div className="px-6 py-4 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between bg-neutral-50/30 gap-4">
+            <div className="flex items-center gap-4">
+              <p className="text-xs font-bold text-neutral-500 uppercase tracking-tight">
+                Page {currentPage} of {totalPages}
+              </p>
+              
+              {onLimitChange && limit !== undefined && (
+                <div className="flex items-center gap-2 border-l border-neutral-200 pl-4">
+                  <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Rows:</span>
+                  <select
+                    value={limit}
+                    onChange={(e) => onLimitChange(Number(e.target.value))}
+                    className="bg-white border border-neutral-200 rounded-lg text-xs font-bold text-neutral-700 px-2 py-1 outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                  >
+                    {limitOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onPageChange(currentPage - 1)}

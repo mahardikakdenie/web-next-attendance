@@ -1,172 +1,209 @@
+/* eslint-disable jsx-a11y/alt-text */
 "use client";
 
-import React from "react";
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+import { PayrollCalculationResult } from '@/types/api';
 
-// --- TYPES ---
-interface SlipBreakdown {
-  grossIncome: number;
-  pph21Amount: number;
-  unpaidLeaveDeduction: number;
-  bpjs: {
-    health: { employee: number };
-    jht: { employee: number };
-  };
-}
-
-interface SelectedEmployeeSlip {
-  id: number;
-  name: string;
-  role: string;
-  ptkp: string;
-  basic: number;
-  allowance: number;
-  unpaidLeave: number;
-  netSalary: number;
-  breakdown: SlipBreakdown;
-}
-
-interface Props {
-  selectedPeriod: string;
-  selectedEmployeeSlip: SelectedEmployeeSlip;
-}
-
-// --- STYLING ---
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
-    backgroundColor: "#ffffff",
-    fontFamily: "Helvetica",
+    padding: 40, 
+    fontFamily: 'Helvetica',
+    fontSize: 9,
+    color: '#0f172a', // slate-900
+    backgroundColor: '#ffffff',
   },
-  headerBanner: {
-    backgroundColor: "#0f172a",
-    padding: 24,
-    borderRadius: 8,
-    color: "#ffffff",
-    marginBottom: 30,
+  // LIGHT HEADER
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 40,
   },
-  confidentialTag: {
-    fontSize: 8,
-    fontWeight: "bold",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    color: "#3b82f6",
-    marginBottom: 8,
+  headerLeft: {
+    flexDirection: 'column',
+    gap: 8,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "heavy",
+  headerRight: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  logoContainer: {
+    flexDirection: 'column',
+    marginBottom: 10,
+  },
+  logo: {
+    width: 60,
+    height: 40,
+    objectFit: 'contain',
     marginBottom: 4,
   },
-  period: {
-    fontSize: 10,
-    color: "#94a3b8",
+  companyName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0f172a',
   },
-  infoSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 40,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-    paddingBottom: 20,
-  },
-  employeeInfo: {
-    flex: 1,
-  },
-  companyInfo: {
-    flex: 1,
-    textAlign: "right",
-  },
-  infoLabel: {
+  headerSubtitle: {
     fontSize: 8,
-    color: "#64748b",
-    textTransform: "uppercase",
+    color: '#64748b', // slate-500
+    textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 2,
   },
-  infoValue: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#1e293b",
+  rightLabel: {
+    fontSize: 8,
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  gridContainer: {
-    flexDirection: "row",
+  rightValue: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  statusBadge: {
+    marginTop: 4,
+    backgroundColor: '#eef2ff', // indigo-50
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 7,
+    fontWeight: 'bold',
+    color: '#4f46e5', // indigo-600
+    textTransform: 'uppercase',
+  },
+
+  // TWO COLUMN SPLIT
+  columns: {
+    flexDirection: 'row',
     gap: 40,
-    marginBottom: 40,
+    position: 'relative',
+  },
+  verticalDivider: {
+    position: 'absolute',
+    left: '50%',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    borderLeftWidth: 1,
+    borderLeftColor: '#f1f5f9',
+    borderLeftStyle: 'dashed',
+    transform: 'translateX(-0.5px)',
   },
   column: {
     flex: 1,
   },
-  columnTitle: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "#0f172a",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 15,
-    paddingBottom: 5,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: '#f1f5f9',
+    paddingBottom: 8,
+    marginBottom: 12,
   },
+  sectionTitle: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  
   row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-    fontSize: 9,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  rowLabelContainer: {
+    flexDirection: 'column',
+    gap: 2,
   },
   rowLabel: {
-    color: "#64748b",
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#334155', // slate-700
+  },
+  rowLabelSub: {
+    fontSize: 7,
+    color: '#94a3b8',
+    fontStyle: 'italic',
   },
   rowValue: {
-    color: "#0f172a",
-    fontWeight: "medium",
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#0f172a',
   },
   deductionValue: {
-    color: "#ef4444",
-  },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 15,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-  netSalaryCard: {
-    backgroundColor: "#0f172a",
-    padding: 24,
-    borderRadius: 12,
-    marginTop: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  netLabel: {
     fontSize: 9,
-    color: "#3b82f6",
-    textTransform: "uppercase",
-    letterSpacing: 2,
-    marginBottom: 4,
+    fontWeight: 'bold',
+    color: '#e11d48', // rose-600
   },
-  netValue: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#ffffff",
+
+  divider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    borderBottomStyle: 'dashed',
+    marginVertical: 10,
   },
-  footer: {
-    marginTop: 50,
-    textAlign: "center",
+
+  // TOTAL BOX (Light Theme)
+  totalBox: {
+    marginTop: 30,
+    backgroundColor: '#f8fafc', // slate-50
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  totalLabelArea: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  totalLabel: {
+    color: '#94a3b8',
     fontSize: 8,
-    color: "#94a3b8",
-    lineHeight: 1.5,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
+  },
+  totalSublabel: {
+    color: '#64748b',
+    fontSize: 8,
+    fontStyle: 'italic',
+  },
+  totalValue: {
+    color: '#4f46e5', // indigo-600
+    fontSize: 24,
+    fontWeight: 'bold',
+    letterSpacing: -0.5,
+  },
+
+  footer: {
+    marginTop: 40,
+    textAlign: 'center',
+    color: '#cbd5e1',
+    fontSize: 7,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 2,
   }
 });
 
-// --- DOCUMENT ---
-export const PayslipPDFDocument = ({ selectedPeriod, selectedEmployeeSlip }: Props) => {
-  const generationDate = new Date().toISOString().split('T')[0];
+interface Props {
+  data: PayrollCalculationResult;
+  companyName: string;
+  logo?: string;
+  ptkp: string;
+  period: string;
+  employeeName?: string;
+  employeeRole?: string;
+}
+
+export const PayslipPDFDocument = ({ data, companyName, logo, ptkp, period, employeeName, employeeRole }: Props) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -175,110 +212,134 @@ export const PayslipPDFDocument = ({ selectedPeriod, selectedEmployeeSlip }: Pro
     }).format(amount);
   };
 
-  const totalBpjsEmployee =
-    selectedEmployeeSlip.breakdown.bpjs.health.employee +
-    selectedEmployeeSlip.breakdown.bpjs.jht.employee;
-
-  const totalDeductions =
-    selectedEmployeeSlip.breakdown.pph21Amount +
-    totalBpjsEmployee +
-    (selectedEmployeeSlip.unpaidLeave > 0
-      ? selectedEmployeeSlip.breakdown.unpaidLeaveDeduction
-      : 0);
+  const totalBpjs = (data?.breakdown?.bpjs?.health?.employee || 0) + 
+                    (data?.breakdown?.bpjs?.jht?.employee || 0) + 
+                    (data?.breakdown?.bpjs?.jp?.employee || 0);
 
   return (
-    <Document title={`Payslip-${selectedEmployeeSlip.name}-${selectedPeriod}`}>
+    <Document>
       <Page size="A4" style={styles.page}>
         
-        {/* Header Banner */}
-        <View style={styles.headerBanner}>
-          <Text style={styles.confidentialTag}>Confidential Document</Text>
-          <Text style={styles.title}>Salary Slip</Text>
-          <Text style={styles.period}>Period: {selectedPeriod}</Text>
-        </View>
-
-        {/* Info Section */}
-        <View style={styles.infoSection}>
-          <View style={styles.employeeInfo}>
-            <Text style={styles.infoLabel}>Employee Name</Text>
-            <Text style={styles.infoValue}>{selectedEmployeeSlip.name}</Text>
-            <View style={{ marginTop: 8 }}>
-              <Text style={styles.infoLabel}>Role / Position</Text>
-              <Text style={styles.infoValue}>{selectedEmployeeSlip.role}</Text>
-            </View>
+        {/* Header Section */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+             <View style={styles.logoContainer}>
+              {logo && <Image src={logo} style={styles.logo} />}
+              <Text style={styles.companyName}>{companyName}</Text>
+             </View>
+             <Text style={styles.headerSubtitle}>Official Monthly Earnings Statement</Text>
           </View>
-          <View style={styles.companyInfo}>
-            <Text style={styles.infoLabel}>Employer</Text>
-            <Text style={styles.infoValue}>Attendance Pro</Text>
-            <View style={{ marginTop: 8 }}>
-              <Text style={styles.infoLabel}>Tax Status (PTKP)</Text>
-              <Text style={styles.infoValue}>{selectedEmployeeSlip.ptkp}</Text>
-            </View>
+          
+          <View style={styles.headerRight}>
+             <Text style={styles.rightLabel}>Employee Info</Text>
+             <Text style={styles.rightValue}>{employeeName || 'N/A'}</Text>
+             <Text style={[styles.rightValue, { fontSize: 8, color: '#64748b' }]}>{employeeRole || 'Personnel'}</Text>
+             <View style={styles.statusBadge}>
+                <Text style={styles.statusText}>STATUS: {ptkp} • PERIOD: {period}</Text>
+             </View>
           </View>
         </View>
 
-        {/* Content Grid */}
-        <View style={styles.gridContainer}>
-          {/* Earnings */}
-          <View style={styles.column}>
-            <Text style={styles.columnTitle}>Earnings</Text>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Basic Salary</Text>
-              <Text style={styles.rowValue}>{formatCurrency(selectedEmployeeSlip.basic)}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Fixed Allowances</Text>
-              <Text style={styles.rowValue}>{formatCurrency(selectedEmployeeSlip.allowance)}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Incentives</Text>
-              <Text style={styles.rowValue}>{formatCurrency(0)}</Text>
-            </View>
-            <View style={styles.totalRow}>
-              <Text>Gross Income</Text>
-              <Text>{formatCurrency(selectedEmployeeSlip.breakdown.grossIncome)}</Text>
-            </View>
-          </View>
+        {/* Two Column Breakdown */}
+        <View style={styles.columns}>
+          <View style={styles.verticalDivider} />
 
-          {/* Deductions */}
+          {/* Left: Earnings */}
           <View style={styles.column}>
-            <Text style={styles.columnTitle}>Deductions</Text>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Income Tax (PPh 21)</Text>
-              <Text style={[styles.rowValue, styles.deductionValue]}>-{formatCurrency(selectedEmployeeSlip.breakdown.pph21Amount)}</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Earnings</Text>
             </View>
+            
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>BPJS Social Security</Text>
-              <Text style={[styles.rowValue, styles.deductionValue]}>-{formatCurrency(totalBpjsEmployee)}</Text>
+              <View style={styles.rowLabelContainer}>
+                <Text style={styles.rowLabel}>Basic Salary</Text>
+                <Text style={styles.rowLabelSub}>Prorated for attendance</Text>
+              </View>
+              <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.proratedBasic || 0)}</Text>
             </View>
-            {selectedEmployeeSlip.unpaidLeave > 0 && (
+
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Allowances (Fixed)</Text>
+              <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.fixedAllowances || 0)}</Text>
+            </View>
+
+            {data?.breakdown?.variableAllowances > 0 && (
               <View style={styles.row}>
-                <Text style={styles.rowLabel}>Unpaid Leave ({selectedEmployeeSlip.unpaidLeave}d)</Text>
-                <Text style={[styles.rowValue, styles.deductionValue]}>-{formatCurrency(selectedEmployeeSlip.breakdown.unpaidLeaveDeduction)}</Text>
+                <View style={styles.rowLabelContainer}>
+                  <Text style={styles.rowLabel}>Allowances (Daily)</Text>
+                  <Text style={styles.rowLabelSub}>Meal & Transport</Text>
+                </View>
+                <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.variableAllowances)}</Text>
               </View>
             )}
-            <View style={styles.totalRow}>
-              <Text>Total Deductions</Text>
-              <Text style={styles.deductionValue}>-{formatCurrency(totalDeductions)}</Text>
+
+            {data?.breakdown?.overtimePay > 0 && (
+               <View style={styles.row}>
+                <View style={styles.rowLabelContainer}>
+                  <Text style={styles.rowLabel}>Overtime Pay</Text>
+                  <Text style={styles.rowLabelSub}>Calculated from OT hours</Text>
+                </View>
+                <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.overtimePay)}</Text>
+              </View>
+            )}
+
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <Text style={[styles.rowValue, { color: '#64748b' }]}>Gross Income</Text>
+              <Text style={styles.rowValue}>{formatCurrency(data?.grossIncome || 0)}</Text>
+            </View>
+          </View>
+
+          {/* Right: Deductions */}
+          <View style={styles.column}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Deductions</Text>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.rowLabelContainer}>
+                <Text style={styles.rowLabel}>Income Tax (PPh 21)</Text>
+                <Text style={styles.rowLabelSub}>TER Scheme {data?.breakdown?.terRate?.toFixed(2) || "0.00"}%</Text>
+              </View>
+              <Text style={styles.deductionValue}>-{formatCurrency(data?.pph21Amount || 0)}</Text>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.rowLabelContainer}>
+                <Text style={styles.rowLabel}>BPJS Social Security</Text>
+                <Text style={styles.rowLabelSub}>JHT, JP & Health Share</Text>
+              </View>
+              <Text style={styles.deductionValue}>-{formatCurrency(totalBpjs)}</Text>
+            </View>
+
+            {data?.breakdown?.unpaidLeaveDeduction > 0 && (
+              <View style={styles.row}>
+                <View style={styles.rowLabelContainer}>
+                  <Text style={styles.rowLabel}>Unpaid Leave</Text>
+                  <Text style={styles.rowLabelSub}>Attendance adjustment</Text>
+                </View>
+                <Text style={styles.deductionValue}>-{formatCurrency(data?.breakdown?.unpaidLeaveDeduction)}</Text>
+              </View>
+            )}
+
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <Text style={[styles.rowValue, { color: '#64748b' }]}>Total Deductions</Text>
+              <Text style={styles.deductionValue}>-{formatCurrency(data?.totalDeductions || 0)}</Text>
             </View>
           </View>
         </View>
 
-        {/* Net Salary Card */}
-        <View style={styles.netSalaryCard}>
-          <View>
-            <Text style={styles.netLabel}>Total Take Home Pay</Text>
-            <Text style={styles.netValue}>{formatCurrency(selectedEmployeeSlip.netSalary)}</Text>
+        {/* Take Home Pay Box */}
+        <View style={styles.totalBox}>
+          <View style={styles.totalLabelArea}>
+            <Text style={styles.totalLabel}>Net Take Home Pay</Text>
+            <Text style={styles.totalSublabel}>Transferred to registered account</Text>
           </View>
+          <Text style={styles.totalValue}>{formatCurrency(data?.netSalary || 0)}</Text>
         </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Text>This is an electronically generated document. No signature is required.</Text>
-          <Text>Attendance Management System © 2026</Text>
-          <Text style={{ marginTop: 10, color: "#cbd5e1" }}>Verification ID: {selectedEmployeeSlip.id}-{generationDate}</Text>
-        </View>
-
+        <Text style={styles.footer}>Computer Generated Document • Confidential</Text>
       </Page>
     </Document>
   );

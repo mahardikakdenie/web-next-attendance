@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Calendar, 
   CheckCircle2, 
@@ -33,7 +33,7 @@ export default function LeavesView() {
   const [limit, setLimit] = useState(5);
   
   // 2. Tab & Modal State
-  const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved" | "rejected">(
+  const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved" | "rejected" | "ongoing">(
     isAdmin ? "pending" : "all"
   );
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequestData | null>(null);
@@ -51,6 +51,18 @@ export default function LeavesView() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Helper to check if leave is ongoing
+  const isOngoing = (startStr: string, endStr: string, status: string) => {
+    if (status.toUpperCase() !== "APPROVED") return false;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    return now >= start && now <= end;
+  };
+
   // Fetch Balances
   const { data: balancesData, isLoading: isBalanceLoading } = useQuery({
     queryKey: ["leave-balances"],
@@ -63,10 +75,19 @@ export default function LeavesView() {
   const { data: requestsData, isLoading: isRequestsLoading } = useQuery({
     queryKey: ["leave-requests", activeTab, limit, debouncedSearch, currentPage],
     queryFn: () => {
-      const statusParam = activeTab === "all" ? undefined : activeTab.toLowerCase();
+      let statusParam: string | undefined;
+      
+      if (activeTab === "all") {
+        statusParam = undefined;
+      } else if (activeTab === "ongoing") {
+        statusParam = "approved"; // Fetch approved to filter locally
+      } else {
+        statusParam = activeTab.toLowerCase();
+      }
+
       return getLeaveRequests({ 
         limit, 
-        offset: (currentPage - 1) * limit, // Hitung offset secara dinamis dari currentPage
+        offset: (currentPage - 1) * limit, 
         status: statusParam,
         search: debouncedSearch,
         page: currentPage,
@@ -74,12 +95,20 @@ export default function LeavesView() {
     },
   });
 
-  const leaveRequests = Array.isArray(requestsData?.data) ? requestsData.data : [];
+  // Local filtering for "ongoing" tab
+  const leaveRequests = useMemo(() => {
+    const rawData = Array.isArray(requestsData?.data) ? requestsData.data : [];
+    if (activeTab === "ongoing") {
+      return rawData.filter(l => isOngoing(l.start_date, l.end_date, l.status));
+    }
+    return rawData;
+  }, [requestsData, activeTab]);
+
   const total = requestsData?.meta?.total || 0;
   const isLoading = isRequestsLoading;
 
   // Handlers
-  const handleTabChange = (tab: "all" | "pending" | "approved" | "rejected") => {
+  const handleTabChange = (tab: "all" | "pending" | "approved" | "rejected" | "ongoing") => {
     setActiveTab(tab);
     setCurrentPage(1); // Reset to first page on tab change
   };
@@ -143,6 +172,8 @@ export default function LeavesView() {
       header: "Status",
       accessor: (leave) => {
         const status = leave.status.toUpperCase();
+        const active = isOngoing(leave.start_date, leave.end_date, leave.status);
+        
         const colors: Record<string, string> = {
           APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-100",
           PENDING: "bg-amber-50 text-amber-700 border-amber-100",
@@ -151,9 +182,16 @@ export default function LeavesView() {
         const colorClass = colors[status] || "bg-slate-50 text-slate-700";
 
         return (
-          <Badge className={`border px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${colorClass}`}>
-            {status}
-          </Badge>
+          <div className="flex flex-col gap-1.5">
+            <Badge className={`border px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${colorClass}`}>
+              {status}
+            </Badge>
+            {active && (
+              <Badge className="bg-indigo-600 text-white border-none px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest w-fit animate-pulse">
+                Running
+              </Badge>
+            )}
+          </div>
         );
       },
       sortable: true,
@@ -258,7 +296,7 @@ export default function LeavesView() {
           {/* Tabs */}
           <div className="flex items-center gap-1 bg-white p-1.5 rounded-[22px] border border-neutral-100 w-fit shadow-xs">
             {isAdmin ? (
-              (["pending", "approved", "rejected", "all"] as const).map((tab) => (
+              (["pending", "ongoing", "approved", "rejected", "all"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => handleTabChange(tab)}

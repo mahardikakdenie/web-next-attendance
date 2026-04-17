@@ -1,6 +1,6 @@
 // src/service/attendance.ts
 import { secureRequest } from "@/lib/axios";
-import { AttendanceToday, AttendanceHistory, ClockPayload, APIResponse, UserAttendance, AttendanceSummary, AttendanceFilterParams, AttendanceCorrectionPayload, AttendanceCorrectionData, ApprovalPayload } from "@/types/api";
+import { AttendanceToday, AttendanceHistory, ClockPayload, APIResponse, AttendanceSummary, AttendanceFilterParams, AttendanceCorrectionPayload, AttendanceCorrectionData, ApprovalPayload, AttendanceRecord } from "@/types/api";
 
 export const getTodayAttendance = async () => {
   return secureRequest<APIResponse<AttendanceToday>>("get", "/v1/attendance/today");
@@ -17,19 +17,17 @@ export const clockAttendance = async (payload: ClockPayload) => {
 };
 
 export const getDataAttendances = async (
-  limit: number = 10, 
+  limit: number = 5 , 
   offset: number = 0,
   status: string = '', 
   date_from: string = '', 
   date_to: string = '', 
   search: string = ''
 ) => {
-  return secureRequest<APIResponse<{ data: UserAttendance[]; meta: { total: number; limit: number; offset: number } }>>(
+  return secureRequest<APIResponse<AttendanceRecord[]>>(
     "get", 
     "/v1/attendance", 
-    undefined, 
     {
-      params: {
         limit,
         offset,
         status,
@@ -38,7 +36,6 @@ export const getDataAttendances = async (
         search,
         include: "user"
       }
-    }
   );
 };
 

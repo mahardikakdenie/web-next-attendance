@@ -14,12 +14,16 @@ import {
   Layers,
   Search,
   CheckCircle2,
+  Upload,
+  Link as LinkIcon,
+  Loader2,
 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import { Switch } from "@/components/ui/Switch";
 import CustomTimeSelector from "../ui/CustomTimeSelector";
 import { Button } from "../ui/Button";
 import { getDataCurrentTenat, updateDataCurrentTenant } from "@/service/tenantSettings";
+import { uploadMedia } from "@/service/media";
 import Image from "next/image";
 import { toast } from "sonner";
 
@@ -126,6 +130,8 @@ export default function TenantSettingForm() {
   const [isLocating, setIsLocating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoMode, setLogoMode] = useState<"link" | "upload">("link");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuccessLocation, setShowSuccessLocation] = useState(false);
 
@@ -135,6 +141,23 @@ export default function TenantSettingForm() {
 
   const handleInputChange = (name: keyof TenantSettingsData, value: string | number): void => {
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingLogo(true);
+      const url = await uploadMedia(file);
+      handleInputChange("tenantLogo", url);
+      toast.success("Logo uploaded successfully!");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Failed to upload logo.");
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
 
   const triggerSuccessFeedback = () => {
@@ -505,23 +528,76 @@ export default function TenantSettingForm() {
             </div>
 
             <div className="flex flex-col gap-4 mb-8 p-5 rounded-2xl bg-slate-50 border border-slate-100">
-               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Company Logo URL</label>
+               <div className="flex items-center justify-between mb-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Company Logo</label>
+                  <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-xs">
+                    <button 
+                      onClick={() => setLogoMode("link")}
+                      className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all flex items-center gap-1.5 ${logoMode === 'link' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      <LinkIcon size={10} /> Link
+                    </button>
+                    <button 
+                      onClick={() => setLogoMode("upload")}
+                      className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all flex items-center gap-1.5 ${logoMode === 'upload' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      <Upload size={10} /> Upload
+                    </button>
+                  </div>
+               </div>
+
                <div className="flex items-center gap-4">
-                  <div className="relative w-16 h-16 rounded-2xl bg-white border border-slate-200 overflow-hidden shrink-0 shadow-sm">
+                  <div className="relative w-20 h-20 rounded-2xl bg-white border border-slate-200 overflow-hidden shrink-0 shadow-sm flex items-center justify-center group/logo">
                     {formData.tenantLogo ? (
-                      <Image src={formData.tenantLogo} fill alt="Tenant Logo" className="object-cover" />
+                      <>
+                        <Image src={formData.tenantLogo} fill alt="Tenant Logo" className="object-cover transition-opacity group-hover/logo:opacity-40" />
+                        {isUploadingLogo && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+                            <Loader2 className="animate-spin text-indigo-600" size={24} />
+                          </div>
+                        )}
+                      </>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300">
-                        <Camera size={24} />
+                      <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-50">
+                        {isUploadingLogo ? <Loader2 className="animate-spin text-indigo-600" size={24} /> : <Camera size={28} />}
                       </div>
                     )}
                   </div>
-                  <Input 
-                    placeholder="https://example.com/logo.png"
-                    value={formData.tenantLogo || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('tenantLogo', e.target.value)}
-                    className="flex-1 h-12 bg-white border-slate-200 rounded-xl text-sm"
-                  />
+
+                  <div className="flex-1">
+                    {logoMode === "link" ? (
+                      <div className="space-y-1">
+                        <Input 
+                          placeholder="https://example.com/logo.png"
+                          value={formData.tenantLogo || ""}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('tenantLogo', e.target.value)}
+                          className="h-12 bg-white border-slate-200 rounded-xl text-sm font-medium"
+                        />
+                        <p className="text-[9px] font-bold text-slate-400 ml-1">Paste a direct image URL</p>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <input 
+                          type="file" 
+                          id="logo-upload"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoUpload}
+                          disabled={isUploadingLogo}
+                        />
+                        <label 
+                          htmlFor="logo-upload"
+                          className="flex flex-col items-center justify-center h-12 w-full bg-white border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all group/upload"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Upload size={16} className="text-slate-400 group-hover/upload:text-indigo-600 transition-colors" />
+                            <span className="text-xs font-bold text-slate-500 group-hover/upload:text-indigo-700 transition-colors">Choose local image...</span>
+                          </div>
+                        </label>
+                        <p className="text-[9px] font-bold text-slate-400 mt-1 ml-1">Max size 5MB (JPG, PNG, SVG)</p>
+                      </div>
+                    )}
+                  </div>
                </div>
             </div>
 

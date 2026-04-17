@@ -31,22 +31,3 @@ export interface SaveRosterRequest {
 export const saveRoster = async (payload: SaveRosterRequest) => {
   return secureRequest<APIResponse<null>>("post", "/v1/hr/roster/save", payload);
 };
-
-/**
- * Holiday Calendar Service
- */
-export interface Holiday {
-  id: string;
-  date: string;
-  name: string;
-  type: string;
-  is_paid: boolean;
-}
-
-export const getHolidays = async (year: number) => {
-  return secureRequest<APIResponse<Holiday[]>>("get", `/v1/hr/calendar?year=${year}`);
-};
-
-export const createHoliday = async (data: Partial<Holiday>) => {
-  return secureRequest<APIResponse<Holiday>>("post", "/v1/hr/calendar", data);
-};

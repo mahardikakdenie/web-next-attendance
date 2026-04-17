@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Download, CalendarDays, X, Wallet, ShieldCheck, Printer, Building2, Loader2 } from "lucide-react";
+import { Download, X, PlusCircle, MinusCircle, Building2, Loader2, Receipt } from "lucide-react";
 import dynamic from "next/dynamic";
 import { PayslipPDFDocument } from "./PayslipPDFDocument";
+import { PayrollRecord } from "@/types/api";
+import { useAuthStore } from "@/store/auth.store";
 
 // --- DYNAMIC IMPORTS TO PREVENT SSR ERRORS ---
 const PDFDownloadLink = dynamic(
@@ -12,64 +14,12 @@ const PDFDownloadLink = dynamic(
   { ssr: false }
 );
 
-interface SlipBreakdown {
-  grossIncome: number;
-  pph21Amount: number;
-  unpaidLeaveDeduction: number;
-  bpjs: {
-    health: { employee: number };
-    jht: { employee: number };
-  };
-}
-
-interface SelectedEmployeeSlip {
-  id: number;
-  avatar?: string;
-  name: string;
-  role: string;
-  ptkp: string;
-  basic: number;
-  allowance: number;
-  unpaidLeave: number;
-  netSalary: number;
-  breakdown: SlipBreakdown;
-}
-
 interface PayslipModalProps {
-  showSlipPreview: number | null;
-  setShowSlipPreview: (id: number | null) => void;
+  showSlipPreview: boolean;
+  setShowSlipPreview: (show: boolean) => void;
   selectedPeriod: string;
-  selectedEmployeeSlip: SelectedEmployeeSlip | null;
+  selectedEmployeeSlip: PayrollRecord | null;
 }
-
-const SlipRow = ({
-  label,
-  value,
-  isDeduction = false,
-  isBold = false,
-}: {
-  label: string;
-  value: string;
-  isDeduction?: boolean;
-  isBold?: boolean;
-}) => (
-  <div
-    className={`flex items-end gap-2 py-2 text-[13px] ${
-      isBold ? "font-black text-slate-900" : "font-semibold text-slate-500"
-    }`}
-  >
-    <span className="shrink-0">{label}</span>
-    <div className="flex-1 border-b border-dashed border-slate-200 mb-1.5" />
-    <span
-      className={`shrink-0 ${
-        isDeduction && value !== "Rp 0" ? "text-rose-500" : "text-slate-900"
-      } ${isBold ? "text-sm" : ""}`}
-    >
-      {isDeduction && value !== "Rp 0" ? "-" : ""}
-      {value}
-    </span>
-  </div>
-);
 
 export default function EnhancedPayslipModal({
   showSlipPreview,
@@ -77,6 +27,7 @@ export default function EnhancedPayslipModal({
   selectedPeriod,
   selectedEmployeeSlip,
 }: PayslipModalProps) {
+  const { user } = useAuthStore();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -88,197 +39,276 @@ export default function EnhancedPayslipModal({
 
   if (!showSlipPreview || !selectedEmployeeSlip) return null;
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
-    }).format(amount);
+    }).format(amount || 0);
   };
 
   const totalBpjsEmployee =
-    selectedEmployeeSlip.breakdown.bpjs.health.employee +
-    selectedEmployeeSlip.breakdown.bpjs.jht.employee;
-
-  const totalDeductions =
-    selectedEmployeeSlip.breakdown.pph21Amount +
-    totalBpjsEmployee +
-    (selectedEmployeeSlip.unpaidLeave > 0
-      ? selectedEmployeeSlip.breakdown.unpaidLeaveDeduction
-      : 0);
+    (selectedEmployeeSlip.breakdown?.deductions?.bpjs_health_employee || 0) +
+    (selectedEmployeeSlip.breakdown?.deductions?.bpjs_jht_employee || 0) +
+    (selectedEmployeeSlip.breakdown?.deductions?.bpjs_jp_employee || 0);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl shadow-slate-900/20 overflow-hidden animate-in zoom-in-95 duration-500 border border-white ring-1 ring-slate-200/50">
+      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] bg-slate-100 shadow-2xl shadow-slate-900/20 animate-in zoom-in-95 duration-500 hide-scrollbar">
         
-        {/* TOP BANNER / HEADER */}
-        <div className="relative overflow-hidden bg-slate-900 p-8 sm:p-10 text-white">
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-blue-500 opacity-20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-32 h-32 bg-indigo-500 opacity-10 rounded-full blur-2xl pointer-events-none" />
-          
-          <div className="relative z-10 flex justify-between items-start">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[10px] font-black tracking-widest uppercase">
-                <ShieldCheck size={14} className="text-blue-400" />
-                Confidential Document
-              </div>
-              <div>
-                <h2 className="text-3xl font-black tracking-tight leading-none">Salary Slip</h2>
-                <p className="text-slate-400 font-bold text-sm mt-2 flex items-center gap-2">
-                  <CalendarDays size={14} />
-                  Period: {selectedPeriod}
-                </p>
-              </div>
-            </div>
+        <button
+          onClick={() => setShowSlipPreview(false)}
+          className="absolute top-4 right-4 z-50 p-2 bg-slate-200/50 hover:bg-slate-200 rounded-full transition-all text-slate-500 hover:text-slate-700 backdrop-blur-sm"
+        >
+          <X size={20} />
+        </button>
+
+        <div className="p-4 sm:p-8 space-y-6">
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden relative">
             
-            <button
-              onClick={() => setShowSlipPreview(null)}
-              className="p-3 hover:bg-white/10 rounded-2xl transition-all text-slate-400 hover:text-white"
-            >
-              <X size={24} />
-            </button>
-          </div>
-        </div>
-
-        {/* CONTENT BODY */}
-        <div className="p-8 sm:p-10 bg-slate-50/30 space-y-8">
-          <div className="flex flex-col sm:flex-row gap-6 justify-between">
-            <div className="flex items-center gap-5">
-              <div className="relative w-16 h-16 shrink-0 shadow-xl shadow-slate-200">
-                <Image
-                  src={selectedEmployeeSlip.avatar || "https://via.placeholder.com/150"}
-                  alt={selectedEmployeeSlip.name}
-                  fill
-                  className="rounded-[24px] border-4 border-white object-cover"
-                />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-slate-900 leading-tight">
-                  {selectedEmployeeSlip.name}
-                </h3>
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-tight mt-0.5">
-                  {selectedEmployeeSlip.role}
-                </p>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-[10px] font-black px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100 uppercase">
-                    PTKP: {selectedEmployeeSlip.ptkp}
-                  </span>
-                </div>
-              </div>
+            {/* Perforated Edge Effect */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-slate-50 flex items-center justify-around px-4">
+              {[...Array(40)].map((_, i) => (
+                <div key={i} className="w-2 h-2 rounded-full bg-slate-200 -mt-1" />
+              ))}
             </div>
 
-            <div className="text-left sm:text-right flex flex-col justify-center">
-               <div className="flex items-center sm:justify-end gap-2 text-slate-900 font-black">
-                  <Building2 size={16} className="text-slate-400" />
-                  <span>Attendance Pro</span>
-               </div>
-               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  Enterprise Solutions Ltd.
-               </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
-            <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-200/60" />
-
-            <div className="space-y-5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <Wallet size={16} strokeWidth={2.5} />
+            <div className="p-8 sm:p-12 space-y-12">
+              {/* Slip Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-8 mt-2">
+                <div className="space-y-4">
+                  {selectedEmployeeSlip.company_context?.logo_url || user?.tenant?.tenant_settings?.tenant_logo ? (
+                    <div className="relative h-12 w-32">
+                      <Image
+                        src={selectedEmployeeSlip.company_context?.logo_url || user?.tenant?.tenant_settings?.tenant_logo || ""} 
+                        alt="Logo" 
+                        fill
+                        className="object-contain object-left" 
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                      <Building2 size={24} />
+                    </div>
+                  )}
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">{selectedEmployeeSlip.company_context?.name || user?.tenant?.name || "Company"}</h2>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Official Monthly Earnings Statement</p>
+                  </div>
                 </div>
-                <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">
-                  Earnings
-                </h4>
-              </div>
-              <div className="space-y-1">
-                <SlipRow label="Basic Salary" value={formatCurrency(selectedEmployeeSlip.basic)} />
-                <SlipRow label="Fixed Allowances" value={formatCurrency(selectedEmployeeSlip.allowance)} />
-                <SlipRow label="Incentives" value={formatCurrency(0)} />
-                <div className="pt-4 mt-4 border-t border-slate-100">
-                  <SlipRow
-                    label="Gross Income"
-                    value={formatCurrency(selectedEmployeeSlip.breakdown.grossIncome)}
-                    isBold
-                  />
+                <div className="text-left sm:text-right space-y-1">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Employee Info</p>
+                  <p className="text-sm font-bold text-slate-900">{selectedEmployeeSlip.user?.full_name}</p>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{selectedEmployeeSlip.user?.position}</p>
+                  <p className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md inline-block uppercase mt-2">
+                    Status: {selectedEmployeeSlip.user?.ptkp_status || '-'} • Period: {selectedEmployeeSlip.period_text || selectedPeriod}
+                  </p>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                  <Printer size={16} strokeWidth={2.5} />
+              {/* Slip Body */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 relative">
+                {/* Vertical Separator */}
+                <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-100 -translate-x-1/2 border-dashed border-l" />
+
+                {/* Earnings */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <div className="w-6 h-6 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
+                      <PlusCircle size={14} />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Earnings</h4>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-bold text-slate-700">Basic Salary</p>
+                        <p className="text-[10px] text-slate-400 font-medium italic">Prorated for attendance</p>
+                      </div>
+                      <span className="text-sm font-bold text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.basic_salary)}</span>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-bold text-slate-700">Allowances (Fixed)</p>
+                      <span className="text-sm font-bold text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.fixed_allowances)}</span>
+                    </div>
+                    {selectedEmployeeSlip.breakdown?.earnings?.variable_allowances > 0 && (
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-bold text-slate-700">Allowances (Daily)</p>
+                          <p className="text-[10px] text-slate-400 font-medium italic">Meal & Transport</p>
+                        </div>
+                        <span className="text-sm font-bold text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.variable_allowances)}</span>
+                      </div>
+                    )}
+                    {selectedEmployeeSlip.breakdown?.earnings?.overtime_pay > 0 && (
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-bold text-slate-700">Overtime Pay</p>
+                          <p className="text-[10px] text-slate-400 font-medium italic">Extra hours calculated</p>
+                        </div>
+                        <span className="text-sm font-bold text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.overtime_pay)}</span>
+                      </div>
+                    )}
+                     {selectedEmployeeSlip.breakdown?.earnings?.incentives > 0 && (
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm font-bold text-slate-700">Incentives</p>
+                        <span className="text-sm font-bold text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.incentives)}</span>
+                      </div>
+                    )}
+                    {selectedEmployeeSlip.breakdown?.earnings?.bonus > 0 && (
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm font-bold text-slate-700">Bonus</p>
+                        <span className="text-sm font-bold text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.bonus)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">
-                  Deductions
-                </h4>
-              </div>
-              <div className="space-y-1">
-                <SlipRow label="Income Tax (PPh 21)" value={formatCurrency(selectedEmployeeSlip.breakdown.pph21Amount)} isDeduction />
-                <SlipRow label="BPJS Social Security" value={formatCurrency(totalBpjsEmployee)} isDeduction />
-                {selectedEmployeeSlip.unpaidLeave > 0 && (
-                  <SlipRow
-                    label={`Unpaid Leave (${selectedEmployeeSlip.unpaidLeave}d)`}
-                    value={formatCurrency(selectedEmployeeSlip.breakdown.unpaidLeaveDeduction)}
-                    isDeduction
-                  />
-                )}
-                <div className="pt-4 mt-4 border-t border-slate-100">
-                  <SlipRow
-                    label="Total Deductions"
-                    value={formatCurrency(totalDeductions)}
-                    isDeduction
-                    isBold
-                  />
+
+                {/* Deductions */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <div className="w-6 h-6 bg-rose-50 rounded-lg flex items-center justify-center text-rose-600">
+                      <MinusCircle size={14} />
+                    </div>
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Deductions</h4>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-bold text-slate-700">Income Tax (PPh 21)</p>
+                        <p className="text-[10px] text-slate-400 font-medium italic">Calculated from TER bracket</p>
+                      </div>
+                      <span className="text-sm font-bold text-rose-600">-{formatCurrency(selectedEmployeeSlip.breakdown?.deductions?.pph21_amount)}</span>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-bold text-slate-700">BPJS Social Security</p>
+                        <p className="text-[10px] text-slate-400 font-medium italic">JHT, JP & Health Share</p>
+                      </div>
+                      <span className="text-sm font-bold text-rose-600">-{formatCurrency(totalBpjsEmployee)}</span>
+                    </div>
+                    {selectedEmployeeSlip.breakdown?.deductions?.unpaid_leave_deduction > 0 && (
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-bold text-slate-700">Unpaid Leave</p>
+                          <p className="text-[10px] text-slate-400 font-medium italic">Attendance adjustment</p>
+                        </div>
+                        <span className="text-sm font-bold text-rose-600">-{formatCurrency(selectedEmployeeSlip.breakdown?.deductions?.unpaid_leave_deduction)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity" />
-            <div className="relative bg-slate-900 rounded-[32px] p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
-              
-              <div className="text-center sm:text-left">
-                <p className="text-[11px] font-black text-blue-400 uppercase tracking-[0.2em] mb-2">
-                  Total Take Home Pay
-                </p>
-                <h3 className="text-4xl font-black tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                  {formatCurrency(selectedEmployeeSlip.netSalary)}
-                </h3>
+              {/* Perforated Divider */}
+              <div className="border-t-2 border-dashed border-slate-100 relative mt-4">
+                <div className="absolute -left-12 -top-3 w-6 h-6 rounded-full bg-slate-50 border border-slate-100" />
+                <div className="absolute -right-12 -top-3 w-6 h-6 rounded-full bg-slate-50 border border-slate-100" />
               </div>
 
-              <div className="flex gap-3 w-full sm:w-auto">
-                {isMounted && (
+              {/* Total Section */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-8 bg-slate-50/50 p-6 sm:p-8 rounded-[2rem] border border-slate-100">
+                <div className="space-y-1 text-center md:text-left">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Net Take Home Pay</p>
+                  <p className="text-sm font-medium text-slate-500 italic">Transferred to registered account</p>
+                </div>
+                <div className="text-center md:text-right flex-1 flex flex-col md:items-end w-full">
+                  <h3 className="text-4xl sm:text-5xl font-black text-indigo-600 tracking-tighter tabular-nums mb-4">
+                    {formatCurrency(selectedEmployeeSlip.net_salary)}
+                  </h3>
+                  
+                  {isMounted && (
                   <PDFDownloadLink
                     document={
                       <PayslipPDFDocument 
-                        selectedPeriod={selectedPeriod} 
-                        selectedEmployeeSlip={selectedEmployeeSlip} 
+                        data={{
+                          grossIncome: selectedEmployeeSlip.breakdown?.earnings?.gross_income,
+                          pph21Amount: selectedEmployeeSlip.breakdown?.deductions?.pph21_amount,
+                          netSalary: selectedEmployeeSlip.net_salary,
+                          totalDeductions: selectedEmployeeSlip.breakdown?.deductions?.total_deductions,
+                          totalCompanyCost: selectedEmployeeSlip.breakdown?.employer_contributions?.total_employer_cost,
+                          breakdown: {
+                            proratedBasic: selectedEmployeeSlip.breakdown?.earnings?.basic_salary,
+                            fixedAllowances: selectedEmployeeSlip.breakdown?.earnings?.fixed_allowances,
+                            variableAllowances: selectedEmployeeSlip.breakdown?.earnings?.variable_allowances,
+                            unpaidLeaveDeduction: selectedEmployeeSlip.breakdown?.deductions?.unpaid_leave_deduction,
+                            overtimePay: selectedEmployeeSlip.breakdown?.earnings?.overtime_pay,
+                            grossIncome: selectedEmployeeSlip.breakdown?.earnings?.gross_income,
+                            pph21Amount: selectedEmployeeSlip.breakdown?.deductions?.pph21_amount,
+                            terRate: 0,
+                            bpjs: {
+                              health: { 
+                                employee: selectedEmployeeSlip.breakdown?.deductions?.bpjs_health_employee, 
+                                company: selectedEmployeeSlip.breakdown?.employer_contributions?.bpjs_health_company 
+                              },
+                              jht: { 
+                                employee: selectedEmployeeSlip.breakdown?.deductions?.bpjs_jht_employee, 
+                                company: selectedEmployeeSlip.breakdown?.employer_contributions?.bpjs_jht_company 
+                              },
+                              jp: { 
+                                employee: selectedEmployeeSlip.breakdown?.deductions?.bpjs_jp_employee, 
+                                company: selectedEmployeeSlip.breakdown?.employer_contributions?.bpjs_jp_company 
+                              },
+                              jkk: selectedEmployeeSlip.breakdown?.employer_contributions?.bpjs_jkk,
+                              jkm: selectedEmployeeSlip.breakdown?.employer_contributions?.bpjs_jkm
+                            }
+                          }
+                        }}
+                        companyName={selectedEmployeeSlip.company_context?.name || user?.tenant?.name || "Attendance Pro"}
+                        logo={selectedEmployeeSlip.company_context?.logo_url || user?.tenant?.tenant_settings?.tenant_logo}
+                        ptkp={selectedEmployeeSlip.user?.ptkp_status || '-'}
+                        period={selectedEmployeeSlip.period_text || selectedPeriod}
+                        employeeName={selectedEmployeeSlip.user?.full_name}
+                        employeeRole={selectedEmployeeSlip.user?.position}
                       />
                     }
-                    fileName={`payslip-${selectedEmployeeSlip.name.replace(/\s+/g, '_')}-${selectedPeriod.replace(/\s+/g, '_')}.pdf`}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl px-8 h-14 font-black shadow-xl shadow-blue-600/30 transition-all active:scale-95 text-xs uppercase tracking-widest"
+                    fileName={`payslip-${selectedEmployeeSlip.user?.full_name?.replace(/\s+/g, '_')}-${selectedPeriod.replace(/\s+/g, '_')}.pdf`}
+                    className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-6 py-3 font-bold shadow-md shadow-indigo-600/20 transition-all w-full md:w-auto"
                   >
                     {({ loading }) => (
                       <>
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download size={18} strokeWidth={3} />}
-                        <span>{loading ? "Preparing..." : "Export PDF"}</span>
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download size={18} strokeWidth={2.5} />}
+                        <span>{loading ? "Preparing PDF..." : "Download PDF"}</span>
                       </>
                     )}
                   </PDFDownloadLink>
                 )}
+                </div>
+              </div>
+
+              <div className="pt-2 text-center">
+                <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.3em]">Computer Generated Document • Confidential</p>
               </div>
             </div>
           </div>
 
-          <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-            This is an electronically generated document. No signature is required. <br />
-            Attendance Management System © 2026
-          </p>
+          {/* Secondary Info Layout */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-2">
+              <div className="w-8 h-8 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                <Building2 size={16} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Employer Cost</p>
+                <p className="text-base font-black text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.employer_contributions?.total_employer_cost)}</p>
+              </div>
+            </div>
+            <div className="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-2">
+              <div className="w-8 h-8 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600">
+                <Receipt size={16} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Deductions</p>
+                <p className="text-base font-black text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.deductions?.total_deductions)}</p>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
   );
 }
+

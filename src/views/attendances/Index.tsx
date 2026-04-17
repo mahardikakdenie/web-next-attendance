@@ -25,7 +25,7 @@ import { Can } from "@/components/auth/PermissionGuard";
 import { TableSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { getDataAttendances, getDataSummary } from "@/service/attendance";
 import { DataTable, Column } from "@/components/ui/DataTable";
-import { UserAttendance, AttendanceFilterParams, AttendanceSummary } from "@/types/api";
+import { AttendanceFilterParams, AttendanceRecord } from "@/types/api";
 import CorrectionRequestModal from "@/components/attendance/CorrectionRequestModal";
 import CorrectionsView from "./Corrections";
 import { useQuery } from "@tanstack/react-query";
@@ -102,7 +102,7 @@ export default function AttendancesView() {
     search: ''
   });
 
-  const limit = 10;
+  const limit = 5;
   const offset = (currentPage - 1) * limit;
 
   // React Query: Summary Data
@@ -128,11 +128,11 @@ export default function AttendancesView() {
     enabled: activeTab === "logs",
   });
 
-  const rawData = attendanceResp?.data?.data || [];
-  const meta = attendanceResp?.data?.meta;
-  const totalPages = meta ? Math.ceil(meta.total / limit) : 1;
+  const rawData = useMemo(() => attendanceResp?.data || [], [attendanceResp?.data]);
+  const meta = attendanceResp?.meta;
+  const totalPages = meta ? meta?.pagination?.last_page : 1;
 
-  const data: UserAttendance[] = useMemo(() => {
+  const data: AttendanceRecord[] = useMemo(() => {
     return rawData.map((item) => ({
       ...item,
       id: item.id || `att-${item.user_id}-${item.clock_in_time}`,
@@ -141,7 +141,7 @@ export default function AttendancesView() {
         employee_id: String(item.user_id),
         media_url: "/profile.jpg"
       }
-    } as UserAttendance));
+    } as AttendanceRecord));
   }, [rawData]);
 
   useEffect(() => {
@@ -169,7 +169,7 @@ export default function AttendancesView() {
     setCurrentPage(1);
   };
 
-  const columns: Column<UserAttendance>[] = useMemo(() => [
+  const columns: Column<AttendanceRecord>[] = useMemo(() => [
     {
       header: "Employee",
       accessor: (item) => (

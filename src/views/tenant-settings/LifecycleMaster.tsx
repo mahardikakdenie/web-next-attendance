@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import { useRouter } from "next/navigation";
 
+type CategoryTab = "ONBOARDING" | "OFFBOARDING" | "ACTIVE";
+
 export default function LifecycleMasterView() {
   const { user, loading: authLoading } = useAuthStore();
   const router = useRouter();
@@ -32,7 +34,7 @@ export default function LifecycleMasterView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"ONBOARDING" | "OFFBOARDING">("ONBOARDING");
+  const [activeTab, setActiveTab] = useState<CategoryTab>("ONBOARDING");
 
   const [formData, setFormData] = useState({
     task_name: "",
@@ -42,7 +44,7 @@ export default function LifecycleMasterView() {
   const fetchTemplates = useCallback(async () => {
     try {
       setIsFetching(true);
-      const resp = await getLifecycleTemplates();
+      const resp = await getLifecycleTemplates(activeTab);
       if (resp.data) {
         setTemplates(resp.data);
       }
@@ -52,7 +54,7 @@ export default function LifecycleMasterView() {
     } finally {
       setIsFetching(false);
     }
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -67,10 +69,9 @@ export default function LifecycleMasterView() {
 
   const filteredTemplates = useMemo(() => {
     return templates.filter(t => 
-      t.category === activeTab && 
       t.task_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [templates, activeTab, searchTerm]);
+  }, [templates, searchTerm]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +82,7 @@ export default function LifecycleMasterView() {
       if (resp.success) {
         toast.success("Template task created");
         setIsModalOpen(false);
-        setFormData({ task_name: "", category: activeTab });
+        setFormData({ task_name: "", category: activeTab === "ACTIVE" ? "ONBOARDING" : activeTab });
         fetchTemplates();
       }
     } catch (error) {
@@ -131,7 +132,7 @@ export default function LifecycleMasterView() {
 
           <Button 
             onClick={() => {
-              setFormData({ ...formData, category: activeTab });
+              setFormData({ ...formData, category: activeTab === "ACTIVE" ? "ONBOARDING" : activeTab });
               setIsModalOpen(true);
             }}
             className="bg-blue-600 text-white hover:bg-blue-700 font-black px-8 py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
@@ -160,7 +161,7 @@ export default function LifecycleMasterView() {
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Category Filter</span>
               <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200/50">
-                {(["ONBOARDING", "OFFBOARDING"] as const).map(tab => (
+                {(["ONBOARDING", "OFFBOARDING", "ACTIVE"] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -178,7 +179,7 @@ export default function LifecycleMasterView() {
               <div className="flex items-center justify-between p-4 rounded-2xl bg-blue-50/50 border border-blue-100">
                 <div className="flex items-center gap-3">
                   <Layout className="text-blue-600" size={18} />
-                  <span className="text-xs font-bold text-slate-600">Total Templates</span>
+                  <span className="text-xs font-bold text-slate-600">Tasks in Category</span>
                 </div>
                 <span className="text-lg font-black text-blue-900">{templates.length}</span>
               </div>
@@ -213,7 +214,9 @@ export default function LifecycleMasterView() {
                 >
                   <div className="flex items-center gap-5">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
-                      activeTab === 'ONBOARDING' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-rose-50 border-rose-100 text-rose-600'
+                      t.category === 'ONBOARDING' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 
+                      t.category === 'OFFBOARDING' ? 'bg-rose-50 border-rose-100 text-rose-600' :
+                      'bg-indigo-50 border-indigo-100 text-indigo-600'
                     }`}>
                       <CheckCircle2 size={24} />
                     </div>
@@ -280,8 +283,8 @@ export default function LifecycleMasterView() {
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Assign to Category</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {(["ONBOARDING", "OFFBOARDING"] as const).map(cat => (
+                    <div className="grid grid-cols-3 gap-3">
+                      {(["ONBOARDING", "OFFBOARDING", "ACTIVE"] as const).map(cat => (
                         <button
                           key={cat}
                           type="button"

@@ -13,12 +13,14 @@ import {
   Bell,
   Smartphone,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  Wallet
 } from "lucide-react";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import UpdateRequestForm from "@/components/profile-update/UpdateRequestForm";
 import UserCurrentDataCard from "@/components/profile-update/UserCurrentDataCard";
 import ProfileImageUpdate from "@/components/profile-update/ProfileImageUpdate";
+import MyPayrollTab from "@/components/profile-update/MyPayrollTab";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import Avatar from "@/components/ui/Avatar";
@@ -51,7 +53,7 @@ const MOCK_REQUESTS = [
   }
 ];
 
-type TabId = "profile" | "verification" | "security";
+type TabId = "profile" | "payroll" | "verification" | "security";
 
 export default function ProfileUpdateView() {
   const { user, loading, fetchUser } = useAuthStore();
@@ -76,6 +78,7 @@ export default function ProfileUpdateView() {
 
   const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
     { id: "profile", label: "My Profile", icon: UserCog },
+    { id: "payroll", label: "My Payroll", icon: Wallet },
     ...(isAdmin ? [{ id: "verification", label: "Verification Center", icon: ShieldCheck } as const] : []),
     { id: "security", label: "Security & Preferences", icon: Lock },
   ];
@@ -129,6 +132,11 @@ export default function ProfileUpdateView() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB CONTENT: PAYROLL */}
+      {activeTab === "payroll" && (
+        <MyPayrollTab />
       )}
 
       {/* TAB CONTENT: VERIFICATION CENTER (ADMIN ONLY) */}

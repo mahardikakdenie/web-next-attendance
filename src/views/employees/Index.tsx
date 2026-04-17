@@ -9,7 +9,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  ListChecks
+  ListChecks,
+  Coins
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Can } from "@/components/auth/PermissionGuard";
@@ -21,13 +22,16 @@ import { MetaResponse, UserData } from "@/types/api";
 import { getRoleBadgeColor } from "@/lib/utils";
 import CreateEmployeeModal from "@/components/employees/CreateEmployeeModal";
 import LifecycleModal from "@/components/employees/LifecycleModal";
-import { useAuthStore } from "@/store/auth.store";
+import QuotaModal from "@/components/employees/QuotaModal";
+import { useAuthStore, ROLES } from "@/store/auth.store";
+import { formatCurrency } from "@/components/finance/CreateExpenseModal";
 
 export default function EmployeesView() {
   const [employees, setEmployees] = useState<UserData[]>([]);
   const [meta, setMeta] = useState<MetaResponse | undefined>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [lifecycleEmployee, setLifecycleEmployee] = useState<{id: number, name: string} | null>(null);
+  const [quotaEmployee, setQuotaEmployee] = useState<{id: number, name: string, quota: number} | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const {user} = useAuthStore(); 
 
@@ -81,6 +85,16 @@ export default function EmployeesView() {
       sortable: true,
     },
     {
+      header: "Monthly Quota",
+      accessor: (emp) => (
+        <div className="flex items-center gap-2 text-indigo-600 font-black text-sm tabular-nums">
+          <Coins size={14} className="text-indigo-400" />
+          {formatCurrency(emp.expense_quota || 0)}
+        </div>
+      ),
+      sortable: true,
+    },
+    {
       header: "Department",
       accessor: (emp) => (
         <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-neutral-100 text-neutral-600 border border-neutral-200/50">
@@ -116,8 +130,19 @@ export default function EmployeesView() {
     },
   ];
 
+  const canEditQuota = user?.role?.name && [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.FINANCE].includes(user.role.name as 'admin' | 'superadmin' | 'finance');
+
   const actions = (emp: UserData) => (
     <div className="flex items-center justify-end gap-1">
+      {canEditQuota && (
+        <button
+          onClick={() => setQuotaEmployee({ id: emp.id, name: emp.name, quota: emp.expense_quota })}
+          title="Update Expense Quota"
+          className="p-2 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+        >
+          <Coins size={18} />
+        </button>
+      )}
       <button
         onClick={() => setLifecycleEmployee({ id: emp.id, name: emp.name })}
         title="Employee Lifecycle"
@@ -196,6 +221,17 @@ export default function EmployeesView() {
           onClose={() => setLifecycleEmployee(null)}
           employeeId={lifecycleEmployee.id}
           employeeName={lifecycleEmployee.name}
+        />
+      )}
+
+      {quotaEmployee && (
+        <QuotaModal 
+          open={!!quotaEmployee}
+          onClose={() => setQuotaEmployee(null)}
+          onSuccess={() => getData(currentPage)}
+          employeeId={quotaEmployee.id}
+          employeeName={quotaEmployee.name}
+          currentQuota={quotaEmployee.quota}
         />
       )}
     </div>
