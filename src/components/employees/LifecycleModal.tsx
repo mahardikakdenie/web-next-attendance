@@ -54,7 +54,9 @@ export default function LifecycleModal({ open, onClose, employeeId, employeeName
 
   useEffect(() => {
     if (open && employeeId) {
-      fetchLifecycle();
+      Promise.resolve().then(() => {
+        fetchLifecycle();
+      });
     }
   }, [open, employeeId, fetchLifecycle]);
 

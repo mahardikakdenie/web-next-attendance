@@ -376,6 +376,27 @@ export interface CreateUserPayload {
   password?: string;
 }
 
+export interface OwnerStats {
+  id: number;
+  name: string;
+  email: string;
+  tenant_id: number;
+  tenant_name: string;
+  tenant_code: string;
+  employee_count: number;
+  attendance_count: number;
+  leave_count: number;
+  overtime_count: number;
+  payroll_count: number;
+  expense_count: number;
+  created_at: string;
+}
+
+export interface OwnerStatsResponse {
+  items: OwnerStats[];
+  total: number;
+}
+
 export interface AttendanceSummary {
   total_record: number;
   total_record_diff: number;

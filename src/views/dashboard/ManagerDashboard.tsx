@@ -57,7 +57,9 @@ export default function ManagerDashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetchData();
+    Promise.resolve().then(() => {
+      fetchData();
+    });
   }, [fetchData]);
 
   if (isLoading) {

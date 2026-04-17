@@ -29,6 +29,32 @@ import { useAuthStore, ROLES } from "@/store/auth.store";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
+// --- SKELETON COMPONENTS ---
+const CalendarSkeleton = () => (
+  <div className="grid grid-cols-7 animate-pulse">
+    {[...Array(35)].map((_, i) => (
+      <div key={i} className="min-h-[130px] p-4 border-r border-b border-slate-100 bg-white">
+        <Skeleton className="w-6 h-6 rounded-lg mb-3" />
+        <Skeleton className="w-full h-4 rounded-md" />
+      </div>
+    ))}
+  </div>
+);
+
+const SidebarSkeleton = () => (
+  <div className="space-y-4 animate-pulse">
+    {[...Array(3)].map((_, i) => (
+      <div key={i} className="flex items-center gap-4 p-2">
+        <Skeleton className="w-12 h-12 rounded-xl" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="w-3/4 h-3 rounded" />
+          <Skeleton className="w-1/2 h-2 rounded" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 export default function HolidayCalendarView() {
   const { user, loading: authLoading } = useAuthStore();
   const router = useRouter();
@@ -88,8 +114,10 @@ export default function HolidayCalendarView() {
         router.replace("/");
         return;
       }
-      fetchCalendarEvents();
-      fetchUsers();
+      Promise.resolve().then(() => {
+        fetchCalendarEvents();
+        fetchUsers();
+      });
     }
   }, [fetchCalendarEvents, fetchUsers, authLoading, user, router]);
 
@@ -218,32 +246,6 @@ export default function HolidayCalendarView() {
   const filteredUsers = availableUsers.filter(u => 
     u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
     u.employee_id.toLowerCase().includes(userSearch.toLowerCase())
-  );
-
-  // --- SKELETON COMPONENTS ---
-  const CalendarSkeleton = () => (
-    <div className="grid grid-cols-7 animate-pulse">
-      {[...Array(35)].map((_, i) => (
-        <div key={i} className="min-h-[130px] p-4 border-r border-b border-slate-100 bg-white">
-          <Skeleton className="w-6 h-6 rounded-lg mb-3" />
-          <Skeleton className="w-full h-4 rounded-md" />
-        </div>
-      ))}
-    </div>
-  );
-
-  const SidebarSkeleton = () => (
-    <div className="space-y-4 animate-pulse">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="flex items-center gap-4 p-2">
-          <Skeleton className="w-12 h-12 rounded-xl" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="w-3/4 h-3 rounded" />
-            <Skeleton className="w-1/2 h-2 rounded" />
-          </div>
-        </div>
-      ))}
-    </div>
   );
 
   const groupedEvents = useMemo(() => {

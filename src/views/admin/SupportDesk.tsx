@@ -71,7 +71,9 @@ export default function SupportDeskView() {
   }, [activeTab]);
 
   useEffect(() => {
-    fetchData();
+    Promise.resolve().then(() => {
+      fetchData();
+    });
   }, [fetchData]);
 
   // --- Action Handlers ---

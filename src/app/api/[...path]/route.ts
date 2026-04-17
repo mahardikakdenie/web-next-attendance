@@ -69,7 +69,7 @@ async function handler(
 
   // Ensure body is at least "{}" for signing and forwarding if empty
   if (method !== "GET" && (!bodyBuffer || bodyBuffer.byteLength === 0)) {
-    bodyBuffer = Buffer.from("{}");
+    bodyBuffer = new TextEncoder().encode("{}").buffer;
   }
 
   const rawBody: Buffer =

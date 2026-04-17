@@ -29,7 +29,9 @@ export function LeaveBalanceCard() {
   }, [user?.id]);
 
   useEffect(() => {
-    fetchBalances();
+    Promise.resolve().then(() => {
+      fetchBalances();
+    });
   }, [fetchBalances, refreshKey]);
 
   if (loading) {

@@ -37,9 +37,11 @@ export default function TodayStatusCard() {
   }, []);
 
   useEffect(() => {
-    setMounted(true);
-    setNow(dayjs());
-    fetchTodayStatus();
+    Promise.resolve().then(() => {
+      setMounted(true);
+      setNow(dayjs());
+      fetchTodayStatus();
+    });
   }, [fetchTodayStatus, refreshKey]);
 
   // Interval untuk menghitung durasi live (update setiap 1 menit)

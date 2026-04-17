@@ -34,7 +34,9 @@ export function RecentActivityCard() {
   }, []);
 
   useEffect(() => {
-    fetchActivities();
+    Promise.resolve().then(() => {
+      fetchActivities();
+    });
   }, [fetchActivities, refreshKey]);
 
   // Loading State

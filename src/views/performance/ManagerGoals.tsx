@@ -10,8 +10,10 @@ import {
   CheckCircle2,
   Calendar,
   Layers,
-  ChevronRight
+  ChevronRight,
+  Clock
 } from "lucide-react";
+import dayjs from "dayjs";
 import { createGoal, getUserGoals } from "@/service/performance";
 import { getDataUserslist } from "@/service/users";
 import { UserData, PerformanceGoal, GoalType } from "@/types/api";
@@ -66,12 +68,16 @@ export default function ManagerGoalsView() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
+    Promise.resolve().then(() => {
+      fetchUsers();
+    });
   }, [fetchUsers]);
 
   useEffect(() => {
     if (selectedUser) {
-      fetchUserGoals(selectedUser.id);
+      Promise.resolve().then(() => {
+        fetchUserGoals(selectedUser.id);
+      });
     }
   }, [selectedUser, fetchUserGoals]);
 

@@ -134,7 +134,9 @@ export default function TenantRolesView() {
   }, [selectedRoleId]);
 
   useEffect(() => {
-    fetchRoles();
+    Promise.resolve().then(() => {
+      fetchRoles();
+    });
   }, [fetchRoles]);
 
   // --- Memos ---
@@ -152,7 +154,9 @@ export default function TenantRolesView() {
       // Assuming children are populated in the role object or we fetch them
       // For now, let's keep it empty or use existing children if available
       // Backend should provide child roles in the Role object
-      setChildRoleIds([]); // Reset for now, would be populated from API
+      Promise.resolve().then(() => {
+        setChildRoleIds([]); // Reset for now, would be populated from API
+      });
     }
   }, [selectedRole, activeTab]);
 

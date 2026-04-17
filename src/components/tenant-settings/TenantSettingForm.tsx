@@ -152,9 +152,10 @@ export default function TenantSettingForm() {
       const url = await uploadMedia(file);
       handleInputChange("tenantLogo", url);
       toast.success("Logo uploaded successfully!");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error(error.message || "Failed to upload logo.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload logo.";
+      toast.error(errorMessage);
     } finally {
       setIsUploadingLogo(false);
     }

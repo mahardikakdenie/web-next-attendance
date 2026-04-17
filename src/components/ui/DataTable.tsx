@@ -12,7 +12,7 @@ import {
 
 export interface Column<T> {
   header: string;
-  accessor: keyof T | ((item: T) => React.ReactNode);
+  accessor: keyof T | ((item: T, index: number) => React.ReactNode);
   sortable?: boolean;
   className?: string;
   align?: "left" | "center" | "right";
@@ -150,7 +150,7 @@ export function DataTable<T extends { id: string | number }>({
                   </td>
                 </tr>
               ) : processedData.length > 0 ? (
-                processedData.map((item) => (
+                processedData.map((item, rowIdx) => (
                   <tr 
                     key={item.id}
                     onClick={() => onRowClick?.(item)}
@@ -163,7 +163,7 @@ export function DataTable<T extends { id: string | number }>({
                         style={{ textAlign: col.align || "left" }}
                       >
                         {typeof col.accessor === "function" 
-                          ? col.accessor(item) 
+                          ? col.accessor(item, rowIdx) 
                           : (item[col.accessor] as React.ReactNode)}
                       </td>
                     ))}

@@ -1,5 +1,5 @@
 import { secureRequest } from "@/lib/axios";
-import { APIResponse } from "@/types/api";
+import { APIResponse, OwnerStatsResponse } from "@/types/api";
 import { 
   SupportMessage, 
   TrialRequest, 
@@ -7,6 +7,13 @@ import {
   CreateTrialPayload,
   CreateSupportMessagePayload
 } from "@/types/support";
+
+/**
+ * Superadmin Analytics & Monitoring
+ */
+export const getOwnersStats = (limit: number = 10, offset: number = 0) => {
+  return secureRequest<APIResponse<OwnerStatsResponse>>("get", "/v1/superadmin/owners-stats", { limit, offset });
+};
 
 /**
  * Public Lead Capture (Landing Page)

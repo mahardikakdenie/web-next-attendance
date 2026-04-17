@@ -3,7 +3,6 @@
 import { useAuthStore } from "@/store/auth.store";
 import DashboardRouter from "@/views/dashboard/DashboardRouter";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 
 export default function Page() {
   const { loading } = useAuthStore();

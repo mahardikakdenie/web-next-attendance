@@ -35,7 +35,9 @@ export default function QuotaModal({
 
   useEffect(() => {
     if (open) {
-      setQuota(String(currentQuota));
+      Promise.resolve().then(() => {
+        setQuota(String(currentQuota));
+      });
     }
   }, [open, currentQuota]);
 

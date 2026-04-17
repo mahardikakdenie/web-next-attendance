@@ -63,7 +63,9 @@ export default function LifecycleMasterView() {
         router.replace("/");
         return;
       }
-      fetchTemplates();
+      Promise.resolve().then(() => {
+        fetchTemplates();
+      });
     }
   }, [authLoading, user, router, fetchTemplates]);
 

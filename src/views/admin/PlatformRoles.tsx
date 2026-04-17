@@ -69,7 +69,9 @@ export default function PlatformRolesView() {
   }, [selectedRoleId]);
 
   useEffect(() => {
-    fetchRoles();
+    Promise.resolve().then(() => {
+      fetchRoles();
+    });
   }, [fetchRoles]);
 
   const selectedRole = useMemo(() => 

@@ -82,6 +82,7 @@ export default function ExpensesView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["expenses-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["users-quota"] });
     }
   });
 
@@ -90,6 +91,7 @@ export default function ExpensesView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["expenses-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["users-quota"] });
     }
   });
 
@@ -112,6 +114,9 @@ export default function ExpensesView() {
 
   const claims = expensesData?.data || [];
   const stats = summaryData?.data;
+
+  console.log("claims : ", claims);
+  
 
   const columns: Column<ExpenseClaim>[] = [
     {
@@ -308,7 +313,7 @@ export default function ExpensesView() {
         </div>
 
         <DataTable 
-          data={claims} 
+          data={expensesData?.data ?? []} 
           columns={columns} 
           actions={actions}
           currentPage={currentPage}

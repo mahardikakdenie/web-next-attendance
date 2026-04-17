@@ -31,7 +31,9 @@ export function QuickInfoCard() {
   }, []);
 
   useEffect(() => {
-    fetchQuickInfo();
+    Promise.resolve().then(() => {
+      fetchQuickInfo();
+    });
   }, [fetchQuickInfo, refreshKey]);
 
   if (loading) {

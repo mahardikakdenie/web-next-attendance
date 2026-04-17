@@ -202,7 +202,9 @@ export default function SchedulesView() {
   }, [currentWeekStart]);
 
   useEffect(() => {
-    fetchData();
+    Promise.resolve().then(() => {
+      fetchData();
+    });
   }, [fetchData]);
 
   const handleUpdateRoster = (userId: number, day: string, shiftId: string) => {

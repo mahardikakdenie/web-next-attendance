@@ -35,7 +35,9 @@ export function UserGoalsSection() {
   }, []);
 
   useEffect(() => {
-    fetchGoals();
+    Promise.resolve().then(() => {
+      fetchGoals();
+    });
   }, [fetchGoals]);
 
   const handleUpdateProgress = async (id: number, current: number, target: number) => {

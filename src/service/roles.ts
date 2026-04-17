@@ -9,11 +9,11 @@ export const getTenantRoles = () => {
   return secureRequest<APIResponse<Role[]>>("get", "/v1/tenant-roles");
 };
 
-export const createCustomRole = (data: Partial<Role> & { permissions: string[] }) => {
+export const createCustomRole = (data: Omit<Partial<Role>, 'permissions'> & { permissions: string[] }) => {
   return secureRequest<APIResponse<Role>>("post", "/v1/tenant-roles", data);
 };
 
-export const updateCustomRole = (id: number, data: Partial<Role> & { permissions: string[] }) => {
+export const updateCustomRole = (id: number, data: Omit<Partial<Role>, 'permissions'> & { permissions: string[] }) => {
   return secureRequest<APIResponse<Role>>("patch", `/v1/tenant-roles/${id}`, data);
 };
 

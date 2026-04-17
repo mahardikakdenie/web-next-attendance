@@ -10,7 +10,9 @@ import {
   MessageSquare,
   Send,
   Calendar,
-  Filter
+  Filter,
+  X,
+  CheckCircle2
 } from "lucide-react";
 import { 
   getCycles, 
@@ -75,12 +77,16 @@ export default function AppraisalsView() {
   }, []);
 
   useEffect(() => {
-    fetchCycles();
+    Promise.resolve().then(() => {
+      fetchCycles();
+    });
   }, [fetchCycles]);
 
   useEffect(() => {
     if (selectedCycle) {
-      fetchAppraisals(selectedCycle);
+      Promise.resolve().then(() => {
+        fetchAppraisals(selectedCycle);
+      });
     }
   }, [selectedCycle, fetchAppraisals]);
 
@@ -108,10 +114,11 @@ export default function AppraisalsView() {
     }
   };
 
-  const isManagerOrAdmin = user?.role?.name && [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR].includes(user.role.name as any);
+  const isManagerOrAdmin = user?.role?.name && 
+    ([ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR] as string[]).includes(user.role.name);
 
   const filteredAppraisals = appraisals.filter(a => 
-    (a as any).user_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    (a as Appraisal & { user_name?: string }).user_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const myAppraisal = appraisals.find(a => a.user_id === user?.id);
@@ -240,10 +247,10 @@ export default function AppraisalsView() {
                   <div key={a.id} className="p-6 rounded-[32px] bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-xl transition-all duration-500 group">
                     <div className="flex items-center gap-4 mb-6">
                       <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-sm shadow-sm overflow-hidden relative border border-white">
-                        {(a as any).user_name?.charAt(0) || 'U'}
+                        {(a as Appraisal & { user_name?: string }).user_name?.charAt(0) || 'U'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-slate-900 truncate">{(a as any).user_name}</p>
+                        <p className="text-sm font-black text-slate-900 truncate">{(a as Appraisal & { user_name?: string }).user_name}</p>
                         <Badge className={`${getStatusBadge(a.status)} border text-[8px] px-1.5 py-0.5 font-black uppercase tracking-widest mt-1`}>
                           {a.status.replace('_', ' ')}
                         </Badge>

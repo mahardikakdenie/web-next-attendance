@@ -29,7 +29,9 @@ export function RecentAttendance() {
   }, []);
 
   useEffect(() => {
-    fetchHistory();
+    Promise.resolve().then(() => {
+      fetchHistory();
+    });
   }, [fetchHistory, refreshKey]);
 
   if (loading) {

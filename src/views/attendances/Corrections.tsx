@@ -233,12 +233,10 @@ export default function CorrectionsView() {
             data={data}
             columns={columns}
             actions={actions}
-            pagination={{
-              total,
-              limit,
-              offset,
-              onPageChange: (newOffset) => setOffset(newOffset)
-            }}
+            currentPage={Math.floor(offset / limit) + 1}
+            totalPages={Math.ceil(total / limit)}
+            onPageChange={(page) => setOffset((page - 1) * limit)}
+            limit={limit}
             isLoading={isLoading}
           />
         )}
