@@ -9,7 +9,6 @@ import {
   MinusCircle,
   PlusCircle,
   Scale,
-  Download,
   Printer,
   AlertCircle,
   Calendar,
@@ -31,14 +30,23 @@ import { calculatePayroll, PayrollInput } from "@/lib/payrollCalculator";
 import { getDataUserslist } from "@/service/users";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Input from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import { PayslipPDFDocument } from "@/components/ui/PayslipPDFDocument";
 import { toast } from "sonner";
 import dayjs from "dayjs";
-import { UserData } from "@/types/api";
+import { UserData, PayrollCalculationResult } from "@/types/api";
 import Image from "next/image";
+
+const DynamicPDFDownload = dynamic(() => import("@/components/payroll/DynamicPDFDownload"), {
+  ssr: false,
+  loading: () => (
+    <Button disabled className="w-full bg-slate-100 text-slate-400 h-14 rounded-2xl font-black flex items-center justify-center gap-2">
+      <Loader2 className="animate-spin" size={20} />
+      <span>Loading PDF Engine...</span>
+    </Button>
+  )
+});
 
 export default function SalaryCalculatorView() {
   const { user, loading: authLoading } = useAuthStore();
@@ -277,59 +285,48 @@ export default function SalaryCalculatorView() {
           </Button>
 
           {result && (
-            <PDFDownloadLink
-              document={
-                <PayslipPDFDocument 
-                  data={{
-                    grossIncome: result?.breakdown?.earnings?.gross_income,
-                    pph21Amount: result?.breakdown?.deductions?.pph21_amount,
-                    netSalary: result?.net_salary,
-                    totalDeductions: result?.breakdown?.deductions?.total_deductions,
-                    totalCompanyCost: result?.breakdown?.employer_contributions?.total_employer_cost,
-                    breakdown: {
-                      proratedBasic: result?.breakdown?.earnings?.basic_salary,
-                      unpaidLeaveDeduction: result?.breakdown?.deductions?.unpaid_leave_deduction,
-                      overtimePay: result?.breakdown?.earnings?.overtime_pay,
-                      grossIncome: result?.breakdown?.earnings?.gross_income,
-                      pph21Amount: result?.breakdown?.deductions?.pph21_amount,
-                      terRate: 0,
-                      bpjs: {
-                        health: {
-                          employee: result?.breakdown?.deductions?.bpjs_health_employee,
-                          company: result?.breakdown?.employer_contributions?.bpjs_health_company
-                        },
-                        jht: {
-                          employee: result?.breakdown?.deductions?.bpjs_jht_employee,
-                          company: result?.breakdown?.employer_contributions?.bpjs_jht_company
-                        },
-                        jp: {
-                          employee: result?.breakdown?.deductions?.bpjs_jp_employee,
-                          company: result?.breakdown?.employer_contributions?.bpjs_jp_company
-                        },
-                        jkk: result?.breakdown?.employer_contributions?.bpjs_jkk,
-                        jkm: result?.breakdown?.employer_contributions?.bpjs_jkm
-                      },
-                      fixedAllowances: result?.breakdown?.earnings?.fixed_allowances,
-                      variableAllowances: result?.breakdown?.earnings?.variable_allowances,
-                    }
-                  }} 
-                  companyName={user.tenant?.name || "AttendancePro Organization"} 
-                  logo={user.tenant?.tenant_settings?.tenant_logo}
-                  ptkp={inputs.ptkpStatus}
-                  period={dayjs(selectedPeriod).format("MMMM YYYY")}
-                  employeeName={employees.find(e => e.id === selectedUserId)?.name || "Simulation User"}
-                  employeeRole={employees.find(e => e.id === selectedUserId)?.department || "Personnel"}
-                />
-              }
+            <DynamicPDFDownload 
+              data={{
+                grossIncome: result?.breakdown?.earnings?.gross_income,
+                pph21Amount: result?.breakdown?.deductions?.pph21_amount,
+                netSalary: result?.net_salary,
+                totalDeductions: result?.breakdown?.deductions?.total_deductions,
+                totalCompanyCost: result?.breakdown?.employer_contributions?.total_employer_cost,
+                breakdown: {
+                  proratedBasic: result?.breakdown?.earnings?.basic_salary,
+                  unpaidLeaveDeduction: result?.breakdown?.deductions?.unpaid_leave_deduction,
+                  overtimePay: result?.breakdown?.earnings?.overtime_pay,
+                  grossIncome: result?.breakdown?.earnings?.gross_income,
+                  pph21Amount: result?.breakdown?.deductions?.pph21_amount,
+                  terRate: 0,
+                  bpjs: {
+                    health: {
+                      employee: result?.breakdown?.deductions?.bpjs_health_employee,
+                      company: result?.breakdown?.employer_contributions?.bpjs_health_company
+                    },
+                    jht: {
+                      employee: result?.breakdown?.deductions?.bpjs_jht_employee,
+                      company: result?.breakdown?.employer_contributions?.bpjs_jht_company
+                    },
+                    jp: {
+                      employee: result?.breakdown?.deductions?.bpjs_jp_employee,
+                      company: result?.breakdown?.employer_contributions?.bpjs_jp_company
+                    },
+                    jkk: result?.breakdown?.employer_contributions?.bpjs_jkk,
+                    jkm: result?.breakdown?.employer_contributions?.bpjs_jkm
+                  },
+                  fixedAllowances: result?.breakdown?.earnings?.fixed_allowances,
+                  variableAllowances: result?.breakdown?.earnings?.variable_allowances,
+                }
+              } as PayrollCalculationResult} 
+              companyName={user.tenant?.name || "AttendancePro Organization"} 
+              logo={user.tenant?.tenant_settings?.tenant_logo}
+              ptkp={inputs.ptkpStatus}
+              period={dayjs(selectedPeriod).format("MMMM YYYY")}
+              employeeName={employees.find(e => e.id === selectedUserId)?.name || "Simulation User"}
+              employeeRole={employees.find(e => e.id === selectedUserId)?.department || "Personnel"}
               fileName={pdfFilename}
-            >
-              {({ loading }) => (
-                <Button variant="secondary" disabled={loading} className="rounded-2xl h-12 shadow-sm">
-                  <Download size={18} />
-                  <span className="font-bold">{loading ? "Preparing..." : "Export PDF"}</span>
-                </Button>
-              )}
-            </PDFDownloadLink>
+            />
           )}
           <Button onClick={() => window.print()} variant="secondary" className="rounded-2xl h-12 shadow-sm">
             <Printer size={18} />
