@@ -12,10 +12,13 @@ import {
 	ArrowRight,
   Info,
   Users,
-  PartyPopper
+  PartyPopper,
+  UserCheck,
+  AlertCircle
 } from 'lucide-react';
 import CameraModal from '../attendance/CameraModal';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
 	loadFaceModels,
@@ -33,6 +36,8 @@ import { uploadMedia } from '@/service/media';
 import { getCalendarEvents, CalendarEvent } from '@/service/calendar';
 import { useAuthStore } from '@/store/auth.store';
 import { useRefresh } from '@/lib/RefreshContext';
+import { getProfileImage } from '@/lib/utils';
+import { CustomApiError } from '@/types/api';
 
 type Coordinates = {
 	latitude: number;
@@ -58,6 +63,7 @@ const dataUrlToFile = async (dataUrl: string) => {
 
 export default function ClockCard() {
 	const { user } = useAuthStore();
+	const router = useRouter();
 	const { triggerRefresh } = useRefresh();
 	const [mounted, setMounted] = useState(false);
 	const [attendance, setAttendance] = useState<AttendanceItem[]>([]);
@@ -84,6 +90,8 @@ export default function ClockCard() {
 	const [tenantSettings, setTenantSettings] = useState<TenantSettingsData>({
 		allowMultipleCheck: false,
 	});
+
+  const hasProfileImage = !!getProfileImage(user?.media_url);
 
 	useEffect(() => {
 		const timeoutId = setTimeout(() => {
@@ -184,6 +192,8 @@ export default function ClockCard() {
 		if (mounted) {
 			const timeoutId = setTimeout(() => {
 				initData();
+        // Background pre-load face-api models
+        loadFaceModels().catch(err => console.error("Failed to pre-load face models:", err));
 			}, 0);
 			return () => clearTimeout(timeoutId);
 		}
@@ -230,6 +240,9 @@ export default function ClockCard() {
 	if (!mounted || !now) return null;
 
 	const handleClockClick = (type: 'clock_in' | 'clock_out') => {
+    if (!hasProfileImage) {
+      return toast.error('Silakan upload foto profil terlebih dahulu untuk dapat melakukan absensi.');
+    }
 		if (isOffToday || isOnLeave || isOfficeClosed)
 			return toast.error('Anda tidak memiliki jadwal kerja hari ini.');
 		setSelectedAction(type);
@@ -261,7 +274,9 @@ export default function ClockCard() {
 			);
 		} catch (error) {
 			console.log(error);
-			toast.error('Terjadi kesalahan.');
+      const apiErr = error as CustomApiError;
+      const detailedMessage = typeof apiErr.response?.data?.data === 'string' ? apiErr.response.data.data : null;
+			toast.error(detailedMessage || apiErr.response?.data?.meta?.message || 'Terjadi kesalahan.');
 		} finally {
 			setLoading(false);
 		}
@@ -275,7 +290,7 @@ export default function ClockCard() {
 			const selfieImg = new window.Image();
 			selfieImg.src = img;
 			const profileImg = new window.Image();
-			profileImg.src = '/profile.jpg';
+			profileImg.src = getProfileImage(user?.media_url) || '/profile.jpg';
 			await Promise.all([
 				new Promise((r) => (selfieImg.onload = r)),
 				new Promise((r) => (profileImg.onload = r)),
@@ -319,8 +334,9 @@ export default function ClockCard() {
 			toast.success('Absensi berhasil');
 		} catch (error) {
       console.log(error);
-      
-			toast.error('Terjadi kesalahan.');
+      const apiErr = error as CustomApiError;
+      const detailedMessage = typeof apiErr.response?.data?.data === 'string' ? apiErr.response.data.data : null;
+			toast.error(detailedMessage || apiErr.response?.data?.meta?.message || 'Terjadi kesalahan.');
 		} finally {
 			setLoading(false);
 			setStatus('idle');
@@ -354,7 +370,7 @@ export default function ClockCard() {
 
 	return (
 		<>
-			<div className='w-full mx-auto rounded-[32px] bg-white border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden flex flex-col group/card'>
+			<div id="tour-clock-card" className='w-full mx-auto rounded-[32px] bg-white border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden flex flex-col group/card'>
 				
         {/* Info Banner for INFORMATION category events */}
         {!isOfficeClosed && todayEvent && todayEvent.category === 'INFORMATION' && (todayEvent.is_all_users || (user && todayEvent.user_ids?.includes(user.id))) && (
@@ -437,42 +453,63 @@ export default function ClockCard() {
 						</div>
 					</div>
 
-					{/* Action Buttons */}
-					<div className='w-full max-w-sm grid grid-cols-2 gap-3 pt-2'>
-						<button
-							onClick={() => handleClockClick('clock_in')}
-							disabled={loading || !canClockIn}
-							className={`h-14 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 ${!canClockIn ? 'bg-slate-50 text-slate-300' : 'bg-slate-900 text-white shadow-lg hover:-translate-y-0.5 active:scale-95'}`}>
-							{loading && selectedAction === 'clock_in' ? (
-								<Loader2 className='animate-spin' size={18} />
-							) : (
-								<ArrowRight size={18} strokeWidth={3} />
-							)}
-							<span className='text-[10px] font-black uppercase tracking-widest'>
-								Clock In - {canClockIn}
-							</span>
-						</button>
-						<button
-							onClick={() => handleClockClick('clock_out')}
-							disabled={loading || !canClockOut}
-							className={`h-14 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 border-2 ${!canClockOut ? 'bg-slate-50 border border-slate-100 text-slate-300' : 'bg-white border-slate-200 text-slate-900 shadow-md hover:border-orange-500 hover:text-orange-600 hover:-translate-y-0.5 active:scale-95'}`}>
-							{loading && selectedAction === 'clock_out' ? (
-								<Loader2
-									className='animate-spin text-orange-500'
-									size={18}
-								/>
-							) : (
-								<ArrowRightCircle
-									size={18}
-									strokeWidth={3}
-									className='rotate-180'
-								/>
-							)}
-							<span className='text-[10px] font-black uppercase tracking-widest'>
-								Clock Out
-							</span>
-						</button>
-					</div>
+					{/* Action Buttons or Profile Update Banner */}
+          {!hasProfileImage ? (
+            <div className="w-full max-w-sm mt-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
+               <div className="bg-rose-50 border border-rose-100 rounded-3xl p-5 flex flex-col items-center gap-4 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-rose-100 flex items-center justify-center text-rose-500 shadow-sm">
+                    <AlertCircle size={24} strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-rose-900 uppercase tracking-tight">Profil Belum Lengkap</h4>
+                    <p className="text-[11px] font-bold text-rose-600/70 mt-1 leading-relaxed">Anda wajib mengupload foto profil sebelum dapat melakukan absensi mandiri.</p>
+                  </div>
+                  <button 
+                    onClick={() => router.push('/request-profile-update')}
+                    className="w-full h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-200 transition-all flex items-center justify-center gap-2"
+                  >
+                    <UserCheck size={16} strokeWidth={3} />
+                    Lengkapi Profil Sekarang
+                  </button>
+               </div>
+            </div>
+          ) : (
+            <div className='w-full max-w-sm grid grid-cols-2 gap-3 pt-2'>
+              <button
+                onClick={() => handleClockClick('clock_in')}
+                disabled={loading || !canClockIn}
+                className={`h-14 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 ${!canClockIn ? 'bg-slate-50 text-slate-300' : 'bg-slate-900 text-white shadow-lg hover:-translate-y-0.5 active:scale-95'}`}>
+                {loading && selectedAction === 'clock_in' ? (
+                  <Loader2 className='animate-spin' size={18} />
+                ) : (
+                  <ArrowRight size={18} strokeWidth={3} />
+                )}
+                <span className='text-[10px] font-black uppercase tracking-widest'>
+                  Clock In
+                </span>
+              </button>
+              <button
+                onClick={() => handleClockClick('clock_out')}
+                disabled={loading || !canClockOut}
+                className={`h-14 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 border-2 ${!canClockOut ? 'bg-slate-50 border border-slate-100 text-slate-300' : 'bg-white border-slate-200 text-slate-900 shadow-md hover:border-orange-500 hover:text-orange-600 hover:-translate-y-0.5 active:scale-95'}`}>
+                {loading && selectedAction === 'clock_out' ? (
+                  <Loader2
+                    className='animate-spin text-orange-500'
+                    size={18}
+                  />
+                ) : (
+                  <ArrowRightCircle
+                    size={18}
+                    strokeWidth={3}
+                    className='rotate-180'
+                  />
+                )}
+                <span className='text-[10px] font-black uppercase tracking-widest'>
+                  Clock Out
+                </span>
+              </button>
+            </div>
+          )}
 				</div>
 
 				{/* Activity Log Section */}
