@@ -129,6 +129,7 @@ export interface UserData {
   role?: Role;
   permissions?: string[]; // Array of strings from BE for easy UI toggling
   is_owner: boolean;
+  must_change_password: boolean;
   base_salary: number;
   manager_id?: number;
   delegate_id?: number;
@@ -138,15 +139,34 @@ export interface UserData {
   recent_activities?: UserRecentActivity[];
   ptkp_status: string;
   expense_quota: number;
-  shift?: {
-    id: string;
-    name: string;
-    startTime: string;
-    endTime: string;
-    type: string;
-    color: string;
-    isDefault: boolean;
-  };
+  shift?: Shift;
+  status?: string;
+}
+
+export interface Shift {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  type: string;
+  color: string;
+  isDefault: boolean;
+}
+
+export interface ChangePasswordPayload {
+  old_password?: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  new_password: string;
+  confirm_password: string;
 }
 
 export interface UsersListResponse {
@@ -383,6 +403,7 @@ export interface OwnerStats {
   tenant_id: number;
   tenant_name: string;
   tenant_code: string;
+  tenant_plan?: string;
   employee_count: number;
   attendance_count: number;
   leave_count: number;
@@ -476,6 +497,22 @@ export interface PayrollUser {
   ptkp_status: string;
   bank_name: string;
   bank_account_number: string;
+  bank_account_holder?: string;
+  bpjs_health_number?: string;
+  bpjs_employment_number?: string;
+  npwp_number?: string;
+}
+
+export interface PayrollProfile {
+  bank_name: string;
+  bank_account_number: string;
+  bank_account_holder: string;
+  bpjs_health_number?: string;
+  bpjs_employment_number?: string;
+  npwp_number?: string;
+  ptkp_status: string;
+  basic_salary: number;
+  fixed_allowance: number;
 }
 
 export interface PayrollEarnings {
@@ -636,6 +673,7 @@ export interface CustomApiError extends Error {
       meta?: {
         message?: string;
       };
+      data?: string;
     };
   };
 }
