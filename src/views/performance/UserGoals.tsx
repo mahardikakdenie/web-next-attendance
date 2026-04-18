@@ -4,11 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { 
   Target, 
   TrendingUp, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle,
   Plus,
-  MoreVertical,
   ChevronRight
 } from "lucide-react";
 import { getMyGoals, updateGoalProgress } from "@/service/performance";
@@ -51,7 +47,7 @@ export function UserGoalsSection() {
       await updateGoalProgress(id, numVal);
       toast.success(numVal >= target ? "Goal completed! Status updated to COMPLETED." : "Progress updated");
       fetchGoals();
-    } catch (error) {
+    } catch {
       toast.error("Failed to update progress");
     }
   };

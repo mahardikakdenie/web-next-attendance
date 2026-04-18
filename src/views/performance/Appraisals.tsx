@@ -7,9 +7,7 @@ import {
   Loader2,
   ChevronRight,
   Star,
-  MessageSquare,
   Send,
-  Calendar,
   Filter,
   X,
   CheckCircle2
@@ -19,11 +17,10 @@ import {
   getAppraisals, 
   submitSelfReview 
 } from "@/service/performance";
-import { PerformanceCycle, Appraisal, UserData } from "@/types/api";
+import { PerformanceCycle, Appraisal } from "@/types/api";
 import { toast } from "sonner";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import { Badge } from "@/components/ui/Badge";
-import Image from "next/image";
 
 export default function AppraisalsView() {
   const { user } = useAuthStore();
@@ -107,7 +104,7 @@ export default function AppraisalsView() {
         setSelfReviewModal({ isOpen: false, appraisalId: null, score: 5, comments: "" });
         if (selectedCycle) fetchAppraisals(selectedCycle);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to submit self-review");
     } finally {
       setIsSubmitting(false);

@@ -10,8 +10,6 @@ import {
   X,
   ArrowRight,
   AlertCircle,
-  Bell,
-  Smartphone,
   Lock,
   ShieldCheck,
   Wallet
@@ -21,6 +19,7 @@ import UpdateRequestForm from "@/components/profile-update/UpdateRequestForm";
 import UserCurrentDataCard from "@/components/profile-update/UserCurrentDataCard";
 import ProfileImageUpdate from "@/components/profile-update/ProfileImageUpdate";
 import MyPayrollTab from "@/components/profile-update/MyPayrollTab";
+import SecurityTab from "@/components/profile-update/SecurityTab";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import Avatar from "@/components/ui/Avatar";
@@ -30,7 +29,7 @@ const MOCK_REQUESTS = [
   {
     id: 1,
     employeeName: "Alex Johnson",
-    avatar: "https://i.pravatar.cc/150?u=alex",
+    avatar: null,
     role: "Senior Developer",
     requestedAt: "2024-03-26 10:30 AM",
     status: "Pending",
@@ -42,7 +41,7 @@ const MOCK_REQUESTS = [
   {
     id: 2,
     employeeName: "Sarah Chen",
-    avatar: "https://i.pravatar.cc/150?u=sarah",
+    avatar: null,
     role: "UI Designer",
     requestedAt: "2024-03-25 02:15 PM",
     status: "Pending",
@@ -175,7 +174,7 @@ export default function ProfileUpdateView() {
                     <tr key={req.id} className="hover:bg-neutral-50/30 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <Avatar src={req.avatar} className="w-10 h-10 rounded-xl" />
+                          <Avatar src={req.avatar} name={req.employeeName} className="w-10 h-10 rounded-xl" />
                           <div>
                             <p className="text-sm font-black text-neutral-900">{req.employeeName}</p>
                             <p className="text-[10px] font-bold text-neutral-400 uppercase">{req.requestedAt}</p>
@@ -216,79 +215,7 @@ export default function ProfileUpdateView() {
 
       {/* TAB CONTENT: SECURITY & PREFERENCES */}
       {activeTab === "security" && (
-        <div className="space-y-8 animate-in fade-in duration-500 px-4 md:px-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white p-8 rounded-4xl border border-neutral-200 shadow-sm space-y-6">
-              <div className="flex items-center gap-3 text-rose-500">
-                <Lock size={24} strokeWidth={2.5} />
-                <h3 className="text-xl font-black text-neutral-900 tracking-tight">Security Access</h3>
-              </div>
-              <p className="text-sm font-medium text-neutral-400">Manage your password and two-factor authentication.</p>
-              
-              <div className="space-y-4 pt-4">
-                <Button className="w-full bg-neutral-900 text-white h-14 rounded-2xl font-black shadow-lg shadow-neutral-900/10">
-                  Change Login Password
-                </Button>
-                <Button className="w-full bg-neutral-50 text-neutral-600 border border-neutral-200 h-14 rounded-2xl font-black">
-                  Enable 2FA Authentication
-                </Button>
-              </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-4xl border border-neutral-200 shadow-sm space-y-6">
-              <div className="flex items-center gap-3 text-blue-500">
-                <Smartphone size={24} strokeWidth={2.5} />
-                <h3 className="text-xl font-black text-neutral-900 tracking-tight">Active Sessions</h3>
-              </div>
-              <p className="text-sm font-medium text-neutral-400">Devices currently logged into your account.</p>
-              
-              <div className="space-y-3">
-                {[
-                  { device: "MacBook Pro 14", location: "Jakarta, ID", status: "Current" },
-                  { device: "iPhone 15 Pro", location: "Tangerang, ID", status: "Active" }
-                ].map((session, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center border border-neutral-100 shadow-sm">
-                        <Smartphone size={18} className="text-neutral-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-neutral-900">{session.device}</p>
-                        <p className="text-[10px] font-bold text-neutral-400 uppercase">{session.location}</p>
-                      </div>
-                    </div>
-                    <Badge className="bg-blue-50 text-blue-600 border-none font-black text-[10px]">{session.status}</Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-8 rounded-4xl border border-neutral-200 shadow-sm space-y-8">
-            <div className="flex items-center gap-3 text-amber-500">
-              <Bell size={24} strokeWidth={2.5} />
-              <h3 className="text-xl font-black text-neutral-900 tracking-tight">App Preferences</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">System Language</label>
-                <select className="w-full h-14 px-4 bg-neutral-50 border border-neutral-100 rounded-2xl text-sm font-bold text-neutral-900 outline-none">
-                  <option>English (US)</option>
-                  <option>Bahasa Indonesia</option>
-                </select>
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 ml-1">Interface Theme</label>
-                <div className="flex gap-2 p-1 bg-neutral-50 rounded-2xl border border-neutral-100">
-                  <button className="flex-1 h-12 bg-white rounded-xl shadow-sm text-xs font-black text-neutral-900">Light</button>
-                  <button className="flex-1 h-12 rounded-xl text-xs font-black text-neutral-400">Dark</button>
-                  <button className="flex-1 h-12 rounded-xl text-xs font-black text-neutral-400">System</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <SecurityTab />
       )}
 
       {/* REVIEW MODAL (Reuse previous logic) */}
@@ -307,7 +234,7 @@ export default function ProfileUpdateView() {
 
             <div className="p-8 space-y-8">
               <div className="flex items-center gap-4 bg-neutral-50 p-4 rounded-3xl border border-neutral-100">
-                <Avatar src={selectedRequest.avatar} className="w-14 h-14 rounded-2xl" />
+                <Avatar src={selectedRequest.avatar} name={selectedRequest.employeeName} className="w-14 h-14 rounded-2xl" />
                 <div>
                   <h3 className="text-lg font-black text-neutral-900">{selectedRequest.employeeName}</h3>
                   <p className="text-sm font-bold text-neutral-400">{selectedRequest.role} • ID: EMP-00{selectedRequest.id}</p>

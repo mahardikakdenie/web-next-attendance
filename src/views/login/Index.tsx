@@ -3,7 +3,6 @@
 import { startTransition, useState } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { 
   Lock, 
   Mail, 
@@ -25,6 +24,7 @@ import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { toast } from "sonner";
 import { submitTrialRequest } from "@/service/support";
+import Link from "next/link";
 
 type AuthMode = "login" | "trial";
 
@@ -188,9 +188,13 @@ export default function LoginView() {
           <div className="relative z-10 pt-12 border-t border-white/5">
             <div className="flex items-center gap-4 mb-6">
               <div className="flex -space-x-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="relative w-10 h-10 rounded-full border-2 border-slate-950 overflow-hidden shadow-xl">
-                    <Image src={`https://i.pravatar.cc/100?u=${i+10}`} alt="User" fill className="object-cover" />
+                {[
+                  { name: "Alpha", bg: "bg-blue-500" },
+                  { name: "Beta", bg: "bg-indigo-500" },
+                  { name: "Gamma", bg: "bg-purple-500" }
+                ].map((item, i) => (
+                  <div key={i} className={`relative w-10 h-10 rounded-full border-2 border-slate-950 overflow-hidden shadow-xl ${item.bg} flex items-center justify-center text-[10px] font-black text-white`}>
+                    {item.name[0]}
                   </div>
                 ))}
               </div>
@@ -252,7 +256,9 @@ export default function LoginView() {
                 <div className="space-y-2.5">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Security Key</label>
-                    <button type="button" className="text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 transition-colors">Forgot Password?</button>
+                    <Link href="/forgot-password" title="Recover Account" className="text-[10px] font-black uppercase text-blue-600 hover:text-blue-700 transition-colors">
+                      Forgot Password?
+                    </Link>
                   </div>
                   <div className="relative group">
                     <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-blue-600 transition-colors" />
