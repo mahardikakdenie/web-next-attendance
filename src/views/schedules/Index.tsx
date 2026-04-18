@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import Image from "next/image";
+import Avatar from "@/components/ui/Avatar";
+import { getProfileImage } from "@/lib/utils";
 import { WorkShift, EmployeeSchedule } from "@/types/schedules";
 import { getShifts, getRoster, saveRoster, createShift } from "@/service/schedules";
 import { toast } from "sonner";
@@ -431,7 +432,7 @@ export default function SchedulesView() {
                   <td className="p-6 sticky left-0 bg-white z-30 border-r border-slate-50 shadow-[4px_0_15px_rgba(0,0,0,0.02)]">
                     <div className="flex items-center gap-4">
                       <div className="relative w-12 h-12 shrink-0">
-                        <Image src={emp.avatar || "/profile.jpg"} fill alt={emp.name} className="rounded-2xl object-cover border-2 border-slate-50 shadow-sm" />
+                        <Avatar src={getProfileImage(emp.avatar)} className="rounded-2xl border-2 border-slate-50 shadow-sm" alt={emp.name} />
                       </div>
                       <div className="min-w-0">
                         <p className="font-black text-[14px] text-slate-900 truncate tracking-tight">{emp.name}</p>

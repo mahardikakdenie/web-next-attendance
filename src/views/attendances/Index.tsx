@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { 
   Users, 
   Eye, 
@@ -23,6 +22,8 @@ import { useAuthStore, ROLES } from "@/store/auth.store";
 import { Button } from "@/components/ui/Button";
 import { Can } from "@/components/auth/PermissionGuard";
 import { TableSkeleton, Skeleton } from "@/components/ui/Skeleton";
+import Avatar from "@/components/ui/Avatar";
+import { getProfileImage } from "@/lib/utils";
 import { getDataAttendances, getDataSummary } from "@/service/attendance";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { AttendanceFilterParams, AttendanceRecord } from "@/types/api";
@@ -139,7 +140,7 @@ export default function AttendancesView() {
       user: item.user || { 
         name: "Unknown User", 
         employee_id: String(item.user_id),
-        media_url: "/profile.jpg"
+        media_url: null
       }
     } as AttendanceRecord));
   }, [rawData]);
@@ -174,15 +175,11 @@ export default function AttendancesView() {
       header: "Employee",
       accessor: (item) => (
         <div className="flex items-center gap-4">
-          <div className="relative w-10 h-10 shrink-0">
-            <Image
-              src={item.user?.media_url || "/profile.jpg"} 
-              fill
-              sizes="40px"
-              alt={item.user?.name || "User"}
-              className="rounded-xl object-cover ring-2 ring-white shadow-sm"
-            />
-          </div>
+          <Avatar 
+            src={getProfileImage(item.user?.media_url)} 
+            name={item.user?.name}
+            className="w-10 h-10 rounded-xl"
+          />
           <div>
             <p className="text-sm font-black text-neutral-900 group-hover:text-blue-600 transition-colors">
               {item.user?.name || "Unknown"}

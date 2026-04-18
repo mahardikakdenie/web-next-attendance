@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/Button";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import { Badge } from "@/components/ui/Badge";
 import Avatar from "@/components/ui/Avatar";
+import { getProfileImage } from "@/lib/utils";
 import { CardSkeleton } from "@/components/ui/Skeleton";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import EnhancedPayslipModal from "@/components/ui/EnhancedPayslipModal"; 
@@ -137,7 +138,7 @@ export default function PayrollView() {
         header: "Employee",
         accessor: (emp) => (
           <div className="flex items-center gap-3">
-            <Avatar src={"/profile.jpg"} className="w-10 h-10 rounded-xl" />
+            <Avatar src={getProfileImage(emp.user?.media_url)} className="w-10 h-10 rounded-xl" />
             <div>
               <p className="text-[13px] font-black text-neutral-900">{emp.user?.full_name || 'Unknown'}</p>
               <div className="flex items-center gap-1.5 mt-0.5">

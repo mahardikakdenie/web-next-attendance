@@ -23,10 +23,12 @@ import {
   UserCog,
   ShieldAlert
 } from "lucide-react";
+import Avatar from "@/components/ui/Avatar";
 import { getProfileImage } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useState, useMemo, useEffect, useRef, useCallback, Fragment } from "react";
 import { SearchLink, BreadcrumbSegment } from "@/types/layout";
+import { TenantPlanBadge } from "../tenant-settings/TenantPlanBadge";
 
 export default function TopNavbar() {
   const { user } = useAuthStore();
@@ -242,7 +244,7 @@ export default function TopNavbar() {
         {/* Multi-Tenant Switcher */}
         {isPlatformAdmin && !isLoading && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-blue-50/50 rounded-xl border border-blue-100/50 cursor-pointer hover:bg-blue-50 transition-colors group">
-            <div className="relative w-5 h-5 rounded-md overflow-hidden flex items-center justify-center bg-white border border-blue-100 shadow-xs">
+            <div className="relative w-5 h-5 rounded-md overflow-hidden flex items-center justify-center bg-white border border-blue-100 shadow-xs shrink-0">
               {user?.tenant_setting?.tenant_logo ? (
                 <Image 
                   src={user.tenant_setting.tenant_logo} 
@@ -254,8 +256,11 @@ export default function TopNavbar() {
                 <Building2 size={12} className="text-blue-500" />
               )}
             </div>
-            <span className="text-xs font-bold text-blue-700 leading-tight">{user?.tenant?.name ?? 'Global System'}</span>
-            <ChevronDown size={12} className="text-blue-400 group-hover:translate-y-0.5 transition-transform" />
+            <div className="flex items-center gap-2 overflow-hidden">
+              <span className="text-xs font-bold text-blue-700 leading-tight truncate">{user?.tenant?.name ?? 'Global System'}</span>
+              <TenantPlanBadge />
+            </div>
+            <ChevronDown size={12} className="text-blue-400 group-hover:translate-y-0.5 transition-transform shrink-0" />
           </div>
         )}
       </div>
@@ -292,15 +297,11 @@ export default function TopNavbar() {
           </div>
 
           <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-slate-100 shadow-sm overflow-hidden group-hover:shadow-md ring-2 ring-transparent group-hover:ring-blue-100 transition-all duration-300">
-              <Image
-                src={getProfileImage(user?.media_url)}
-                width={40}
-                height={40}
-                alt="User profile"
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-            </div>
+            <Avatar 
+              src={getProfileImage(user?.media_url)} 
+              name={user?.name}
+              className="w-10 h-10 rounded-full shadow-sm group-hover:shadow-md ring-2 ring-transparent group-hover:ring-blue-100 transition-all duration-300"
+            />
             {!isLoading && (
               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white shadow-sm" />
             )}

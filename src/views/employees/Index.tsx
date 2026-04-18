@@ -10,7 +10,8 @@ import {
   Edit,
   Trash2,
   ListChecks,
-  Coins
+  Coins,
+  CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Can } from "@/components/auth/PermissionGuard";
@@ -19,10 +20,11 @@ import { useEffect, useState, useCallback } from "react";
 import { getDataUserslist } from "@/service/users";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { MetaResponse, UserData } from "@/types/api";
-import { getRoleBadgeColor } from "@/lib/utils";
+import { getRoleBadgeColor, getProfileImage } from "@/lib/utils";
 import CreateEmployeeModal from "@/components/employees/CreateEmployeeModal";
 import LifecycleModal from "@/components/employees/LifecycleModal";
 import QuotaModal from "@/components/employees/QuotaModal";
+import PayrollProfileModal from "@/components/employees/PayrollProfileModal";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import { formatCurrency } from "@/components/finance/CreateExpenseModal";
 
@@ -32,6 +34,7 @@ export default function EmployeesView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [lifecycleEmployee, setLifecycleEmployee] = useState<{id: number, name: string} | null>(null);
   const [quotaEmployee, setQuotaEmployee] = useState<{id: number, name: string, quota: number} | null>(null);
+  const [payrollEmployee, setPayrollEmployee] = useState<{id: number, name: string} | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const {user} = useAuthStore(); 
 
@@ -64,7 +67,7 @@ export default function EmployeesView() {
       header: "Employee",
       accessor: (emp) => (
         <div className="flex items-center gap-3">
-          <Avatar src={emp.media_url || "/profile.jpg"} />
+          <Avatar src={getProfileImage(emp.media_url)} name={emp.name} />
           <div>
             <p className="text-sm font-bold text-neutral-900 group-hover:text-blue-600 transition-colors">{emp.name}</p>
             <p className="text-[11px] text-neutral-500 font-medium">ID: {emp.employee_id}</p>
@@ -141,6 +144,15 @@ export default function EmployeesView() {
           className="p-2 text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
         >
           <Coins size={18} />
+        </button>
+      )}
+      {canEditQuota && (
+        <button
+          onClick={() => setPayrollEmployee({ id: emp.id, name: emp.name })}
+          title="Payroll Profile"
+          className="p-2 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+        >
+          <CreditCard size={18} />
         </button>
       )}
       <button
@@ -232,6 +244,15 @@ export default function EmployeesView() {
           employeeId={quotaEmployee.id}
           employeeName={quotaEmployee.name}
           currentQuota={quotaEmployee.quota}
+        />
+      )}
+
+      {payrollEmployee && (
+        <PayrollProfileModal 
+          open={!!payrollEmployee}
+          onClose={() => setPayrollEmployee(null)}
+          employeeId={payrollEmployee.id}
+          employeeName={payrollEmployee.name}
         />
       )}
     </div>

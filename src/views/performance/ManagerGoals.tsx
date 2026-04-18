@@ -8,8 +8,6 @@ import {
   Loader2,
   X,
   CheckCircle2,
-  Calendar,
-  Layers,
   ChevronRight,
   Clock
 } from "lucide-react";
@@ -19,7 +17,8 @@ import { getDataUserslist } from "@/service/users";
 import { UserData, PerformanceGoal, GoalType } from "@/types/api";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/auth.store";
-import Image from "next/image";
+import Avatar from "@/components/ui/Avatar";
+import { getProfileImage } from "@/lib/utils";
 
 export default function ManagerGoalsView() {
   const { user } = useAuthStore();
@@ -112,7 +111,7 @@ export default function ManagerGoalsView() {
           end_date: new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString().split('T')[0],
         });
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to assign goal");
     } finally {
       setIsSubmitting(false);
@@ -171,7 +170,7 @@ export default function ManagerGoalsView() {
                     }`}
                   >
                     <div className="relative w-10 h-10 shrink-0">
-                      <Image src={u.media_url || "/profile.jpg"} fill alt={u.name} className="rounded-xl object-cover" />
+                      <Avatar src={getProfileImage(u.media_url)} className="rounded-xl" alt={u.name} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-black text-slate-900 truncate">{u.name}</p>
@@ -198,7 +197,7 @@ export default function ManagerGoalsView() {
               <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10 border-b border-slate-50 pb-8">
                 <div className="flex items-center gap-4">
                   <div className="relative w-16 h-16 shrink-0 shadow-lg">
-                    <Image src={selectedUser.media_url || "/profile.jpg"} fill alt={selectedUser.name} className="rounded-2xl object-cover border-2 border-white" />
+                    <Avatar src={getProfileImage(selectedUser.media_url)} className="rounded-2xl border-2 border-white" alt={selectedUser.name} />
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-slate-900 tracking-tight">{selectedUser.name}</h2>

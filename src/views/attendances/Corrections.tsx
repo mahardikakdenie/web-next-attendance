@@ -1,26 +1,22 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
-import Image from "next/image";
+import { useState, useMemo } from "react";
 import { 
-  FileEdit, 
   CheckCircle2, 
   XCircle, 
-  Clock, 
   SearchX,
   RotateCcw,
-  MessageSquare,
   AlertCircle,
-  MoreVertical,
-  History
+  MoreVertical
 } from "lucide-react";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import { Button } from "@/components/ui/Button";
-import { TableSkeleton, Skeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/Skeleton";
+import Avatar from "@/components/ui/Avatar";
+import { getProfileImage } from "@/lib/utils";
 import { getCorrections } from "@/service/attendance";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { AttendanceCorrectionData } from "@/types/api";
-import { toast } from "sonner";
 import CorrectionApprovalModal from "@/components/attendance/CorrectionApprovalModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -36,7 +32,7 @@ export default function CorrectionsView() {
   const [selectedCorrection, setSelectedCorrection] = useState<AttendanceCorrectionData | null>(null);
   const [approvalMode, setApprovalMode] = useState<'APPROVE' | 'REJECT' | null>(null);
 
-  const { data: correctionsResp, isLoading, refetch } = useQuery({
+  const { data: correctionsResp, isLoading } = useQuery({
     queryKey: ["corrections-list", statusFilter, limit, offset],
     queryFn: () => getCorrections({ 
       status: statusFilter === "ALL" ? "" : statusFilter, 
@@ -58,15 +54,11 @@ export default function CorrectionsView() {
       header: "Employee",
       accessor: (item) => (
         <div className="flex items-center gap-4">
-          <div className="relative w-10 h-10 shrink-0">
-            <Image
-              src={item.user?.media_url || "/profile.jpg"} 
-              fill
-              sizes="40px"
-              alt={item.user?.name || "User"}
-              className="rounded-xl object-cover ring-2 ring-white shadow-sm"
-            />
-          </div>
+          <Avatar 
+            src={getProfileImage(item.user?.media_url)} 
+            className="w-10 h-10 rounded-xl"
+            alt={item.user?.name || "User"}
+          />
           <div>
             <p className="text-sm font-black text-neutral-900 group-hover:text-blue-600 transition-colors">
               {item.user?.name || "Unknown"}

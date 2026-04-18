@@ -1,40 +1,84 @@
+"use client";
+
 import Image from "next/image";
+import { useMemo } from "react";
 
 interface AvatarProps {
-  src?: string; // src bisa berupa string, undefined, atau kosong
+  src?: string | null;
+  name?: string;
   className?: string;
   alt?: string;
 }
 
 export default function Avatar({ 
   src, 
-  className = "w-8 h-8 rounded-full object-cover", 
+  name = "User",
+  className = "w-10 h-10 rounded-2xl", 
   alt = "User avatar" 
 }: AvatarProps) {
   
-  // CEGAHAN ERROR: Jika src kosong ("") atau tidak ada, render fallback UI
-  if (!src) {
+  const initials = useMemo(() => {
+    if (!name || name === "Unknown User") return "U";
+    return name
+      .split(" ")
+      .filter(part => part.length > 0)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  }, [name]);
+
+  // Generate a consistent color based on the name
+  const bgColor = useMemo(() => {
+    const colors = [
+      "bg-blue-600",
+      "bg-indigo-600",
+      "bg-emerald-600",
+      "bg-rose-600",
+      "bg-amber-600",
+      "bg-purple-600",
+      "bg-cyan-600",
+      "bg-slate-700",
+    ];
+    let hash = 0;
+    const stringToHash = name || "User";
+    for (let i = 0; i < stringToHash.length; i++) {
+      hash = stringToHash.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  }, [name]);
+
+  // Ensure className has the necessary properties if they're missing
+  const finalClassName = useMemo(() => {
+    let classes = className;
+    if (!classes.includes("overflow-hidden")) classes += " overflow-hidden";
+    if (!classes.includes("relative")) classes += " relative";
+    if (!classes.includes("shrink-0")) classes += " shrink-0";
+    return classes;
+  }, [className]);
+
+  const isPlaceholder = !src || src.includes("pravatar.cc") || src === "";
+
+  if (isPlaceholder) {
     return (
       <div 
-        className={`${className} bg-gray-200 flex items-center justify-center text-gray-400 overflow-hidden`}
-        aria-label="Default user avatar"
+        className={`${finalClassName} ${bgColor} flex items-center justify-center text-white font-black tracking-tighter border-2 border-white shadow-xs`}
+        aria-label={name}
       >
-        {/* SVG Ikon User Default sebagai pengganti gambar kosong */}
-        <svg className="w-3/5 h-3/5 mt-1" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
+        <span className="text-[1.2em] leading-none">{initials}</span>
       </div>
     );
   }
 
-  // Jika src valid dan ada isinya, render Image dari Next.js
   return (
-    <Image
-      src={src}
-      width={40}
-      height={40}
-      alt={alt}
-      className={className}
-    />
+    <div className={finalClassName}>
+      <Image
+        src={src}
+        fill
+        alt={alt}
+        className="object-cover"
+        sizes="100px"
+      />
+    </div>
   );
 }

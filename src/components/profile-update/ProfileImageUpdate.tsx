@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Camera, RefreshCw, Loader2 } from "lucide-react";
+import { Camera, RefreshCw, Loader2, User } from "lucide-react";
 import Image from "next/image";
 import Card from "@/components/ui/Card";
 import CameraModal from "@/components/attendance/CameraModal";
@@ -106,14 +106,18 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
       <div className="relative flex flex-col items-center md:flex-row md:items-start gap-8">
         {/* Image Preview Area */}
         <div className="relative group">
-          <div className="h-40 w-40 overflow-hidden rounded-[2.5rem] border-4 border-white bg-neutral-100 shadow-2xl shadow-blue-500/10 ring-1 ring-neutral-200">
-            <Image
-              src={previewImage || getProfileImage(currentImage)}
-              alt="Profile"
-              width={160}
-              height={160}
-              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-            />
+          <div className="h-40 w-40 overflow-hidden rounded-[2.5rem] border-4 border-white bg-neutral-100 shadow-2xl shadow-blue-500/10 ring-1 ring-neutral-200 flex items-center justify-center">
+            {previewImage || getProfileImage(currentImage) ? (
+              <Image
+                src={previewImage || getProfileImage(currentImage)!}
+                alt="Profile"
+                width={160}
+                height={160}
+                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+              />
+            ) : (
+              <User size={64} className="text-slate-300" />
+            )}
             {(isUploading || isValidating) && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm">
                 <RefreshCw size={32} className="animate-spin text-blue-600" />

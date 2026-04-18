@@ -22,6 +22,7 @@ import { getLeaveRequests, getLeaveBalances, LeaveRequestData } from "@/service/
 import LeaveApprovalModal from "@/components/leaves/LeaveApprovalModal";
 import Input from "@/components/ui/Input";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getProfileImage } from "@/lib/utils";
 
 export default function LeavesView() {
   const { user } = useAuthStore();
@@ -126,7 +127,7 @@ export default function LeavesView() {
       accessor: (leave) => (
         <div className="flex items-center gap-3">
           <Avatar 
-            src={leave.user?.media_url || leave.user_avatar || "/profile.jpg"} 
+            src={getProfileImage(leave.user?.media_url || leave.user_avatar)} 
             className="w-10 h-10 rounded-xl" 
           />
           <div>
