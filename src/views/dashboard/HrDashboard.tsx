@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import Chart from "@/components/ui/Chart";
 import { DataTable, Column } from "@/components/ui/DataTable";
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
 import type ApexCharts from "apexcharts";
 import { 
@@ -40,11 +40,10 @@ import {
 import { 
   HrDashboardPerformanceMatrix, 
   HeatmapQueryParams,
-  MappedUser,
-  HrDashboardData,
-  HeatmapItem
+  MappedUser
 } from "@/types/api";
 import { getHrDashboard, getHeatmap } from "@/service/dashboard";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Visual Helpers
@@ -98,14 +97,9 @@ const mapUserToPerformance = (u: MappedUser): EmployeePerformance => ({
 
 export default function HrDashboardPage() {
   // --- States ---
-  const [isLoading, setIsLoading] = useState(true);
-  const [apiData, setApiData] = useState<HrDashboardData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
   
-  const [heatmapApiData, setHeatmapApiData] = useState<HeatmapItem[]>([]);
-  const [isHeatmapLoading, setIsHeatmapLoading] = useState(false);
-
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeePerformance | null>(null);
   const [heatmapMetric, setHeatmapMetric] = useState<AnalyticsMetric>("attendance");
   const [heatmapEmployeeId, setHeatmapEmployeeId] = useState<number | "all">("all");
@@ -118,57 +112,41 @@ export default function HrDashboardPage() {
     employees: []
   });
 
-  // --- Data Fetching ---
+  // --- Data Fetching with React Query ---
 
-  useEffect(() => {
-    const getData = async () => {
-      try {
-        setIsLoading(true);
-        const resp = await getHrDashboard();
-        if (resp.data) {
-          setApiData(resp.data);
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsLoading(false);
+  const { data: dashboardResp, isLoading: isDashboardLoading } = useQuery({
+    queryKey: ["hr-dashboard"],
+    queryFn: getHrDashboard,
+  });
+
+  const apiData = dashboardResp?.data || null;
+
+  const { data: heatmapResp, isLoading: isHeatmapLoading } = useQuery({
+    queryKey: ["hr-heatmap", heatmapMetric, heatmapEmployeeId],
+    queryFn: async () => {
+      const typeMap: Record<string, string> = {
+        attendance: "clockin",
+        overtime: "clockout",
+        leave: "leave"
+      };
+
+      const params: HeatmapQueryParams = { 
+        type: typeMap[heatmapMetric] || "clockin" 
+      };
+
+      if (heatmapEmployeeId !== "all") {
+        params.user_id = heatmapEmployeeId as number;
       }
-    };
-    getData();
-  }, []);
 
-  useEffect(() => {
-    const fetchHeatmap = async () => {
-      try {
-        setIsHeatmapLoading(true);
-        
-        const typeMap: Record<string, string> = {
-          attendance: "clockin",
-          overtime: "clockout",
-          leave: "leave"
-        };
+      return await getHeatmap(params);
+    },
+  });
 
-        const params: HeatmapQueryParams = { 
-          type: typeMap[heatmapMetric] || "clockin" 
-        };
+  const heatmapApiData = useMemo(() => {
+    return heatmapResp?.data || [];
+  }, [heatmapResp]);
 
-        if (heatmapEmployeeId !== "all") {
-          params.user_id = heatmapEmployeeId as number;
-        }
-
-        const resp = await getHeatmap(params);
-        if (resp.data) {
-          setHeatmapApiData(resp.data);
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setIsHeatmapLoading(false);
-      }
-    };
-    
-    fetchHeatmap();
-  }, [heatmapMetric, heatmapEmployeeId]);
+  const isLoading = isDashboardLoading;
 
   // --- Memos ---
 
