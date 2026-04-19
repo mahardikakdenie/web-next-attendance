@@ -34,7 +34,7 @@ import dayjs from "dayjs";
 import { Can } from "@/components/auth/PermissionGuard";
 import SuspendTenantModal from "@/components/admin/SuspendTenantModal";
 import { Skeleton, TableSkeleton } from "@/components/ui/Skeleton";
-import Image from "next/image";
+import Avatar from "@/components/ui/Avatar";
 
 // --- Internal Components ---
 
@@ -126,13 +126,12 @@ export default function SubscriptionsView() {
       header: "Organization", 
       accessor: (s) => (
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 overflow-hidden border border-slate-200 shadow-sm">
-            {s.tenant_logo ? (
-              <Image src={s.tenant_logo} alt={s.tenant_name} className="w-full h-full object-cover" />
-            ) : (
-              <Building2 size={20} />
-            )}
-          </div>
+          <Avatar 
+            src={s.tenant_logo} 
+            name={s.tenant_name} 
+            className="w-10 h-10 rounded-2xl shadow-sm border border-slate-200" 
+            alt={s.tenant_name} 
+          />
           <div className="flex flex-col">
             <span className="font-black text-slate-900 leading-tight">{s.tenant_name}</span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{s.tenant_code}</span>
