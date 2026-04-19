@@ -31,69 +31,36 @@ import {
   PermissionModule
 } from "@/types/permissions";
 import { Role } from "@/types/api";
-import { getTenantRoles, createCustomRole, updateCustomRole, deleteCustomRole, saveRoleHierarchy } from "@/service/roles";
+import { 
+  getTenantRoles, 
+  createCustomRole, 
+  updateCustomRole, 
+  deleteCustomRole, 
+  saveRoleHierarchy,
+  getAllPermissions 
+} from "@/service/roles";
 import { toast } from "sonner";
 import { getRoleBadgeColor } from "@/lib/utils";
 
-// --- PERMISSION MODULES CONFIGURATION ---
-const PERMISSION_MODULES: PermissionModule[] = [
-  {
-    id: "mod_attendance",
-    name: "Attendance & Monitoring",
-    icon: Clock,
-    permissions: [
-      { id: "attendance.view", name: "View Logs", description: "Ability to see real-time attendance entries", action: "view" },
-      { id: "attendance.edit", name: "Manual Correction", description: "Edit or add logs for employees", action: "edit" },
-      { id: "attendance.approve", name: "Approve Requests", description: "Confirm or reject check-in adjustments", action: "approve" },
-      { id: "attendance.export", name: "Export Data", description: "Download logs as PDF or Excel", action: "export" },
-    ]
-  },
-  {
-    id: "mod_payroll",
-    name: "Payroll & Finance",
-    icon: Wallet,
-    permissions: [
-      { id: "payroll.view", name: "View Salaries", description: "Access to employee pay information", action: "view" },
-      { id: "payroll.edit", name: "Edit Allowances", description: "Modify fixed or recurring bonuses", action: "edit" },
-      { id: "payroll.approve", name: "Process Disbursement", description: "Trigger monthly payroll runs", action: "approve" },
-      { id: "payroll.create", name: "Generate Slips", description: "Create and distribute digital payslips", action: "create" },
-    ]
-  },
-  {
-    id: "mod_user",
-    name: "User Management",
-    icon: Users,
-    permissions: [
-      { id: "user.view", name: "View Directory", description: "Access to employee list and profiles", action: "view" },
-      { id: "user.create", name: "Add Employees", description: "Create new user accounts and onboarding", action: "create" },
-      { id: "user.edit", name: "Update Profiles", description: "Modify existing employee information", action: "edit" },
-      { id: "user.delete", name: "Offboard/Archive", description: "Remove access or archive user records", action: "delete" },
-    ]
-  },
-  {
-    id: "mod_analytics",
-    name: "Strategic Analytics",
-    icon: BarChart3,
-    permissions: [
-      { id: "analytics.view", name: "View HR Stats", description: "See macro-level organization health", action: "view" },
-      { id: "analytics.dna", name: "Access DNA Profile", description: "See individual behavioral analytics", action: "view" },
-      { id: "analytics.executive", name: "Executive Reports", description: "View sensitive company growth data", action: "view" },
-    ]
-  },
-  {
-    id: "mod_support",
-    name: "Platform Support",
-    icon: Sparkles,
-    permissions: [
-      { id: "support.manage", name: "Support Desk", description: "Access helpdesk and provisioning tools", action: "approve" },
-    ]
-  }
-];
+// --- ICON MAPPING FOR DYNAMIC MODULES ---
+const MODULE_ICONS: Record<string, any> = {
+  attendance: Clock,
+  payroll: Wallet,
+  user: Users,
+  analytics: BarChart3,
+  support: Sparkles,
+  project: GitBranch,
+  finance: Wallet,
+  employee: Users,
+  system: ShieldCheck
+};
 
 export default function TenantRolesView() {
   // --- States ---
   const [roles, setRoles] = useState<Role[]>([]);
+  const [permissionModules, setPermissionModules] = useState<PermissionModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPermsLoading, setIsPermsLoading] = useState(true);
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"permissions" | "hierarchy">("permissions");
   const [isCreating, setIsCreating] = useState(false);
@@ -112,6 +79,26 @@ export default function TenantRolesView() {
   const [childRoleIds, setChildRoleIds] = useState<number[]>([]);
 
   // --- Data Fetching ---
+  const fetchPermissions = useCallback(async () => {
+    try {
+      setIsPermsLoading(true);
+      const resp = await getAllPermissions();
+      if (resp.data) {
+        // Map icons to modules based on their key
+        const mappedModules = resp.data.map(mod => ({
+          ...mod,
+          icon: MODULE_ICONS[mod.key] || ShieldAlert
+        }));
+        setPermissionModules(mappedModules);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load permission catalog");
+    } finally {
+      setIsPermsLoading(false);
+    }
+  }, []);
+
   const fetchRoles = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -134,10 +121,9 @@ export default function TenantRolesView() {
   }, [selectedRoleId]);
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      fetchRoles();
-    });
-  }, [fetchRoles]);
+    fetchPermissions();
+    fetchRoles();
+  }, [fetchPermissions, fetchRoles]);
 
   // --- Memos ---
   const selectedRole = useMemo(() => 
@@ -461,11 +447,16 @@ export default function TenantRolesView() {
               <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
                 {activeTab === "permissions" ? (
                   <div className="space-y-10 animate-in fade-in duration-500">
-                    {PERMISSION_MODULES.map((module) => (
-                      <div key={module.id} className="space-y-6">
+                    {isPermsLoading ? (
+                      <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading permissions catalog...</p>
+                      </div>
+                    ) : permissionModules.map((module) => (
+                      <div key={module.key} className="space-y-6">
                         <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
                           <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center border border-slate-100">
-                            <module.icon size={20} strokeWidth={2.5} />
+                            {module.icon ? <module.icon size={20} strokeWidth={2.5} /> : <ShieldAlert size={20} strokeWidth={2.5} />}
                           </div>
                           <h3 className="text-lg font-black text-slate-900 tracking-tight">{module.name}</h3>
                         </div>
@@ -477,8 +468,8 @@ export default function TenantRolesView() {
                               className="flex items-center justify-between p-5 rounded-3xl bg-slate-50/50 border border-slate-100 hover:border-blue-100 hover:bg-white transition-all group"
                             >
                               <div className="flex-1 pr-4">
-                                <p className="text-sm font-black text-slate-800">{perm.name}</p>
-                                <p className="text-[11px] text-slate-400 font-medium leading-relaxed mt-0.5">{perm.description}</p>
+                                <p className="text-sm font-black text-slate-800">{perm.id.split('.').pop()?.replace(/_/g, ' ')}</p>
+                                <p className="text-[11px] text-slate-400 font-medium leading-relaxed mt-0.5">{perm.description || `Grant access to ${perm.action} in ${perm.module} module`}</p>
                               </div>
                               <Switch 
                                 checked={selectedRole.permissions?.some(p => p.id === perm.id) || false}
