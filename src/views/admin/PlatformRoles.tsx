@@ -52,7 +52,7 @@ export default function PlatformRolesView() {
     {
       header: "Permissions Count",
       accessor: (item) => (
-        <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 font-black">
+        <Badge className="bg-blue-50 text-blue-700 border-blue-100 font-black">
           {item.permissions?.length || 0} Capabilities
         </Badge>
       )
