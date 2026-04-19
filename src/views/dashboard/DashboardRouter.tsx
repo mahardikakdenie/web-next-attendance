@@ -1,26 +1,29 @@
 "use client";
 
 import { useAuthStore, ROLES } from "@/store/auth.store";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Users, 
   Wallet, 
-  ShieldCheck
+  ShieldCheck,
+  Monitor
 } from "lucide-react";
 import UserDashboardPage from "./UserDashboard";
 import AdminDashboardPage from "./AdminDashboard";
 import HrDashboardPage from "./HrDashboard";
 import FinanceDashboardPage from "./FinanceDashboard";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { toast } from "sonner";
 
 type AnalyticsTab = "platform" | "hr" | "finance" | "user";
 
 export default function DashboardRouter({ initialTab }: { initialTab?: AnalyticsTab }) {
   const { user } = useAuthStore();
+  const isMobile = useIsMobile();
+  
   const [activeTab, setActiveTab] = useState<AnalyticsTab>(
     initialTab || (user?.role?.name === ROLES.FINANCE ? "finance" : "hr")
   );
-
-  if (!user) return <UserDashboardPage />;
 
   const isManagement = 
     user.role?.name === ROLES.SUPERADMIN || 
@@ -28,7 +31,20 @@ export default function DashboardRouter({ initialTab }: { initialTab?: Analytics
     user.role?.name === ROLES.HR ||
     user.role?.name === ROLES.FINANCE;
 
-  if (isManagement) {
+  // Mobile Optimization: Force User Dashboard for management roles on mobile
+  useEffect(() => {
+    if (isMobile && isManagement && activeTab !== "user") {
+      setActiveTab("user");
+      toast.info("Mobile Mode: Switched to Employee Dashboard for better experience.", {
+        description: "Use a desktop for full management analytics.",
+        duration: 5000,
+      });
+    }
+  }, [isMobile, isManagement]);
+
+  if (!user) return <UserDashboardPage />;
+
+  if (isManagement && !isMobile) {
     return (
       <div className="flex flex-col gap-8">
         {/* Analytics Mode Switcher */}
@@ -66,6 +82,16 @@ export default function DashboardRouter({ initialTab }: { initialTab?: Analytics
                 <Wallet size={16} /> Finance
               </button>
             )}
+
+            {/* Added explicit User View button for managers */}
+            <button
+              onClick={() => setActiveTab("user")}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shrink-0 ${
+                activeTab === "user" ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <Monitor size={16} /> Personal
+            </button>
           </div>
 
           <div className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hidden lg:block">
@@ -84,5 +110,6 @@ export default function DashboardRouter({ initialTab }: { initialTab?: Analytics
     );
   }
 
+  // If management on mobile OR normal user, show UserDashboard
   return <UserDashboardPage />;
 }

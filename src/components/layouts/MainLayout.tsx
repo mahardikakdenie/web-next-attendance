@@ -5,6 +5,7 @@ import OnboardingTour from "@/components/ui/OnboardingTour";
 import FloatingHelpButton from "@/components/ui/FloatingHelpButton";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
+import BottomNav from "./BottomNav";
 
 export default function MainLayout({
   children,
@@ -19,15 +20,13 @@ export default function MainLayout({
       <OnboardingTour />
       <FloatingHelpButton />
 
-      {/* Modern Floating Sidebar Container */}
+      {/* Modern Floating Sidebar Container (Desktop Only) */}
       <div className="hidden md:flex flex-col z-20 h-full relative">
         <Sidebar />
       </div>
 
-      {/* Mobile Sidebar Navigation (Fixed Bottom) */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full z-50">
-        <Sidebar />
-      </div>
+      {/* Bottom Navigation (Mobile Only) */}
+      <BottomNav />
 
       {/* Main Content Area - The "Floating Shell" */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative bg-white rounded-[2rem] md:rounded-[40px] shadow-2xl shadow-slate-300/40 border border-white ring-1 ring-slate-200/60">
