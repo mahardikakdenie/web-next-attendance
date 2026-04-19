@@ -390,7 +390,7 @@ export default function Sidebar() {
         const resp = await getDataCurrentTenat();
         if (resp?.data) {
           setTenantLogo(resp.data.tenant_logo || null);
-          setTenantName(resp.data.tenant?.Name || "Attendance");
+          setTenantName(resp.data.tenant?.name || "Attendance");
         }
       } catch (error) {
         console.error("Failed to fetch tenant settings in sidebar:", error);
