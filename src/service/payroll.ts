@@ -6,7 +6,8 @@ import {
   PayrollRecord,
   EmployeeBaseline,
   AttendanceSyncData,
-  SavePayrollPayload
+  SavePayrollPayload,
+  PayrollProfile
 } from "@/types/api";
 
 export const calculatePayrollAPI = async (payload: PayrollCalculatePayload) => {
