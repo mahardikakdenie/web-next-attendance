@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
 import { getDataCurrentTenat } from "@/service/tenantSettings";
+import Avatar from "@/components/ui/Avatar";
 
 interface MenuItem {
   key: string;
@@ -100,21 +101,29 @@ const MENUS: MenuItem[] = [
     ],
   },
 
-  // COMMON - ACCESSIBLE BY ALL AUTHORIZED STAFF
+  // COMMON - CORE INSIGHTS & DASHBOARD
   {
-    key: "dashboard",
-    label: "Attendance",
+    key: "core-group",
+    label: "Core Insights",
     icon: LayoutDashboard,
-    path: "/",
     roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
-  },
-  {
-    key: "analytics",
-    label: "Analytics",
-    icon: TrendingUp,
-    path: "/analytics",
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE],
-    permission: "analytics.view",
+    children: [
+      {
+        key: "dashboard",
+        label: "Attendance",
+        icon: LayoutDashboard,
+        path: "/",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
+      },
+      {
+        key: "analytics",
+        label: "Analytics",
+        icon: TrendingUp,
+        path: "/analytics",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE],
+        permission: "analytics.view",
+      },
+    ],
   },
 
   // TENANT LEVEL - MANAGEMENT
@@ -533,17 +542,12 @@ export default function Sidebar() {
       >
         <div className="flex items-center gap-3 overflow-hidden cursor-pointer group" onClick={() => router.push('/')}>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 font-black text-white shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform overflow-hidden relative text-lg">
-            {tenantLogo ? (
-              <Image 
-                src={tenantLogo} 
-                alt="Logo" 
-                fill
-                className="object-cover"
-                sizes="40px"
-              />
-            ) : (
-              tenantName.charAt(0).toUpperCase()
-            )}
+            <Avatar 
+              src={tenantLogo} 
+              name={tenantName}
+              className="w-full h-full rounded-2xl"
+              alt="Logo"
+            />
           </div>
           <div
             className={`flex flex-col transition-all duration-300 overflow-hidden ${

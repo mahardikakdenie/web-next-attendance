@@ -14,12 +14,12 @@ import HrDashboardPage from "./HrDashboard";
 import FinanceDashboardPage from "./FinanceDashboard";
 import ManagerDashboardPage from "./ManagerDashboard";
 
-type AnalyticsTab = "ops" | "platform" | "hr" | "finance" | "user";
+type AnalyticsTab = "platform" | "hr" | "finance" | "user";
 
-export default function DashboardRouter() {
+export default function DashboardRouter({ initialTab }: { initialTab?: AnalyticsTab }) {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<AnalyticsTab>(
-    user?.role?.name === ROLES.SUPERADMIN || user?.role?.name === ROLES.ADMIN ? "ops" : "user"
+    initialTab || (user?.role?.name === ROLES.FINANCE ? "finance" : "hr")
   );
 
   if (!user) return <UserDashboardPage />;
@@ -36,15 +36,6 @@ export default function DashboardRouter() {
         {/* Analytics Mode Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-4 bg-white/60 backdrop-blur-md p-2 rounded-[32px] border border-white shadow-sm ring-1 ring-slate-200/50">
           <div className="flex p-1 bg-slate-100/80 rounded-2xl border border-slate-200/50 overflow-x-auto no-scrollbar">
-            <button
-              onClick={() => setActiveTab("ops")}
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shrink-0 ${
-                activeTab === "ops" ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              <LayoutDashboard size={16} /> Operations
-            </button>
-
             {user.role?.name === ROLES.SUPERADMIN && (
               <button
                 onClick={() => setActiveTab("platform")}
@@ -80,13 +71,12 @@ export default function DashboardRouter() {
           </div>
 
           <div className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hidden lg:block">
-            Dashboard Control Center
+            Analytics Control Center
           </div>
         </div>
 
         {/* Dynamic View Rendering */}
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {activeTab === "ops" && <ManagerDashboardPage />}
           {activeTab === "platform" && <AdminDashboardPage />}
           {activeTab === "hr" && <HrDashboardPage />}
           {activeTab === "finance" && <FinanceDashboardPage />}

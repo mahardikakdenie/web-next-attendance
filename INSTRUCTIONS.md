@@ -35,6 +35,8 @@ Tabel `roles` di Backend menggunakan konstanta `BASE_ROLE` berikut:
 ## 2. Technical Standards
 - **No `any` data type**: Gunakan interface yang terdokumentasi di `@/types/*`.
 - **UI Aesthetic**: Menggunakan konsep **Floating App Shell** (rounded 40px, bg-slate-50, glassmorphism).
+- **Global UI Components**: Selalu prioritaskan penggunaan komponen UI global dari `@/components/ui/*`. 
+  - **PENTING**: Gunakan komponen `Avatar` dari `@/components/ui/Avatar.tsx` untuk semua tampilan foto profil, inisial user, atau logo organisasi. Jangan gunakan `next/image` secara langsung untuk avatar guna menghindari error properti width/height dan inkonsistensi styling.
 - **Icons**: Gunakan `lucide-react`.
 - **Charts**: Gunakan `apexcharts`.
 - **State Management**: Zustand untuk Auth dan Global State.
