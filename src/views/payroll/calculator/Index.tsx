@@ -591,6 +591,7 @@ export default function SalaryCalculatorView() {
                         alt="Logo" 
                         fill
                         className="object-contain object-left" 
+                        sizes="128px"
                       />
                     </div>
                   ) : (

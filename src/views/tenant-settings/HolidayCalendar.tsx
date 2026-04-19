@@ -517,7 +517,13 @@ export default function HolidayCalendarView() {
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 overflow-hidden relative">
                                     {u.media_url ? (
-                                      <Image src={u.media_url} fill alt={u.name} className="object-cover" />
+                                      <Image 
+                                        src={u.media_url} 
+                                        fill 
+                                        alt={u.name} 
+                                        className="object-cover" 
+                                        sizes="32px"
+                                      />
                                     ) : u.name.charAt(0)}
                                   </div>
                                   <div>

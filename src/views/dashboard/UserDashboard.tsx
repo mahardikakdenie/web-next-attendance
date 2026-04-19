@@ -73,7 +73,7 @@ export default function UserDashboardPage() {
             {/* Grid layout 2 kolom */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
               {/* Featured Card: Membentang penuh 2 kolom di layar medium ke atas */}
-              <div className="md:col-span-2 flex flex-col h-full transition-transform hover:-translate-y-1 duration-300">
+              <div id="tour-leave-request" className="md:col-span-2 flex flex-col h-full transition-transform hover:-translate-y-1 duration-300">
                 <LeaveRequestCard />
               </div>
               
@@ -106,7 +106,7 @@ export default function UserDashboardPage() {
               </div>
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">Attendance History</h2>
             </div>
-            <div className="bg-white rounded-3xl md:rounded-[40px] border border-slate-100 shadow-sm overflow-hidden p-2 md:p-4">
+            <div id="tour-attendance-log" className="bg-white rounded-3xl md:rounded-[40px] border border-slate-100 shadow-sm overflow-hidden p-2 md:p-4">
               <RecentAttendance />
             </div>
           </section>

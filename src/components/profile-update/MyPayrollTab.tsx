@@ -251,6 +251,7 @@ export default function MyPayrollTab() {
                           alt="Logo" 
                           fill
                           className="object-contain object-left" 
+                          sizes="128px"
                         />
                       </div>
                     ) : (

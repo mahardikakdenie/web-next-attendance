@@ -667,6 +667,58 @@ export interface Appraisal {
   comments: string;
 }
 
+/**
+ * TIMESHEET & PROJECT MANAGEMENT
+ */
+
+export interface Project {
+  id: number;
+  name: string;
+  client_name: string;
+  start_date: string;
+  end_date?: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'ON_HOLD';
+  created_at: string;
+}
+
+export interface ProjectTask {
+  id: number;
+  project_id: number;
+  name: string;
+}
+
+export interface TimesheetEntry {
+  id: number;
+  user_id: number;
+  project_id: number;
+  task_name: string;
+  date: string;
+  duration_hours: number;
+  description: string;
+  project?: Project;
+  user?: UserData;
+  created_at: string;
+}
+
+export interface ProjectBreakdown {
+  project_id: number;
+  project_name: string;
+  total_hours: number;
+  percentage: number;
+}
+
+export interface TimesheetReport {
+  entries: TimesheetEntry[];
+  summary: {
+    total_hours: number;
+    period: string;
+    employee_name: string;
+    manager_name: string;
+    hr_name: string;
+  };
+  breakdown: ProjectBreakdown[];
+}
+
 export interface CustomApiError extends Error {
   response?: {
     data?: {

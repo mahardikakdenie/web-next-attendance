@@ -1,207 +1,202 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { useState } from "react";
 import { 
+  ShieldAlert, 
   Plus, 
-  ChevronRight,
-  ShieldAlert,
+  Search, 
+  Settings2, 
+  Lock, 
+  CheckCircle2, 
+  MoreVertical,
+  Wand2,
+  Trash2,
   Save,
-  Lock,
-  Loader2,
-  Globe,
-  Clock
+  X
 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Switch } from "@/components/ui/Switch";
+import { useQuery } from "@tanstack/react-query";
+import { getSystemRoles } from "@/service/roles";
+import { DataTable, Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
-import { 
-  PermissionModule
-} from "@/types/permissions";
+import { Button } from "@/components/ui/Button";
 import { Role } from "@/types/api";
-import { getTenantRoles } from "@/service/roles";
-import { toast } from "sonner";
-
-// --- SYSTEM PERMISSION MODULES ---
-const PERMISSION_MODULES: PermissionModule[] = [
-  {
-    id: "mod_platform",
-    name: "Platform Administration",
-    icon: Globe,
-    permissions: [
-      { id: "tenants.manage", name: "Manage Tenants", description: "Create and suspend organizations", action: "edit" },
-      { id: "subscriptions.manage", name: "Billing Control", description: "Manage platform pricing and plans", action: "edit" },
-      { id: "accounts.global", name: "Global Accounts", description: "Manage all system-wide users", action: "edit" },
-    ]
-  },
-  {
-    id: "mod_attendance",
-    name: "Attendance Module",
-    icon: Clock,
-    permissions: [
-      { id: "attendance.view", name: "View Logs", description: "System-wide log monitoring", action: "view" },
-      { id: "attendance.master", name: "Master Config", description: "Configure global attendance rules", action: "edit" },
-    ]
-  }
-];
 
 export default function PlatformRolesView() {
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
-  const fetchRoles = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const resp = await getTenantRoles();
-      if (resp.data) {
-        // Here Superadmin CAN see everything including 'superadmin'
-        setRoles(resp.data);
-        if (resp.data.length > 0 && selectedRoleId === null) {
-          setSelectedRoleId(resp.data[0].id);
-        }
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to load platform roles");
-    } finally {
-      setIsLoading(false);
+  // 1. Fetch System Roles
+  const { data: rolesResp, isLoading } = useQuery({
+    queryKey: ["system-roles"],
+    queryFn: getSystemRoles,
+  });
+
+  const columns: Column<Role>[] = [
+    {
+      header: "System Role",
+      accessor: (item) => (
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
+            <Lock size={18} strokeWidth={2.5} />
+          </div>
+          <div>
+            <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{item.name}</p>
+            <p className="text-[11px] font-medium text-slate-400 max-w-xs truncate">{item.description}</p>
+          </div>
+        </div>
+      ),
+      sortable: true
+    },
+    {
+      header: "Permissions Count",
+      accessor: (item) => (
+        <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 font-black">
+          {item.permissions?.length || 0} Capabilities
+        </Badge>
+      )
+    },
+    {
+      header: "Visibility",
+      accessor: () => (
+        <div className="flex items-center gap-1.5 text-emerald-600">
+          <CheckCircle2 size={14} strokeWidth={3} />
+          <span className="text-[10px] font-black uppercase tracking-widest">Global Master</span>
+        </div>
+      )
     }
-  }, [selectedRoleId]);
-
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      fetchRoles();
-    });
-  }, [fetchRoles]);
-
-  const selectedRole = useMemo(() => 
-    roles.find(r => r.id === selectedRoleId) || null
-  , [roles, selectedRoleId]);
-
-  if (isLoading && roles.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-        <p className="font-bold text-slate-400 tracking-widest uppercase text-xs">Loading Platform DNA...</p>
-      </div>
-    );
-  }
+  ];
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-7xl mx-auto pb-12 animate-in fade-in duration-700">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       
-      {/* --- HEADER SECTION --- */}
-      <section className="relative overflow-hidden bg-slate-950 rounded-[40px] p-8 sm:p-12 shadow-2xl text-white">
-        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-blue-600 opacity-20 rounded-full blur-[100px] pointer-events-none"></div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 text-[11px] font-black tracking-[0.2em] uppercase">
-              <Globe size={16} className="text-blue-400" />
-              Global System Control
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-tight">
-              Platform <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Roles & Governance</span>
-            </h1>
-            <p className="text-slate-400 font-medium max-w-xl text-sm sm:text-base leading-relaxed">
-              Manage core system roles and master permissions that define the default capabilities for every tenant in the platform.
-            </p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue-600 mb-1">
+            <ShieldAlert size={14} strokeWidth={3} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Security Blueprint</span>
           </div>
-          <div className="flex gap-3">
-             <Button className="bg-blue-600 hover:bg-blue-500 text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-blue-600/30 transition-all active:scale-95 flex items-center gap-2">
-                <Plus size={20} strokeWidth={3} /> New System Role
-             </Button>
-          </div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight sm:text-5xl">System Governance</h1>
+          <p className="text-slate-500 font-medium max-w-xl leading-relaxed">
+            Define global access policies and permission structures. Changes made here ripple across all organization tenants.
+          </p>
         </div>
-      </section>
+
+        <Button className="flex items-center gap-2 bg-slate-900 text-white hover:bg-indigo-600 shadow-xl shadow-slate-200 px-8 py-4 rounded-[20px] transition-all active:scale-95 group">
+          <Plus size={20} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300" />
+          <span className="font-black text-sm uppercase tracking-wide">Create Master Role</span>
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* LEFT SIDE: SYSTEM ROLES */}
-        <div className="lg:col-span-4 space-y-4">
-          <div className="px-2 flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">System Core Roles</span>
-            <Badge className="bg-slate-900 text-blue-400 border-none px-2 py-0.5">Master Access</Badge>
+        
+        {/* Left Side: Roles Table */}
+        <div className="lg:col-span-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text"
+                placeholder="Search master roles..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-4 h-12 bg-slate-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+              />
+            </div>
+            <div className="flex gap-2">
+               <button className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-100 transition-all"><Settings2 size={20} /></button>
+            </div>
           </div>
-          
-          <div className="space-y-3">
-            {roles.map((role) => (
-              <button
-                key={role.id}
-                onClick={() => setSelectedRoleId(role.id)}
-                className={`w-full flex items-center gap-4 p-5 rounded-[32px] transition-all duration-300 text-left border group ${
-                  selectedRoleId === role.id 
-                  ? "bg-white border-blue-200 shadow-xl shadow-blue-500/10 ring-1 ring-blue-100" 
-                  : "bg-slate-50/50 border-transparent hover:border-slate-200 hover:bg-white"
-                }`}
+
+          <DataTable 
+            data={rolesResp?.data || []} 
+            columns={columns} 
+            isLoading={isLoading}
+            onRowClick={(item) => setSelectedRole(item)}
+            actions={(item) => (
+              <button 
+                onClick={() => setSelectedRole(item)}
+                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
               >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-                  selectedRoleId === role.id ? "bg-slate-900 text-white shadow-lg" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
-                }`}>
-                  <ShieldAlert size={24} strokeWidth={2.5} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className={`font-black text-sm tracking-tight ${selectedRoleId === role.id ? "text-slate-900" : "text-slate-600"}`}>
-                      {role.name}
-                    </p>
-                    <Lock size={12} className="text-slate-300" />
-                  </div>
-                  <p className="text-[11px] font-medium text-slate-400 truncate">{role.description}</p>
-                </div>
-                <ChevronRight size={18} className={`transition-all ${selectedRoleId === role.id ? "text-blue-500 translate-x-0" : "text-slate-300 -translate-x-2 opacity-0 group-hover:opacity-100 group-hover:translate-x-0"}`} />
+                <MoreVertical size={18} />
               </button>
-            ))}
-          </div>
+            )}
+          />
         </div>
 
-        {/* RIGHT SIDE: PERMISSION MASTER */}
-        <div className="lg:col-span-8 bg-white rounded-[40px] shadow-sm border border-slate-100 flex flex-col min-h-[600px] overflow-hidden">
+        {/* Right Side: Quick Insight / Selection */}
+        <div className="lg:col-span-4 space-y-6">
           {selectedRole ? (
-            <>
-              <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{selectedRole.name} Master Config</h2>
-                  <p className="text-sm font-medium text-slate-400 mt-1">Defining global permissions for this system role</p>
-                </div>
-                <Button className="bg-slate-900 hover:bg-blue-600 text-white font-black px-6 py-3 rounded-2xl flex items-center gap-2 transition-all">
-                  <Save size={18} /> Update Global Policy
-                </Button>
-              </div>
-
-              <div className="flex-1 p-8 space-y-10">
-                {PERMISSION_MODULES.map((module) => (
-                  <div key={module.id} className="space-y-6">
-                    <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-                        <module.icon size={20} strokeWidth={2.5} />
-                      </div>
-                      <h3 className="text-lg font-black text-slate-900 tracking-tight">{module.name}</h3>
+            <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden animate-in slide-in-from-right-4 duration-500">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+               
+               <div className="relative z-10 space-y-8">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <h3 className="text-2xl font-black uppercase tracking-tight text-blue-400">{selectedRole.name}</h3>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Active Master Policy</p>
                     </div>
+                    <button onClick={() => setSelectedRole(null)} className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
+                       <X size={18} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="text-[11px] font-medium text-slate-400 leading-relaxed italic">
+                      &ldquo;{selectedRole.description}&rdquo;
+                    </p>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {module.permissions.map((perm) => (
-                        <div key={perm.id} className="flex items-center justify-between p-5 rounded-3xl bg-slate-50/50 border border-slate-100 transition-all">
-                          <div className="flex-1 pr-4">
-                            <p className="text-sm font-black text-slate-800">{perm.name}</p>
-                            <p className="text-[11px] text-slate-400 font-medium mt-0.5">{perm.description}</p>
-                          </div>
-                          <Switch 
-                            checked={selectedRole.permissions?.some(p => p.id === perm.id) || false}
-                            disabled={true} // System roles managed by dev/migration mostly
-                          />
-                        </div>
-                      ))}
+                    <div className="pt-4 border-t border-white/5 space-y-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">Entitled Permissions</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedRole.permissions?.map((p) => (
+                          <span key={p.id} className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-slate-300">
+                            {p.id.split('.').join(' ')}
+                          </span>
+                        )) || <span className="text-xs italic text-slate-600">No specific permissions</span>}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </>
+
+                  <div className="flex gap-3 pt-6">
+                    <Button variant="outline" className="flex-1 border-white/10 text-white hover:bg-white/5 rounded-2xl h-12 text-[11px]">
+                       <Wand2 size={14} className="mr-2" /> Modify Matrix
+                    </Button>
+                    <button className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all">
+                       <Trash2 size={18} />
+                    </button>
+                  </div>
+               </div>
+            </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-slate-400">
-              <p className="font-bold">Select a core role to view master policy</p>
+            <div className="bg-white rounded-[2.5rem] p-10 border border-dashed border-slate-200 text-center space-y-6">
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                <ShieldAlert size={32} />
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-lg font-black text-slate-900">Selection Required</h4>
+                <p className="text-xs font-medium text-slate-400 leading-relaxed">
+                  Choose a master system role from the list to audit permissions or manage global hierarchies.
+                </p>
+              </div>
             </div>
           )}
+
+          <div className="p-8 bg-blue-600 rounded-[2.5rem] text-white shadow-xl shadow-blue-200 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+            <h4 className="text-base font-black mb-2 flex items-center gap-2">
+              <Save size={18} />
+              Policy Backup
+            </h4>
+            <p className="text-xs font-medium text-blue-100 leading-relaxed mb-6">
+              Platform roles are immutable by default for tenants. Always maintain a stable core configuration.
+            </p>
+            <button className="w-full py-3 bg-white text-blue-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:shadow-lg transition-all active:scale-95">
+              Sync All Tenants
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   );

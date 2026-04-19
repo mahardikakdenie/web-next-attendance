@@ -251,6 +251,7 @@ export default function TopNavbar() {
                   alt="Tenant Logo" 
                   fill 
                   className="object-cover"
+                  sizes="20px"
                 />
               ) : (
                 <Building2 size={12} className="text-blue-500" />

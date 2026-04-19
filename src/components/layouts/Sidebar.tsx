@@ -31,7 +31,9 @@ import {
   Calendar,
   ListChecks,
   Target,
-  Star
+  Star,
+  Briefcase,
+  History as ActivityIcon
 } from "lucide-react";
 import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
 import { getDataCurrentTenat } from "@/service/tenantSettings";
@@ -74,14 +76,14 @@ const MENUS: MenuItem[] = [
       },
       {
         key: "accounts",
-        label: "Manage Accounts",
+        label: "Platform Admins",
         icon: UserCheck,
         path: "/admin/accounts",
         roles: [ROLES.SUPERADMIN],
       },
       {
         key: "platform-roles",
-        label: "Roles & Permissions",
+        label: "System Governance",
         icon: ShieldAlert,
         path: "/admin/roles",
         roles: [ROLES.SUPERADMIN],
@@ -178,6 +180,14 @@ const MENUS: MenuItem[] = [
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.USER],
         permission: "performance.view",
       },
+      {
+        key: "projects",
+        label: "Projects",
+        icon: Briefcase,
+        path: "/projects",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
+        permission: "project.manage",
+      },
     ],
   },
 
@@ -249,6 +259,14 @@ const MENUS: MenuItem[] = [
         permission: "tenant.settings.view",
       },
       {
+        key: "tenant-settings-billing",
+        label: "Billing & Plan",
+        icon: CreditCard,
+        path: "/tenant-settings/billing",
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+        permission: "billing.manage",
+      },
+      {
         key: "company-calendar",
         label: "Holiday Calendar",
         icon: Calendar,
@@ -301,6 +319,13 @@ const MENUS: MenuItem[] = [
         label: "My Salary & Slips",
         icon: Wallet,
         path: "/payroll",
+        roles: [ROLES.USER],
+      },
+      {
+        key: "my-timesheet",
+        label: "My Timesheet",
+        icon: ActivityIcon,
+        path: "/timesheet",
         roles: [ROLES.USER],
       },
     ],
@@ -514,6 +539,7 @@ export default function Sidebar() {
                 alt="Logo" 
                 fill
                 className="object-cover"
+                sizes="40px"
               />
             ) : (
               tenantName.charAt(0).toUpperCase()

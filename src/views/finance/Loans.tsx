@@ -19,9 +19,9 @@ import Avatar from "@/components/ui/Avatar";
 import { EmployeeLoan } from "@/types/finance";
 
 const MOCK_LOANS: EmployeeLoan[] = [
-  { id: "LOAN-001", employeeName: "Alex Johnson", avatar: "https://i.pravatar.cc/150?u=alex", principalAmount: 5000000, monthlyInstallment: 1000000, remainingBalance: 2000000, interestRate: 0, tenorMonths: 5, paidMonths: 3, status: "Active", startDate: "2024-01-01" },
-  { id: "LOAN-002", employeeName: "Sarah Chen", avatar: "https://i.pravatar.cc/150?u=sarah", principalAmount: 2000000, monthlyInstallment: 500000, remainingBalance: 0, interestRate: 0, tenorMonths: 4, paidMonths: 4, status: "Paid", startDate: "2023-11-01" },
-  { id: "LOAN-003", employeeName: "Marcus Miller", avatar: "https://i.pravatar.cc/150?u=marcus", principalAmount: 10000000, monthlyInstallment: 2000000, remainingBalance: 10000000, interestRate: 0, tenorMonths: 5, paidMonths: 0, status: "Pending", startDate: "2024-04-01" },
+  { id: "LOAN-001", employeeName: "Alex Johnson", avatar: null, principalAmount: 5000000, monthlyInstallment: 1000000, remainingBalance: 2000000, interestRate: 0, tenorMonths: 5, paidMonths: 3, status: "Active", startDate: "2024-01-01" },
+  { id: "LOAN-002", employeeName: "Sarah Chen", avatar: null, principalAmount: 2000000, monthlyInstallment: 500000, remainingBalance: 0, interestRate: 0, tenorMonths: 4, paidMonths: 4, status: "Paid", startDate: "2023-11-01" },
+  { id: "LOAN-003", employeeName: "Marcus Miller", avatar: null, principalAmount: 10000000, monthlyInstallment: 2000000, remainingBalance: 10000000, interestRate: 0, tenorMonths: 5, paidMonths: 0, status: "Pending", startDate: "2024-04-01" },
 ];
 
 export default function LoansView() {
@@ -40,7 +40,7 @@ export default function LoansView() {
       header: "Employee",
       accessor: (l) => (
         <div className="flex items-center gap-3">
-          <Avatar src={l.avatar} className="w-8 h-8 rounded-lg" />
+          <Avatar src={l.avatar} name={l.employeeName} className="w-8 h-8 rounded-lg" />
           <div>
             <p className="font-bold text-slate-700 leading-none">{l.employeeName}</p>
             <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{l.id}</p>
@@ -98,7 +98,7 @@ export default function LoansView() {
           Rejected: "bg-rose-100 text-rose-700"
         };
         return (
-          <Badge className={`${styles[l.status]} border-none font-black text-[9px] uppercase tracking-widest`}>
+          <Badge className={`${styles[l.status as keyof typeof styles]} border-none font-black text-[9px] uppercase tracking-widest`}>
             {l.status}
           </Badge>
         );

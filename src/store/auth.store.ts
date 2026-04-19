@@ -4,9 +4,10 @@ import { loginAPI, getMeAPI, logoutAPI } from "@/service/auth.service";
 import { UserData } from "@/types/api";
 
 export type TenantSettingsTenant = {
-  ID: number;
-  Name: string;
-  Code: string;
+  id: number;
+  name: string;
+  code: string;
+  plan: string;
   CreatedAt: string;
   UpdatedAt: string;
 };
@@ -67,6 +68,7 @@ type AuthState = {
   user: AuthUser | null;
   loading: boolean;
   isAuthenticated: boolean;
+  mustChangePassword: boolean;
   login: (email: string, password: string) => Promise<void>;
   fetchUser: () => Promise<void>;
   logout: () => Promise<void>;
@@ -80,6 +82,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   loading: false,
   isAuthenticated: false,
+  mustChangePassword: false,
 
   login: async (email: string, password: string) => {
     try {
@@ -91,6 +94,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         user: res.data,
         isAuthenticated: true,
+        mustChangePassword: res.data.must_change_password,
         loading: false,
       });
     } catch (error: unknown) {
@@ -110,12 +114,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         user: res.data,
         isAuthenticated: true,
+        mustChangePassword: res.data.must_change_password,
         loading: false,
       });
     } catch {
       set({
         user: null,
         isAuthenticated: false,
+        mustChangePassword: false,
         loading: false,
       });
     }
@@ -127,6 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       user: null,
       isAuthenticated: false,
+      mustChangePassword: false,
     });
   },
 

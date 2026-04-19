@@ -12,7 +12,6 @@ import {
   ShieldCheck, 
   Briefcase,
   IdCard,
-  Lock,
   Loader2,
   ChevronDown,
   Check
@@ -264,7 +263,7 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Password</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -276,7 +275,7 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
                   onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
                 />
               </div>
-            </div>
+            </div> */}
 
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Assign Role</label>

@@ -84,6 +84,7 @@ export default function EnhancedPayslipModal({
                         alt="Logo" 
                         fill
                         className="object-contain object-left" 
+                        sizes="128px"
                       />
                     </div>
                   ) : (

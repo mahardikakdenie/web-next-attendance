@@ -1,6 +1,8 @@
 import AuthBootstrap from "@/components/auth/AuthBootstrap";
 import SessionTimeoutWatcher from "@/components/auth/SessionTimeoutWatcher";
 import OfflineIndicator from "@/components/ui/OfflineIndicator";
+import OnboardingTour from "@/components/ui/OnboardingTour";
+import FloatingHelpButton from "@/components/ui/FloatingHelpButton";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 
@@ -14,6 +16,8 @@ export default function MainLayout({
       <AuthBootstrap />
       <SessionTimeoutWatcher />
       <OfflineIndicator />
+      <OnboardingTour />
+      <FloatingHelpButton />
 
       {/* Modern Floating Sidebar Container */}
       <div className="hidden md:flex flex-col z-20 h-full relative">

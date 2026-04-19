@@ -9,6 +9,10 @@ export const getTenantRoles = () => {
   return secureRequest<APIResponse<Role[]>>("get", "/v1/tenant-roles");
 };
 
+export const getSystemRoles = () => {
+  return secureRequest<APIResponse<Role[]>>("get", "/v1/superadmin/system-roles");
+};
+
 export const createCustomRole = (data: Omit<Partial<Role>, 'permissions'> & { permissions: string[] }) => {
   return secureRequest<APIResponse<Role>>("post", "/v1/tenant-roles", data);
 };

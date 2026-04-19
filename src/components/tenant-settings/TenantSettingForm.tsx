@@ -551,7 +551,13 @@ export default function TenantSettingForm() {
                   <div className="relative w-20 h-20 rounded-2xl bg-white border border-slate-200 overflow-hidden shrink-0 shadow-sm flex items-center justify-center group/logo">
                     {formData.tenantLogo ? (
                       <>
-                        <Image src={formData.tenantLogo} fill alt="Tenant Logo" className="object-cover transition-opacity group-hover/logo:opacity-40" />
+                        <Image 
+                          src={formData.tenantLogo} 
+                          fill 
+                          alt="Tenant Logo" 
+                          className="object-cover transition-opacity group-hover/logo:opacity-40" 
+                          sizes="80px"
+                        />
                         {isUploadingLogo && (
                           <div className="absolute inset-0 flex items-center justify-center bg-white/60">
                             <Loader2 className="animate-spin text-indigo-600" size={24} />

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Avatar from "../ui/Avatar";
 import { Eye, MoreVertical, MapPin, Smartphone } from "lucide-react";
 import { DataTable, Column } from "../ui/DataTable";
 import { UserAttendance } from "@/types/api";
@@ -58,15 +58,11 @@ export function AttendanceTable({
       header: "Employee",
       accessor: (item) => (
         <div className="flex items-center gap-4">
-          <div className="relative w-10 h-10 shrink-0">
-            <Image
-              src={item.user?.media_url || "https://i.pravatar.cc/150"}
-              fill
-              sizes="40px"
-              alt={item.user?.name || "User"}
-              className="rounded-xl object-cover ring-2 ring-white shadow-sm"
-            />
-          </div>
+          <Avatar 
+            src={item.user?.media_url} 
+            name={item.user?.name}
+            className="w-10 h-10 rounded-xl"
+          />
           <div>
             <p className="text-sm font-black text-neutral-900 group-hover:text-blue-600 transition-colors">
               {item.user?.name || "Unknown"}

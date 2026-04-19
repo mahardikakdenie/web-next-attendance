@@ -26,6 +26,8 @@ import { getOwnersStats } from "@/service/support";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import { Can } from "@/components/auth/PermissionGuard";
+import EditTenantModal from "@/components/admin/EditTenantModal";
+import { Edit } from "lucide-react";
 
 const StatTooltip = ({ children, label }: { children: React.ReactNode; label: string }) => (
   <div className="group/tooltip relative inline-flex items-center justify-center">
@@ -47,13 +49,16 @@ export default function OwnersStatsView() {
   const [offset, setOffset] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [selectedTenant, setSelectedTenant] = useState<OwnerStats | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
       const resp = await getOwnersStats(limit, offset);
       if (resp.data) {
-        setData(resp.data.items || []);
-        setTotal(resp.data.total || 0);
+        setData(resp.data || []);
+        setTotal(resp.meta.pagination?.total || 0);
       }
     } catch {
       toast.error("Failed to sync tenant monitoring data");
@@ -78,7 +83,7 @@ export default function OwnersStatsView() {
     { 
       header: "No", 
       accessor: (o: OwnerStats, index: number) => <span className="text-[10px] font-black text-slate-400">{(offset + index + 1).toString().padStart(2, '0')}</span>,
-      width: "50px"
+      // width: "50px"
     },
     { 
       header: "Owner Info", 
@@ -106,6 +111,25 @@ export default function OwnersStatsView() {
           </Badge>
         </div>
       )
+    },
+    { 
+      header: "Membership", 
+      accessor: (o) => {
+        const plan = o.tenant_plan || "Basic";
+        const styles = {
+          Enterprise: "bg-indigo-600 text-white shadow-lg shadow-indigo-200 border border-indigo-400/30",
+          Pro: "bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-lg shadow-teal-500/20 border border-teal-400/30",
+          Basic: "bg-slate-50 text-slate-400 border border-slate-200/50"
+        };
+        const colorClass = styles[plan as keyof typeof styles] || styles.Basic;
+        
+        return (
+          <Badge className={`${colorClass} border font-black text-[9px] uppercase tracking-[0.15em] px-2.5 py-1.5 rounded-xl transition-all hover:scale-105 active:scale-95 cursor-default`}>
+            {plan}
+          </Badge>
+        );
+      },
+      sortable: true
     },
     { 
       header: "Employees", 
@@ -245,10 +269,22 @@ export default function OwnersStatsView() {
               <DataTable 
                 data={filteredData} 
                 columns={columns}
-                actions={() => (
-                  <button className="p-2 text-slate-300 hover:text-slate-900 transition-all rounded-xl hover:bg-slate-50">
-                    <MoreVertical size={18} />
-                  </button>
+                actions={(o) => (
+                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                    <button 
+                      onClick={() => {
+                        setSelectedTenant(o);
+                        setIsEditModalOpen(true);
+                      }}
+                      className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" 
+                      title="Edit Organization"
+                    >
+                      <Edit size={18} />
+                    </button>
+                    <button className="p-2 text-slate-300 hover:text-slate-900 transition-all rounded-xl hover:bg-slate-50">
+                      <MoreVertical size={18} />
+                    </button>
+                  </div>
                 )}
               />
             ) : !isLoading && (
@@ -291,6 +327,16 @@ export default function OwnersStatsView() {
             </div>
           </div>
         </div>
+
+        <EditTenantModal 
+          isOpen={isEditModalOpen}
+          tenant={selectedTenant}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedTenant(null);
+          }}
+          onSuccess={fetchData}
+        />
       </div>
     </Can>
   );

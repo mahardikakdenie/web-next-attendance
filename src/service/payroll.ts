@@ -38,8 +38,24 @@ export const getEmployeeBaseline = async (userId: number) => {
   return secureRequest<APIResponse<EmployeeBaseline>>("get", `/v1/payroll/employee/${userId}/baseline`);
 };
 
+export const getPayrollProfile = async (userId: number) => {
+  return secureRequest<APIResponse<PayrollProfile>>("get", `/v1/admin/users/${userId}/payroll-profile`);
+};
+
+export const updatePayrollProfile = async (userId: number, payload: Partial<PayrollProfile>) => {
+  return secureRequest<APIResponse<null>>("put", `/v1/admin/users/${userId}/payroll-profile`, payload);
+};
+
 export const getEmployeeAttendanceSync = async (userId: number, period: string) => {
   return secureRequest<APIResponse<AttendanceSyncData>>("get", `/v1/payroll/employee/${userId}/attendance-sync?period=${period}`);
+};
+
+export const getMyPayrollProfile = async () => {
+  return secureRequest<APIResponse<PayrollProfile>>("get", "/v1/my-payroll/profile");
+};
+
+export const getMyPayrollSlip = async (period: string) => {
+  return secureRequest<APIResponse<PayrollRecord>>("get", `/v1/my-payroll/slips?period=${period}`);
 };
 
 export const getMyPayrollHistory = async (params?: { page?: number; limit?: number }) => {

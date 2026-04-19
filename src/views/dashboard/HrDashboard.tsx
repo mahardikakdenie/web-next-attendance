@@ -417,7 +417,13 @@ export default function HrDashboardPage() {
       accessor: (item) => (
         <div className="flex items-center gap-3">
           <div className="relative w-8 h-8 shrink-0">
-            <Image src={item.avatar} fill alt={item.name} className="rounded-lg object-cover" />
+            <Image 
+              src={item.avatar} 
+              fill 
+              alt={item.name} 
+              className="rounded-lg object-cover" 
+              sizes="32px"
+            />
           </div>
           <div>
             <p className="font-bold text-neutral-900 leading-none">{item.name}</p>
@@ -477,7 +483,7 @@ export default function HrDashboardPage() {
       </section>
 
       {/* KPI Stats */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section id="tour-hr-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {hrStats.map((stat, idx) => (
           <div key={idx} className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br ${stat.color} text-white shadow-lg ${stat.shadow} mb-6 group-hover:scale-110 transition-transform`}>
@@ -492,7 +498,7 @@ export default function HrDashboardPage() {
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Advanced Heatmap with Visual User Switcher */}
-        <div className="lg:col-span-8 bg-white rounded-[40px] p-8 sm:p-10 shadow-sm border border-slate-100 flex flex-col">
+        <div id="tour-hr-heatmap" className="lg:col-span-8 bg-white rounded-[40px] p-8 sm:p-10 shadow-sm border border-slate-100 flex flex-col">
           <div className="flex flex-col gap-10 mb-10">
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8">
               <div className="space-y-1">
@@ -562,7 +568,13 @@ export default function HrDashboardPage() {
                       ? "shadow-xl shadow-blue-500/20 ring-4 ring-blue-500" 
                       : "ring-2 ring-transparent group-hover:ring-slate-200"
                     }`}>
-                      <Image src={emp.avatar} fill alt={emp.name} className="object-cover" />
+                      <Image 
+                        src={emp.avatar} 
+                        fill 
+                        alt={emp.name} 
+                        className="object-cover" 
+                        sizes="64px"
+                      />
                     </div>
                     <span className={`text-[11px] font-black tracking-tight ${
                       heatmapEmployeeId === emp.id ? "text-slate-900" : "text-slate-400"
@@ -584,7 +596,7 @@ export default function HrDashboardPage() {
         </div>
 
         {/* Attendance Leaderboard */}
-        <div className="lg:col-span-4 flex flex-col gap-8">
+        <div id="tour-hr-leaderboard" className="lg:col-span-4 flex flex-col gap-8">
           <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100 flex flex-col h-full">
             <div className="flex items-center justify-between mb-8">
               <div>
@@ -604,7 +616,13 @@ export default function HrDashboardPage() {
                   onClick={() => setSelectedEmployee(emp)}
                 >
                   <div className="relative w-12 h-12 shrink-0">
-                    <Image src={emp.avatar} fill alt={emp.name} className="rounded-xl object-cover" />
+                    <Image 
+                      src={emp.avatar} 
+                      fill 
+                      alt={emp.name} 
+                      className="rounded-xl object-cover" 
+                      sizes="48px"
+                    />
                     <div className={`absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black text-white border-2 border-white shadow-sm ${idx === 0 ? 'bg-amber-500' : idx === 1 ? 'bg-slate-400' : 'bg-amber-700'}`}>
                       {idx + 1}
                     </div>
@@ -641,7 +659,13 @@ export default function HrDashboardPage() {
                   onClick={() => setSelectedEmployee(emp)}
                 >
                   <div className="relative w-12 h-12 shrink-0">
-                    <Image src={emp.avatar} fill alt={emp.name} className="rounded-xl object-cover" />
+                    <Image 
+                      src={emp.avatar} 
+                      fill 
+                      alt={emp.name} 
+                      className="rounded-xl object-cover" 
+                      sizes="48px"
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-black text-sm text-slate-900 truncate group-hover:text-rose-600 transition-colors">{emp.name}</p>
@@ -677,7 +701,8 @@ export default function HrDashboardPage() {
             </div>
           </div>
 
-          <div className="xl:col-span-4 bg-white rounded-[40px] p-8 sm:p-10 shadow-sm border border-slate-100 flex flex-col">
+          <div id="tour-hr-heatmap" className="lg:col-span-8 bg-white rounded-[40px] p-8 sm:p-10 shadow-sm border border-slate-100 flex flex-col">
+
             <div className="mb-10">
               <h3 className="text-2xl font-black text-slate-900 tracking-tight">Leave Type Mix</h3>
               <p className="text-sm font-medium text-slate-400 mt-1">Distribution of time-off categories</p>
@@ -698,7 +723,7 @@ export default function HrDashboardPage() {
         </div>
 
         {/* Employee Performance Matrix */}
-        <div className="lg:col-span-12 bg-white rounded-[40px] p-8 sm:p-10 shadow-sm border border-slate-100">
+        <div id="tour-hr-matrix" className="lg:col-span-12 bg-white rounded-[40px] p-8 sm:p-10 shadow-sm border border-slate-100">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
             <div>
               <h3 className="text-2xl font-black text-slate-900 tracking-tight">Performance Matrix</h3>
@@ -758,10 +783,16 @@ export default function HrDashboardPage() {
                       className="flex items-center justify-between p-4 rounded-3xl bg-white border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer group"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="relative w-12 h-12 shrink-0">
-                          <Image src={emp.avatar} fill alt={emp.name} className="rounded-2xl object-cover" />
-                        </div>
-                        <div>
+                          <div className="relative w-12 h-12 shrink-0">
+                            <Image 
+                              src={emp.avatar} 
+                              fill 
+                              alt={emp.name} 
+                              className="rounded-2xl object-cover" 
+                              sizes="48px"
+                            />
+                          </div>
+                          <div>
                           <p className="font-black text-sm text-slate-900 group-hover:text-blue-600 transition-colors">{emp.name}</p>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{emp.department}</p>
                         </div>
@@ -796,7 +827,13 @@ export default function HrDashboardPage() {
               <div className="relative z-10 flex justify-between items-center">
                 <div className="flex items-center gap-8">
                   <div className="relative w-24 h-24 shrink-0 shadow-2xl">
-                    <Image src={selectedEmployee.avatar} fill alt={selectedEmployee.name} className="rounded-[32px] object-cover border-4 border-white/10" />
+                    <Image 
+                      src={selectedEmployee.avatar} 
+                      fill 
+                      alt={selectedEmployee.name} 
+                      className="rounded-[32px] object-cover border-4 border-white/10" 
+                      sizes="96px"
+                    />
                     <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center border-4 border-slate-900 shadow-lg">
                        <UserCheck size={18} className="text-white" />
                     </div>

@@ -12,7 +12,7 @@ export function proxy(req: NextRequest) {
                 
   const pathname = url.pathname;
 
-  const isAuthPage = pathname.startsWith("/login");
+  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith('/forgot-password');
   const isPublicAsset = pathname.startsWith('/_next') || 
                         pathname.includes('.') || 
                         pathname.startsWith('/api');

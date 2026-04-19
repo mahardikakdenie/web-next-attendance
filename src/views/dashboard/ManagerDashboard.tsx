@@ -24,7 +24,8 @@ import { getHrDashboard } from "@/service/dashboard";
 import { getLeaveRequests, LeaveRequestData } from "@/service/leave";
 import { HrDashboardData } from "@/types/api";
 import { Badge } from "@/components/ui/Badge";
-import Image from "next/image";
+import Avatar from "@/components/ui/Avatar";
+import { getProfileImage } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -84,7 +85,7 @@ export default function ManagerDashboardPage() {
     <div className="flex flex-col gap-10 pb-16 animate-in fade-in duration-700 max-w-[1600px] mx-auto">
       
       {/* 1. OPERATIONS HEADER */}
-      <section className="relative overflow-hidden bg-slate-900 rounded-[40px] p-8 sm:p-12 shadow-2xl shadow-slate-900/30 text-white">
+      <section id="tour-manager-header" className="relative overflow-hidden bg-slate-900 rounded-[40px] p-8 sm:p-12 shadow-2xl shadow-slate-900/30 text-white">
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-blue-500 opacity-20 rounded-full blur-[100px] pointer-events-none animate-pulse"></div>
         <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-indigo-500 opacity-10 rounded-full blur-[80px] pointer-events-none"></div>
         
@@ -124,7 +125,7 @@ export default function ManagerDashboardPage() {
         <div className="lg:col-span-8 flex flex-col gap-10">
           
           {/* A. WORKFORCE METRICS */}
-          <section className="flex flex-col gap-6">
+          <section id="tour-manager-metrics" className="flex flex-col gap-6">
             <div className="flex items-center gap-3 px-2">
               <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
                 <Activity size={16} strokeWidth={2.5} />
@@ -154,7 +155,7 @@ export default function ManagerDashboardPage() {
           </section>
 
           {/* B. APPROVALS HUB */}
-          <section className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100 relative overflow-hidden">
+          <section id="tour-manager-approvals" className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50/50 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
             
             <div className="relative z-10 flex items-center justify-between mb-8">
@@ -173,7 +174,7 @@ export default function ManagerDashboardPage() {
                   <div key={i} className="flex items-center justify-between p-5 rounded-3xl bg-slate-50/50 border border-transparent hover:border-slate-100 hover:bg-white hover:shadow-md transition-all group">
                     <div className="flex items-center gap-4">
                       <div className="relative w-14 h-14 shrink-0">
-                        <Image src={leave.user?.media_url || "/profile.jpg"} fill alt={leave.user?.name || "User"} className="rounded-2xl object-cover border-2 border-white shadow-sm" />
+                        <Avatar src={getProfileImage(leave.user?.media_url)} className="rounded-2xl border-2 border-white shadow-sm" alt={leave.user?.name || "User"} />
                       </div>
                       <div>
                         <p className="font-black text-slate-900 group-hover:text-blue-600 transition-colors">{leave.user?.name}</p>
@@ -237,7 +238,7 @@ export default function ManagerDashboardPage() {
           </div>
 
           {/* 2. LEADERBOARD */}
-          <section className="bg-slate-900 rounded-[40px] p-8 border border-white/5 shadow-2xl relative overflow-hidden group">
+          <section id="tour-manager-leaderboard" className="bg-slate-900 rounded-[40px] p-8 border border-white/5 shadow-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-blue-500/20 transition-all duration-500"></div>
             
             <div className="relative z-10">
@@ -252,19 +253,11 @@ export default function ManagerDashboardPage() {
               <div className="flex flex-col gap-3">
                 {(data?.top_performers || []).length > 0 ? (
                   data?.top_performers.slice(0, 3).map((emp, i) => {
-                    const initials = emp.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                    
                     return (
                       <div key={i} className="flex items-center justify-between p-4 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group/item">
                         <div className="flex items-center gap-4">
                           <div className="relative w-12 h-12">
-                            <div className="w-full h-full rounded-2xl overflow-hidden border-2 border-slate-800 shadow-sm bg-slate-800 flex items-center justify-center">
-                              {emp.avatar ? (
-                                <Image src={emp.avatar} fill alt={emp.name} className="object-cover" />
-                              ) : (
-                                <span className="text-xs font-black text-slate-500">{initials}</span>
-                              )}
-                            </div>
+                            <Avatar src={getProfileImage(emp.avatar)} className="rounded-2xl border-2 border-slate-800 shadow-sm" alt={emp.name} />
                             <div className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-lg flex items-center justify-center border-2 border-slate-900 text-[10px] font-black text-white shadow-lg ${
                               i === 0 ? 'bg-amber-500' : i === 1 ? 'bg-slate-400' : 'bg-amber-700'
                             }`}>
@@ -291,6 +284,7 @@ export default function ManagerDashboardPage() {
 
           {/* 3. QUICK ANALYTICS LINK */}
           <div 
+            id="tour-manager-analytics"
             onClick={() => router.push('/analytics')}
             className="group cursor-pointer bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[40px] p-8 text-white shadow-xl shadow-indigo-200 relative overflow-hidden"
           >

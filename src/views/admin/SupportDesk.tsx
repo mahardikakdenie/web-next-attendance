@@ -1,23 +1,22 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { 
   MessageSquare, 
   UserPlus, 
   TicketCheck, 
   Search,
   Filter, 
-  Check, 
   X, 
-  Clock, 
   Building2, 
   MoreHorizontal,
   ShieldCheck,
   Zap,
   Send,
   Loader2,
-  AlertCircle,
-  RotateCcw
+  RotateCcw,
+  CheckCircle2,
+  Users
 } from "lucide-react";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
@@ -35,6 +34,7 @@ import {
   executeProvisioning
 } from "@/service/support";
 import { toast } from "sonner";
+import dayjs from "dayjs";
 
 type TabId = "inbox" | "trials" | "tickets";
 
@@ -49,7 +49,6 @@ export default function SupportDeskView() {
   const [tickets, setTickets] = useState<ProvisioningTicket[]>([]);
 
   // --- Fetch Handlers ---
-
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -153,62 +152,83 @@ export default function SupportDeskView() {
 
   const ticketColumns: Column<ProvisioningTicket>[] = [
     { header: "Organization", accessor: (t) => (
-      <div className="flex flex-col">
-        <span className="font-black text-slate-900">{t.company_name}</span>
-        <span className="text-[10px] font-bold text-slate-400">{t.admin_email}</span>
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-xs font-black shadow-lg">
+          {t.trial_request.company_name.charAt(0)}
+        </div>
+        <div className="flex flex-col">
+          <span className="font-black text-slate-900 leading-tight">{t.trial_request.company_name}</span>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <Badge className="bg-blue-50 text-blue-600 border-none font-black text-[8px] uppercase px-1.5 py-0">
+              {t.trial_request.industry}
+            </Badge>
+            <span className="text-[10px] font-bold text-slate-400">ID: {t.id.split('-')[0]}</span>
+          </div>
+        </div>
       </div>
     )},
-    { header: "Plan", accessor: (t) => <Badge className="bg-slate-900 text-blue-400 border-none font-black text-[10px]">{t.plan_type}</Badge> },
-    { header: "Provisioning Status", accessor: (t) => {
-      // Prioritize explicit COMPLETED/is_executed flags
-      if (t.is_executed || t.status === "COMPLETED") {
+    { header: "Contact Details", accessor: (t) => (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-bold text-slate-700">{t.trial_request.contact_name}</span>
+        <span className="text-[10px] font-medium text-slate-400">{t.trial_request.email}</span>
+        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter">{t.trial_request.phone_number}</span>
+      </div>
+    )},
+    { header: "Staffing", accessor: (t) => (
+      <div className="flex flex-col">
+        <div className="flex items-center gap-1.5 text-slate-600">
+          <Users size={14} className="text-slate-400" />
+          <span className="text-xs font-black">{t.trial_request.employee_count_range}</span>
+        </div>
+        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Licenses</span>
+      </div>
+    )},
+    { header: "Provisioning Intelligence", accessor: (t) => {
+      const isSuccess = t.status === "COMPLETED" && !t.error_log;
+      const isFailed = t.status === "FAILED" || (t.status === "COMPLETED" && t.error_log);
+
+      if (isSuccess) {
         return (
-          <div className="flex items-center gap-2 text-emerald-600 font-black text-[10px] uppercase tracking-widest bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 w-fit">
-            <Check size={14} strokeWidth={3} /> Success
+          <div className="flex flex-col gap-1">
+            <Badge className="bg-emerald-100 text-emerald-700 border-none text-[9px] font-black uppercase tracking-widest w-fit">
+              Successfully Activated
+            </Badge>
+            <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400">
+              <CheckCircle2 size={10} className="text-emerald-500" />
+              {t.completed_at ? dayjs(t.completed_at).format("DD MMM, HH:mm") : "N/A"}
+            </div>
           </div>
         );
       }
       
-      if (t.status === "FAILED") {
+      if (isFailed) {
         return (
-          <div className="flex flex-col gap-1.5 max-w-[220px]">
-            <div className="flex items-center gap-2 text-rose-600 font-black text-[10px] uppercase tracking-widest bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100 w-fit">
-              <AlertCircle size={14} strokeWidth={3} /> Execution Failed
-            </div>
-            {t.error_log && (
-              <div className="bg-slate-900/5 p-2 rounded-lg border border-rose-100/50">
-                <p className="text-[9px] font-mono text-rose-500 leading-tight break-words">
-                  {t.error_log}
-                </p>
+          <div className="flex flex-col gap-1.5 max-w-[250px]">
+            <Badge className="bg-rose-100 text-rose-700 border-none text-[9px] font-black uppercase tracking-widest w-fit">
+              Execution Error
+            </Badge>
+            <div className="bg-rose-50/50 p-2 rounded-xl border border-rose-100/50 group/log relative">
+              <p className="text-[9px] font-mono text-rose-500 leading-tight line-clamp-2 italic">
+                {t.error_log || "Unknown provisioning failure"}
+              </p>
+              {/* Tooltip for full error log */}
+              <div className="absolute bottom-full left-0 mb-2 hidden group-hover/log:block z-50 bg-slate-900 text-white text-[10px] p-3 rounded-xl shadow-2xl max-w-sm border border-white/10 font-mono">
+                {t.error_log}
               </div>
-            )}
-          </div>
-        );
-      }
-
-      if (t.status === "EXECUTING") {
-        return (
-          <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 w-fit">
-            <Loader2 size={14} className="animate-spin" /> Provisioning...
+            </div>
           </div>
         );
       }
 
       return (
-        <div className="flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 w-fit">
-          <Clock size={14} strokeWidth={3} /> Awaiting Trigger
+        <div className="flex flex-col gap-1">
+          <Badge className="bg-blue-100 text-blue-700 border-none text-[9px] font-black uppercase tracking-widest w-fit animate-pulse">
+            {t.status === "EXECUTING" ? "Processing..." : "Waiting in Queue"}
+          </Badge>
+          <span className="text-[9px] font-bold text-slate-400 italic px-1">Awaiting system trigger</span>
         </div>
       );
     }},
-    { header: "Priority", accessor: (t) => {
-      const colors = {
-        URGENT: "text-rose-600 bg-rose-100",
-        HIGH: "text-orange-600 bg-orange-100",
-        MEDIUM: "text-blue-600 bg-blue-100",
-        LOW: "text-slate-600 bg-slate-100"
-      };
-      return <Badge className={`${colors[t.priority]} border-none text-[9px] font-black`}>{t.priority}</Badge>;
-    }}
   ];
 
   return (

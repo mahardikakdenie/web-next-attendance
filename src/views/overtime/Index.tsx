@@ -21,7 +21,7 @@ const MOCK_OVERTIME = [
   {
     id: 1,
     employeeName: "Bagus Fikri",
-    avatar: "https://i.pravatar.cc/150?u=bagus",
+    avatar: null,
     date: "2024-03-08",
     startTime: "18:00",
     endTime: "21:00",
@@ -32,7 +32,7 @@ const MOCK_OVERTIME = [
   {
     id: 2,
     employeeName: "Ihdizein",
-    avatar: "https://i.pravatar.cc/150?u=ihdizein",
+    avatar: null,
     date: "2024-03-05",
     startTime: "17:30",
     endTime: "19:30",
@@ -43,7 +43,7 @@ const MOCK_OVERTIME = [
   {
     id: 3,
     employeeName: "Mufti Hidayat",
-    avatar: "https://i.pravatar.cc/150?u=mufti",
+    avatar: null,
     date: "2024-04-02",
     startTime: "18:00",
     endTime: "20:00",
@@ -179,7 +179,7 @@ export default function OvertimeView() {
                 <tr key={item.id} className="hover:bg-neutral-50/30 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <Avatar src={item.avatar} className="w-10 h-10 rounded-xl" />
+                      <Avatar src={item.avatar} name={item.employeeName} className="w-10 h-10 rounded-xl" />
                       <div>
                         <p className="text-sm font-black text-neutral-900">{item.employeeName}</p>
                         <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight line-clamp-1 max-w-[150px]">{item.reason}</p>

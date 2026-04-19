@@ -53,20 +53,18 @@ export interface CreateSupportMessagePayload {
   category: "TECHNICAL" | "BILLING" | "FEATURE" | "OTHER";
 }
 
-export type TicketStatus = "WAITING" | "EXECUTING" | "COMPLETED" | "FAILED";
-
 /**
  * Provisioning Tickets for Superadmin
  */
 export interface ProvisioningTicket {
   id: string;
   trial_request_id: string;
-  company_name: string;
-  admin_email: string;
-  plan_type: "BASIC" | "PROFESSIONAL" | "ENTERPRISE";
-  priority: TicketPriority;
-  status: TicketStatus;
-  is_executed: boolean;
-  error_log?: string;
+  status: "WAITING" | "EXECUTING" | "COMPLETED" | "FAILED" | string;
+  error_log: string;
+  executed_by: number;
+  completed_at: string;
   created_at: string;
+  trial_request: TrialRequest;
+  admin_email: string;
+  is_executed: boolean;
 }
