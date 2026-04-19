@@ -205,9 +205,9 @@ export default function MyPayrollTab() {
               logo={slip.company_context?.logo_url || user?.tenant?.tenant_settings?.tenant_logo}
               ptkp={slip.user.ptkp_status || "TK/0"}
               period={slip.period_text || dayjs(selectedPeriod).format("MMMM YYYY")}
-              employeeName={slip.user.full_name || user?.name}
-              employeeRole={slip.user.position || user?.department}
-              fileName={`payslip-${slip.user.full_name?.replace(/\s+/g, '_') || user?.name?.replace(/\s+/g, '_')}-${selectedPeriod}.pdf`}
+              employeeName={slip.user.full_name || user?.name || "Employee"}
+              employeeRole={slip.user.position || user?.department || "Staff"}
+              fileName={`payslip-${(slip.user.full_name || user?.name || "Employee").replace(/\s+/g, '_')}-${selectedPeriod}.pdf`}
             />
           )}
         </div>
