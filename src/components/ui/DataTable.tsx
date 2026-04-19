@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
+import Select from "./Select";
 
 export interface Column<T> {
   header: string;
@@ -42,16 +43,27 @@ export function DataTable<T extends { id: string | number }>({
   searchKey,
   onRowClick,
   actions,
-  currentPage,
+  currentPage: externalPage,
   totalPages,
   onPageChange,
   isLoading = false,
   limit,
   onLimitChange,
-  limitOptions = [10, 25, 50, 100]
+  limitOptions = [5, 10, 15, 25]
 }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{ key: keyof T; direction: "asc" | "desc" } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [internalPage, setInternalPage] = useState(1);
+
+  // Sync effective page
+  const currentPage = externalPage !== undefined ? externalPage : internalPage;
+
+  const handlePageChange = (page: number) => {
+    if (externalPage === undefined) {
+      setInternalPage(page);
+    }
+    onPageChange?.(page);
+  };
 
   // Handle Sorting logic
   const handleSort = (key: keyof T) => {
@@ -88,8 +100,19 @@ export function DataTable<T extends { id: string | number }>({
       });
     }
 
+    // Client-side pagination (if not server-side)
+    if (limit && !totalPages) {
+      const start = ((currentPage || 1) - 1) * limit;
+      return filtered.slice(start, start + limit);
+    }
+
     return filtered;
-  }, [data, sortConfig, searchTerm, searchKey]);
+  }, [data, sortConfig, searchTerm, searchKey, limit, currentPage, totalPages]);
+
+  const internalTotalPages = totalPages || (limit ? Math.ceil(data.length / limit) : 0);
+  const effectiveCurrentPage = currentPage || 1;
+
+  const showPagination = internalTotalPages > 0 && (onPageChange || onLimitChange);
 
   return (
     <div className="space-y-4">
@@ -191,78 +214,75 @@ export function DataTable<T extends { id: string | number }>({
         </div>
 
         {/* Pagination */}
-        {totalPages && totalPages > 0 && currentPage !== undefined && onPageChange && (
+        {showPagination && (
           <div className="px-6 py-4 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between bg-neutral-50/30 gap-4">
             <div className="flex items-center gap-4">
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-tight">
-                Page {currentPage} of {totalPages}
+                Page {effectiveCurrentPage} of {internalTotalPages}
               </p>
               
               {onLimitChange && limit !== undefined && (
                 <div className="flex items-center gap-2 border-l border-neutral-200 pl-4">
                   <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Rows:</span>
-                  <select
+                  <Select
                     value={limit}
-                    onChange={(e) => onLimitChange(Number(e.target.value))}
-                    className="bg-white border border-neutral-200 rounded-lg text-xs font-bold text-neutral-700 px-2 py-1 outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
-                  >
-                    {limitOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => onLimitChange(Number(val))}
+                    options={limitOptions.map(opt => ({ label: String(opt), value: opt }))}
+                    className="w-20"
+                  />
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onPageChange(currentPage - 1)}
-                disabled={currentPage === 1 || isLoading}
-                className="p-2 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <div className="flex items-center gap-1">
-                {[...Array(totalPages)].map((_, i) => {
-                  const page = i + 1;
-                  // Show current, first, last, and pages around current
-                  if (
-                    page === 1 ||
-                    page === totalPages ||
-                    (page >= currentPage - 1 && page <= currentPage + 1)
-                  ) {
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => onPageChange(page)}
-                        className={`w-10 h-10 rounded-xl text-xs font-black transition-all active:scale-95 ${
-                          currentPage === page
-                            ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                            : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  } else if (
-                    (page === 2 && currentPage > 3) ||
-                    (page === totalPages - 1 && currentPage < totalPages - 2)
-                  ) {
-                    return <span key={page} className="px-1 text-neutral-400">...</span>;
-                  }
-                  return null;
-                })}
+            {onPageChange && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(effectiveCurrentPage - 1)}
+                  disabled={effectiveCurrentPage === 1 || isLoading}
+                  className="p-2 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <div className="flex items-center gap-1">
+                  {[...Array(internalTotalPages)].map((_, i) => {
+                    const page = i + 1;
+                    // Show current, first, last, and pages around current
+                    if (
+                      page === 1 ||
+                      page === internalTotalPages ||
+                      (page >= effectiveCurrentPage - 1 && page <= effectiveCurrentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`w-10 h-10 rounded-xl text-xs font-black transition-all active:scale-95 ${
+                            effectiveCurrentPage === page
+                              ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                              : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    } else if (
+                      (page === 2 && effectiveCurrentPage > 3) ||
+                      (page === internalTotalPages - 1 && effectiveCurrentPage < internalTotalPages - 2)
+                    ) {
+                      return <span key={page} className="px-1 text-neutral-400">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                <button
+                  onClick={() => handlePageChange(effectiveCurrentPage + 1)}
+                  disabled={effectiveCurrentPage === internalTotalPages || isLoading}
+                  className="p-2 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                >
+                  <ChevronRight size={18} />
+                </button>
               </div>
-              <button
-                onClick={() => onPageChange(currentPage + 1)}
-                disabled={currentPage === totalPages || isLoading}
-                className="p-2 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
+            )}
           </div>
         )}
       </div>
