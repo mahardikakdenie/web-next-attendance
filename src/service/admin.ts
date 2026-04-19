@@ -1,5 +1,5 @@
 import { secureRequest } from "@/lib/axios";
-import { APIResponse } from "@/types/api";
+import { APIResponse, UserData } from "@/types/api";
 
 export interface UpdateTenantPayload {
   name: string;
