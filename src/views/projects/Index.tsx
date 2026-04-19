@@ -249,7 +249,7 @@ export default function ProjectsView() {
           <div className="flex items-center gap-3">
             <Select 
               value={statusFilter}
-              onChange={(val) => setStatusFilter(val)}
+              onChange={(val) => setStatusFilter(String(val))}
               options={[
                 { label: "All Status", value: "" },
                 { label: "Active", value: "ACTIVE" },

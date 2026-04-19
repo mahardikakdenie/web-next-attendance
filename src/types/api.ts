@@ -351,6 +351,24 @@ export interface HrDashboardPerformanceMatrix {
   leave_balance: number;
 }
 
+export interface EmployeeDnaData {
+  user_id: number;
+  performance_score: number;
+  radar_metrics: {
+    punctuality: number;
+    overtime_efficiency: number;
+    leave_regularity: number;
+    productivity_index: number;
+    compliance_rate: number;
+  };
+  punctuality_dna: {
+    arrival_consistency: number;
+    avg_clock_in: string;
+    avg_clock_out: string;
+  };
+  insights: string[];
+}
+
 export interface HrDashboardData {
   stats: {
     presence_rate: number;
@@ -501,6 +519,7 @@ export interface PayrollUser {
   bpjs_health_number?: string;
   bpjs_employment_number?: string;
   npwp_number?: string;
+  media_url?: string;
 }
 
 export interface PayrollProfile {

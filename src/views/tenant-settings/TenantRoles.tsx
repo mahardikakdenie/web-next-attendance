@@ -42,8 +42,10 @@ import {
 import { toast } from "sonner";
 import { getRoleBadgeColor } from "@/lib/utils";
 
+import { LucideIcon } from "lucide-react";
+
 // --- ICON MAPPING FOR DYNAMIC MODULES ---
-const MODULE_ICONS: Record<string, React.ElementType> = {
+const MODULE_ICONS: Record<string, LucideIcon> = {
   attendance: Clock,
   payroll: Wallet,
   user: Users,

@@ -40,7 +40,7 @@ export default function ExpensesView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [limit] = useState(10);
+  const [limit, setLimit] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isQuotaModalOpen, setIsQuotaModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ id: number; name: string; quota: number } | null>(null);

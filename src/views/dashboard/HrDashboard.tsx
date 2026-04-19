@@ -40,9 +40,10 @@ import {
 import { 
   HrDashboardPerformanceMatrix, 
   HeatmapQueryParams,
-  MappedUser
+  MappedUser,
+  // EmployeeDnaData
 } from "@/types/api";
-import { getHrDashboard, getHeatmap } from "@/service/dashboard";
+import { getHrDashboard, getHeatmap, getEmployeeDna } from "@/service/dashboard";
 import { useQuery } from "@tanstack/react-query";
 
 /**
@@ -141,6 +142,14 @@ export default function HrDashboardPage() {
       return await getHeatmap(params);
     },
   });
+
+  const { data: dnaResp, isLoading: isDnaLoading } = useQuery({
+    queryKey: ["employee-dna", selectedEmployee?.id],
+    queryFn: () => getEmployeeDna(selectedEmployee!.id),
+    enabled: !!selectedEmployee?.id,
+  });
+
+  const dnaData = dnaResp?.data || null;
 
   const heatmapApiData = useMemo(() => {
     return heatmapResp?.data || [];
@@ -828,7 +837,7 @@ export default function HrDashboardPage() {
                     </div>
                     <h2 className="text-4xl font-black tracking-tight">{selectedEmployee.name}</h2>
                     <p className="text-slate-400 font-bold flex items-center gap-2">
-                      <Briefcase size={16} /> {selectedEmployee.department} Specialist • <Coffee size={16} /> Net Score: {selectedEmployee.score}
+                      <Briefcase size={16} /> {selectedEmployee.department} Specialist • <Coffee size={16} /> Net Score: {dnaData?.performance_score || selectedEmployee.score}
                     </p>
                   </div>
                 </div>
@@ -842,70 +851,111 @@ export default function HrDashboardPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-10 custom-scrollbar space-y-10">
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                
-                <div className="xl:col-span-2 bg-slate-50/50 rounded-[32px] p-8 border border-slate-100 flex flex-col">
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                        <Target size={20} strokeWidth={2.5} />
-                      </div>
-                      <h4 className="text-xl font-black text-slate-900 tracking-tight">Behavioral Characteristics</h4>
-                    </div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">30-Day Rolling Analysis</span>
-                  </div>
-                  <div className="flex-1 flex items-center justify-center">
-                    <Chart 
-                      options={individualRadarOptions} 
-                      series={[{ name: selectedEmployee.name, data: [selectedEmployee.score, selectedEmployee.overtimeHours * 5, 60, 80, 100] }]} 
-                      type="radar" 
-                      height={350} 
-                      width="100%"
-                    />
-                  </div>
+              {isDnaLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <Activity className="w-10 h-10 text-blue-500 animate-spin" />
+                  <p className="font-bold text-slate-400 tracking-widest uppercase text-xs">Decoding Behavioral DNA...</p>
                 </div>
-
-                <div className="space-y-6">
-                  <div className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100">
-                    <div className="flex items-center gap-3 mb-6 text-emerald-600">
-                      <History size={20} strokeWidth={2.5} />
-                      <h4 className="font-black text-slate-900 uppercase tracking-widest text-xs">Punctuality DNA</h4>
-                    </div>
-                    <div className="space-y-4">
-                      {[
-                        { label: "Arrival Consistency", value: "98%", color: "text-emerald-600", bg: "bg-emerald-50" },
-                        { label: "Late Incident Rate", value: selectedEmployee.totalLate + " Times", color: "text-rose-600", bg: "bg-rose-50" },
-                        { label: "Avg Clock-In", value: selectedEmployee.avgClockIn, color: "text-blue-600", bg: "bg-blue-50" },
-                      ].map((item, i) => (
-                        <div key={i} className="flex flex-col gap-1 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{item.label}</span>
-                          <span className={`text-lg font-black ${item.color}`}>{item.value}</span>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    
+                    <div className="xl:col-span-2 bg-slate-50/50 rounded-[32px] p-8 border border-slate-100 flex flex-col">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                            <Target size={20} strokeWidth={2.5} />
+                          </div>
+                          <h4 className="text-xl font-black text-slate-900 tracking-tight">Behavioral Characteristics</h4>
                         </div>
-                      ))}
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">30-Day Rolling Analysis</span>
+                      </div>
+                      <div className="flex-1 flex items-center justify-center">
+                        <Chart 
+                          options={individualRadarOptions} 
+                          series={[{ 
+                            name: selectedEmployee.name, 
+                            data: dnaData ? [
+                              dnaData.radar_metrics.punctuality,
+                              dnaData.radar_metrics.overtime_efficiency,
+                              dnaData.radar_metrics.leave_regularity,
+                              dnaData.radar_metrics.productivity_index,
+                              dnaData.radar_metrics.compliance_rate
+                            ] : [selectedEmployee.score, selectedEmployee.overtimeHours * 5, 60, 80, 100] 
+                          }]} 
+                          type="radar" 
+                          height={350} 
+                          width="100%"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100">
+                        <div className="flex items-center gap-3 mb-6 text-emerald-600">
+                          <History size={20} strokeWidth={2.5} />
+                          <h4 className="font-black text-slate-900 uppercase tracking-widest text-xs">Punctuality DNA</h4>
+                        </div>
+                        <div className="space-y-4">
+                          {[
+                            { label: "Arrival Consistency", value: dnaData ? `${dnaData.punctuality_dna.arrival_consistency}%` : "98%", color: "text-emerald-600", bg: "bg-emerald-50" },
+                            { label: "Late Incident Rate", value: selectedEmployee.totalLate + " Times", color: "text-rose-600", bg: "bg-rose-50" },
+                            { label: "Avg Clock-In", value: dnaData?.punctuality_dna.avg_clock_in || selectedEmployee.avgClockIn, color: "text-blue-600", bg: "bg-blue-50" },
+                            { label: "Avg Clock-Out", value: dnaData?.punctuality_dna.avg_clock_out || "-", color: "text-indigo-600", bg: "bg-indigo-50" },
+                          ].map((item, i) => (
+                            <div key={i} className="flex flex-col gap-1 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{item.label}</span>
+                              <span className={`text-lg font-black ${item.color}`}>{item.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[32px] p-8 text-white shadow-xl shadow-indigo-500/20">
+                        <h4 className="font-black uppercase tracking-widest text-[10px] mb-2 opacity-80">Workspace Balance</h4>
+                        <div className="flex items-end justify-between">
+                           <div>
+                              <p className="text-3xl font-black leading-none">{selectedEmployee.leaveBalance} Days</p>
+                              <p className="text-xs font-bold mt-2 text-indigo-100">Remaining Annual Leave</p>
+                           </div>
+                           <TrendingUp size={32} className="opacity-20" />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[32px] p-8 text-white shadow-xl shadow-indigo-500/20">
-                    <h4 className="font-black uppercase tracking-widest text-[10px] mb-2 opacity-80">Workspace Balance</h4>
-                    <div className="flex items-end justify-between">
-                       <div>
-                          <p className="text-3xl font-black leading-none">{selectedEmployee.leaveBalance} Days</p>
-                          <p className="text-xs font-bold mt-2 text-indigo-100">Remaining Annual Leave</p>
-                       </div>
-                       <TrendingUp size={32} className="opacity-20" />
+                  {/* Insights Section */}
+                  {dnaData?.insights && dnaData.insights.length > 0 && (
+                    <div className="bg-blue-50/50 rounded-[32px] p-8 border border-blue-100">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                          <Sparkles size={20} strokeWidth={2.5} />
+                        </div>
+                        <h4 className="text-xl font-black text-slate-900 tracking-tight">Automated AI Insights</h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {dnaData.insights.map((insight, idx) => (
+                          <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-white border border-blue-100/50 shadow-sm">
+                            <div className="w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">
+                              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            </div>
+                            <p className="text-sm font-medium text-slate-700 leading-relaxed">{insight}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
+                  )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <button className="flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-800 text-white font-black py-5 rounded-3xl transition-all shadow-xl shadow-slate-200 active:scale-95">
-                  <TrendingUp size={20} /> Optimized Performance Path
-                </button>
-                <button className="flex items-center justify-center gap-3 bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-600 font-black py-5 rounded-3xl transition-all active:scale-95">
-                  <Download size={20} /> Download Full Behavioral Audit
-                </button>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button className="flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-800 text-white font-black py-5 rounded-3xl transition-all shadow-xl shadow-slate-200 active:scale-95">
+                      <TrendingUp size={20} /> Optimized Performance Path
+                    </button>
+                    <button className="flex items-center justify-center gap-3 bg-white border-2 border-slate-100 hover:bg-slate-50 text-slate-600 font-black py-5 rounded-3xl transition-all active:scale-95">
+                      <Download size={20} /> Download Full Behavioral Audit
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
