@@ -1,5 +1,6 @@
 import { secureRequest } from "@/lib/axios";
 import { APIResponse, Role } from "@/types/api";
+import { PermissionModule } from "@/types/permissions";
 
 /**
  * RBAC 2.0 Management Service
