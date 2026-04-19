@@ -10,8 +10,6 @@ import {
   Wallet,
   Receipt,
   Plane,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   TrendingUp,
   Mail,
@@ -45,8 +43,8 @@ export default function OwnersStatsView() {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<OwnerStats[]>([]);
   const [total, setTotal] = useState(0);
-  const [limit] = useState(10);
-  const [offset, setOffset] = useState(0);
+  const [limit, setLimit] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedTenant, setSelectedTenant] = useState<OwnerStats | null>(null);
@@ -55,6 +53,7 @@ export default function OwnersStatsView() {
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
+      const offset = (currentPage - 1) * limit;
       const resp = await getOwnersStats(limit, offset);
       if (resp.data) {
         setData(resp.data || []);
@@ -65,12 +64,10 @@ export default function OwnersStatsView() {
     } finally {
       setIsLoading(false);
     }
-  }, [limit, offset]);
+  }, [limit, currentPage]);
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      fetchData();
-    });
+    fetchData();
   }, [fetchData]);
 
   const filteredData = data.filter(item => 
@@ -82,7 +79,10 @@ export default function OwnersStatsView() {
   const columns: Column<OwnerStats>[] = [
     { 
       header: "No", 
-      accessor: (o: OwnerStats, index: number) => <span className="text-[10px] font-black text-slate-400">{(offset + index + 1).toString().padStart(2, '0')}</span>,
+      accessor: (o: OwnerStats, index: number) => {
+        const offset = (currentPage - 1) * limit;
+        return <span className="text-[10px] font-black text-slate-400">{(offset + index + 1).toString().padStart(2, '0')}</span>;
+      },
       // width: "50px"
     },
     { 
@@ -196,7 +196,6 @@ export default function OwnersStatsView() {
   ];
 
   const totalPages = Math.ceil(total / limit);
-  const currentPage = Math.floor(offset / limit) + 1;
 
   return (
     <Can permission="analytics.executive">
@@ -269,6 +268,15 @@ export default function OwnersStatsView() {
               <DataTable 
                 data={filteredData} 
                 columns={columns}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                limit={limit}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit);
+                  setCurrentPage(1);
+                }}
+                isLoading={isLoading}
                 actions={(o) => (
                   <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                     <button 
@@ -296,35 +304,6 @@ export default function OwnersStatsView() {
                 <p className="text-sm font-medium text-slate-400 mt-1">Try adjusting your search or filters.</p>
               </div>
             )}
-          </div>
-
-          {/* Pagination Footer */}
-          <div className="p-8 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-              Showing <span className="text-slate-900">{filteredData.length}</span> of {total} organizations
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <button 
-                disabled={offset === 0 || isLoading}
-                onClick={() => setOffset(prev => Math.max(0, prev - limit))}
-                className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 disabled:opacity-30 transition-all"
-              >
-                <ChevronLeft size={20} strokeWidth={3} />
-              </button>
-              
-              <div className="flex items-center px-4 h-12 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-900">
-                Page {currentPage} of {totalPages || 1}
-              </div>
-
-              <button 
-                disabled={currentPage >= totalPages || isLoading}
-                onClick={() => setOffset(prev => prev + limit)}
-                className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 disabled:opacity-30 transition-all"
-              >
-                <ChevronRight size={20} strokeWidth={3} />
-              </button>
-            </div>
           </div>
         </div>
 
