@@ -94,6 +94,7 @@ export default function AttendancesView() {
 
   const [activeTab, setActiveTab] = useState<"logs" | "corrections">("logs");
   const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
 
   const [filters, setFilters] = useState<AttendanceFilterParams>({
@@ -103,7 +104,6 @@ export default function AttendancesView() {
     search: ''
   });
 
-  const limit = 5;
   const offset = (currentPage - 1) * limit;
 
   // React Query: Summary Data
@@ -369,6 +369,11 @@ export default function AttendancesView() {
                 totalPages={totalPages}
                 onPageChange={handlePageChange}
                 isLoading={isAttendanceLoading}
+                limit={limit}
+                onLimitChange={(val) => {
+                  setLimit(val);
+                  setCurrentPage(1);
+                }}
               />
             )}
           </div>

@@ -10,7 +10,6 @@ import {
   Loader2,
   AlertCircle,
   Search,
-  ChevronDown,
   History
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -105,7 +104,6 @@ export default function LeavesView() {
     return rawData;
   }, [requestsData, activeTab]);
 
-  const total = requestsData?.meta?.total || 0;
   const isLoading = isRequestsLoading;
 
   // Handlers
@@ -330,33 +328,6 @@ export default function LeavesView() {
           </div>
         </div>
 
-        {/* Table Controls Info */}
-        <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rows per page:</span>
-            <div className="relative">
-              <select 
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setCurrentPage(1); // Reset page on limit change
-                }}
-                className="appearance-none bg-white border border-neutral-200 rounded-lg pl-3 pr-8 py-1 text-xs font-bold text-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" size={12} />
-            </div>
-          </div>
-
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Showing {leaveRequests.length} of {total} Records
-          </p>
-        </div>
-
         {/* Data Table */}
         <DataTable 
           data={leaveRequests} 
@@ -366,6 +337,11 @@ export default function LeavesView() {
           totalPages={requestsData?.meta?.pagination?.last_page || 1}
           onPageChange={(page) => setCurrentPage(page)}
           isLoading={isLoading}
+          limit={limit}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setCurrentPage(1);
+          }}
         />
       </div>
 

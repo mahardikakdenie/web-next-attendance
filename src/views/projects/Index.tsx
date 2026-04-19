@@ -5,13 +5,11 @@ import {
   Briefcase, 
   Plus, 
   Search, 
-  Filter, 
   Edit, 
   Trash2, 
   Calendar,
   Building2,
   AlertCircle,
-  ChevronDown,
   Loader2,
   DollarSign,
   Users,
@@ -40,11 +38,14 @@ import { toast } from "sonner";
 import dayjs from "dayjs";
 import { usePermission, Can } from "@/components/auth/PermissionGuard";
 import Image from "next/image";
+import Select from "@/components/ui/Select";
 
 export default function ProjectsView() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -54,8 +55,8 @@ export default function ProjectsView() {
 
   // Queries
   const { data: projectsResp, isLoading } = useQuery({
-    queryKey: ["projects", search, statusFilter],
-    queryFn: () => getProjects({ search, status: statusFilter }),
+    queryKey: ["projects", search, statusFilter, currentPage, limit],
+    queryFn: () => getProjects({ search, status: statusFilter, page: currentPage, limit }),
   });
 
   const projects = projectsResp?.data || [];
@@ -246,27 +247,32 @@ export default function ProjectsView() {
             />
           </div>
           <div className="flex items-center gap-3">
-            <div className="relative group">
-              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
-              <select 
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-12 pl-10 pr-10 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 outline-none focus:ring-4 focus:ring-blue-500/5 transition-all appearance-none min-w-[160px]"
-              >
-                <option value="">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="ON_HOLD">On Hold</option>
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-            </div>
+            <Select 
+              value={statusFilter}
+              onChange={(val) => setStatusFilter(val)}
+              options={[
+                { label: "All Status", value: "" },
+                { label: "Active", value: "ACTIVE" },
+                { label: "Completed", value: "COMPLETED" },
+                { label: "On Hold", value: "ON_HOLD" },
+              ]}
+              className="min-w-[160px]"
+            />
           </div>
         </div>
 
         <DataTable 
           columns={columns} 
           data={projects} 
-          loading={isLoading}
+          isLoading={isLoading}
+          currentPage={currentPage}
+          totalPages={projectsResp?.meta?.pagination?.last_page || 1}
+          onPageChange={(page) => setCurrentPage(page)}
+          limit={limit}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setCurrentPage(1);
+          }}
         />
       </div>
 

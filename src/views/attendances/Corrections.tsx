@@ -25,7 +25,7 @@ export default function CorrectionsView() {
   const queryClient = useQueryClient();
   const isAdmin = user?.role?.name === ROLES.SUPERADMIN || user?.role?.name === ROLES.ADMIN || user?.role?.name === ROLES.HR;
 
-  const [limit] = useState(10);
+  const [limit, setLimit] = useState(10);
   const [offset, setOffset] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>("PENDING");
 
@@ -229,6 +229,10 @@ export default function CorrectionsView() {
             totalPages={Math.ceil(total / limit)}
             onPageChange={(page) => setOffset((page - 1) * limit)}
             limit={limit}
+            onLimitChange={(val) => {
+              setLimit(val);
+              setOffset(0);
+            }}
             isLoading={isLoading}
           />
         )}

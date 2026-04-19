@@ -43,7 +43,7 @@ import { toast } from "sonner";
 import { getRoleBadgeColor } from "@/lib/utils";
 
 // --- ICON MAPPING FOR DYNAMIC MODULES ---
-const MODULE_ICONS: Record<string, any> = {
+const MODULE_ICONS: Record<string, React.ElementType> = {
   attendance: Clock,
   payroll: Wallet,
   user: Users,
@@ -121,8 +121,11 @@ export default function TenantRolesView() {
   }, [selectedRoleId]);
 
   useEffect(() => {
-    fetchPermissions();
-    fetchRoles();
+    const timer = setTimeout(() => {
+      fetchPermissions();
+      fetchRoles();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchPermissions, fetchRoles]);
 
   // --- Memos ---

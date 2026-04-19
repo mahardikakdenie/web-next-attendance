@@ -100,6 +100,8 @@ export default function HrDashboardPage() {
   // --- States ---
   const [isLoading, setIsLoading] = useState(true);
   const [apiData, setApiData] = useState<HrDashboardData | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   const [heatmapApiData, setHeatmapApiData] = useState<HeatmapItem[]>([]);
   const [isHeatmapLoading, setIsHeatmapLoading] = useState(false);
@@ -743,6 +745,10 @@ export default function HrDashboardPage() {
             data={employeeList} 
             columns={columns} 
             onRowClick={(item) => setSelectedEmployee(item)}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            limit={limit}
+            onLimitChange={setLimit}
           />
         </div>
       </section>

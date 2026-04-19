@@ -26,6 +26,8 @@ const MOCK_LOANS: EmployeeLoan[] = [
 
 export default function LoansView() {
   const [loans] = useState<EmployeeLoan[]>(MOCK_LOANS);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -193,6 +195,10 @@ export default function LoansView() {
           data={loans} 
           columns={columns} 
           actions={actions}
+          limit={limit}
+          onLimitChange={setLimit}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
         />
       </div>
 

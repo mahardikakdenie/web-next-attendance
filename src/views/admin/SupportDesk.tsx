@@ -42,6 +42,8 @@ export default function SupportDeskView() {
   const [activeTab, setActiveTab] = useState<TabId>("trials");
   const [isLoading, setIsLoading] = useState(true);
   const [executingTicketId, setExecutingTicketId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   // Data States
   const [messages, setMessages] = useState<SupportMessage[]>([]);
@@ -300,6 +302,10 @@ export default function SupportDeskView() {
             <DataTable 
               data={messages} 
               columns={inboxColumns} 
+              limit={limit}
+              onLimitChange={setLimit}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
               actions={() => (
                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                   <button type="button" className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Reply"><Send size={18} /></button>
@@ -313,6 +319,10 @@ export default function SupportDeskView() {
             <DataTable 
               data={trials} 
               columns={trialColumns} 
+              limit={limit}
+              onLimitChange={setLimit}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
               actions={(t) => (
                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                   {t.status !== "APPROVED" && (
@@ -333,6 +343,10 @@ export default function SupportDeskView() {
             <DataTable 
               data={tickets} 
               columns={ticketColumns} 
+              limit={limit}
+              onLimitChange={setLimit}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
               actions={(t) => (
                 <div className="flex items-center justify-end gap-2">
                   {!t.is_executed && t.status !== "COMPLETED" && t.status !== "EXECUTING" && (

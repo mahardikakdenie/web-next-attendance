@@ -51,7 +51,7 @@ export default function PayrollView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
 
   // Handle Search Debounce
   useEffect(() => {
@@ -412,6 +412,11 @@ export default function PayrollView() {
           currentPage={currentPage}
           totalPages={meta ? meta?.pagination?.last_page : 1}
           onPageChange={(page) => setCurrentPage(page)}
+          limit={limit}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setCurrentPage(1);
+          }}
         />
       </div>
 

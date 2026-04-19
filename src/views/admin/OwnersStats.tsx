@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState } from "react";
 import { 
   Users, 
   Search, 
@@ -26,6 +26,7 @@ import dayjs from "dayjs";
 import { Can } from "@/components/auth/PermissionGuard";
 import EditTenantModal from "@/components/admin/EditTenantModal";
 import { Edit } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const StatTooltip = ({ children, label }: { children: React.ReactNode; label: string }) => (
   <div className="group/tooltip relative inline-flex items-center justify-center">
@@ -40,9 +41,7 @@ const StatTooltip = ({ children, label }: { children: React.ReactNode; label: st
 );
 
 export default function OwnersStatsView() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [data, setData] = useState<OwnerStats[]>([]);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [limit, setLimit] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,25 +49,20 @@ export default function OwnersStatsView() {
   const [selectedTenant, setSelectedTenant] = useState<OwnerStats | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    try {
-      setIsLoading(true);
+  const { data: resp, isLoading, isError } = useQuery({
+    queryKey: ["owners-stats", limit, currentPage],
+    queryFn: async () => {
       const offset = (currentPage - 1) * limit;
-      const resp = await getOwnersStats(limit, offset);
-      if (resp.data) {
-        setData(resp.data || []);
-        setTotal(resp.meta.pagination?.total || 0);
-      }
-    } catch {
-      toast.error("Failed to sync tenant monitoring data");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [limit, currentPage]);
+      return await getOwnersStats(limit, offset);
+    },
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  if (isError) {
+    toast.error("Failed to sync tenant monitoring data");
+  }
+
+  const data = resp?.data || [];
+  const total = resp?.meta.pagination?.total || 0;
 
   const filteredData = data.filter(item => 
     item.tenant_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -314,7 +308,9 @@ export default function OwnersStatsView() {
             setIsEditModalOpen(false);
             setSelectedTenant(null);
           }}
-          onSuccess={fetchData}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["owners-stats"] });
+          }}
         />
       </div>
     </Can>

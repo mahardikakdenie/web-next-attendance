@@ -320,6 +320,8 @@ export default function ExpensesView() {
           totalPages={expensesData?.meta?.pagination?.last_page || 1}
           onPageChange={(page) => setCurrentPage(page)}
           isLoading={isExpensesLoading}
+          limit={limit}
+          onLimitChange={setLimit}
         />
       </div>
 

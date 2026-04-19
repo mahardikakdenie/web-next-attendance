@@ -2,7 +2,6 @@
 
 import { startTransition, useMemo, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import Image from "next/image";
 import {
   LayoutDashboard,
   CalendarDays,

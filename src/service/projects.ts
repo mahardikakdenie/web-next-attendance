@@ -8,7 +8,7 @@ import {
   AssignMemberPayload 
 } from "@/types/projects";
 
-export const getProjects = (params?: { status?: string; search?: string }) => {
+export const getProjects = (params?: { status?: string; search?: string; page?: number; limit?: number }) => {
   return secureRequest<APIResponse<Project[]>>("get", "/v1/projects", params);
 };
 

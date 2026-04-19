@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 
 // Import individual view components
-import UserDashboardPage from "@/views/dashboard/UserDashboard";
 import DashboardRouter from "@/views/dashboard/DashboardRouter";
 import UserInsightsView from "@/views/dashboard/UserInsights";
 import { ROLES } from "@/store/auth.store";
@@ -32,7 +31,10 @@ export default function Page() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("absen");
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   if (!mounted || loading) {

@@ -5,14 +5,12 @@ import { useState } from "react";
 import { 
   Users, 
   Wallet, 
-  ShieldCheck,
-  LayoutDashboard
+  ShieldCheck
 } from "lucide-react";
 import UserDashboardPage from "./UserDashboard";
 import AdminDashboardPage from "./AdminDashboard";
 import HrDashboardPage from "./HrDashboard";
 import FinanceDashboardPage from "./FinanceDashboard";
-import ManagerDashboardPage from "./ManagerDashboard";
 
 type AnalyticsTab = "platform" | "hr" | "finance" | "user";
 

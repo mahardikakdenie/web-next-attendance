@@ -37,6 +37,7 @@ Tabel `roles` di Backend menggunakan konstanta `BASE_ROLE` berikut:
 - **UI Aesthetic**: Menggunakan konsep **Floating App Shell** (rounded 40px, bg-slate-50, glassmorphism).
 - **Global UI Components**: Selalu prioritaskan penggunaan komponen UI global dari `@/components/ui/*`. 
   - **PENTING**: Gunakan komponen `Avatar` dari `@/components/ui/Avatar.tsx` untuk semua tampilan foto profil, inisial user, atau logo organisasi. Jangan gunakan `next/image` secara langsung untuk avatar guna menghindari error properti width/height dan inkonsistensi styling.
+  - **PENTING**: Gunakan komponen `Select` dari `@/components/ui/Select.tsx` untuk semua input pilihan (dropdown), termasuk pengatur **Limit** (item per halaman). Jangan gunakan `<select>` bawaan HTML guna menjaga estetika UI yang premium dan konsisten.
 - **Icons**: Gunakan `lucide-react`.
 - **Charts**: Gunakan `apexcharts`.
 - **State Management**: Zustand untuk Auth dan Global State.

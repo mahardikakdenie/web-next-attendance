@@ -32,6 +32,8 @@ export default function TimesheetView() {
   const queryClient = useQueryClient();
   const [selectedPeriod, setSelectedPeriod] = useState(dayjs().format("YYYY-MM"));
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   // Queries
   const { data: reportResp, isLoading: isReportLoading } = useQuery({
@@ -202,6 +204,10 @@ export default function TimesheetView() {
               columns={columns} 
               data={report?.entries || []} 
               isLoading={isReportLoading}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              limit={limit}
+              onLimitChange={setLimit}
             />
           </div>
 

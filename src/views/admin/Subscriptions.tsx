@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { 
   CreditCard, 
   Search, 
-  Building2, 
   Calendar,
   Clock,
   DollarSign,
@@ -14,8 +13,6 @@ import {
   ShieldCheck,
   SearchX,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   BellRing,
   Ban,
   Users,
@@ -61,7 +58,7 @@ export default function SubscriptionsView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [limit] = useState(10);
+  const [limit, setLimit] = useState(10);
 
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [selectedTenantForSuspend, setSelectedTenantForSuspend] = useState<{id: number, name: string} | null>(null);
@@ -342,6 +339,14 @@ export default function SubscriptionsView() {
               <DataTable 
                 data={items} 
                 columns={columns}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => setCurrentPage(page)}
+                limit={limit}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit);
+                  setCurrentPage(1);
+                }}
                 actions={(s) => (
                   <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                     {s.status === "Past Due" && (
@@ -377,37 +382,6 @@ export default function SubscriptionsView() {
               </div>
             )}
           </div>
-
-          {/* Pagination */}
-          {items.length > 0 && (
-            <div className="p-8 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
-               <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                  Financial Session Encrypted
-               </div>
-               
-               <div className="flex items-center gap-2">
-                  <button 
-                    disabled={currentPage === 1 || isLoading}
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 hover:border-blue-100 disabled:opacity-30 transition-all"
-                  >
-                    <ChevronLeft size={20} strokeWidth={3} />
-                  </button>
-                  
-                  <div className="flex items-center px-4 h-12 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-900 shadow-sm">
-                    Page {currentPage} of {totalPages}
-                  </div>
-
-                  <button 
-                    disabled={currentPage >= totalPages || isLoading}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 hover:border-blue-100 disabled:opacity-30 transition-all"
-                  >
-                    <ChevronRight size={20} strokeWidth={3} />
-                  </button>
-               </div>
-            </div>
-          )}
         </div>
 
         {/* Suspend Confirmation Modal */}

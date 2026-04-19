@@ -24,6 +24,8 @@ import { Role } from "@/types/api";
 export default function PlatformRolesView() {
   const [search, setSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   // 1. Fetch System Roles
   const { data: rolesResp, isLoading } = useQuery({
@@ -113,6 +115,10 @@ export default function PlatformRolesView() {
             columns={columns} 
             isLoading={isLoading}
             onRowClick={(item) => setSelectedRole(item)}
+            limit={limit}
+            onLimitChange={setLimit}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
             actions={(item) => (
               <button 
                 onClick={() => setSelectedRole(item)}

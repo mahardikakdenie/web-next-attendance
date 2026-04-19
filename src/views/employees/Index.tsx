@@ -36,15 +36,16 @@ export default function EmployeesView() {
   const [quotaEmployee, setQuotaEmployee] = useState<{id: number, name: string, quota: number} | null>(null);
   const [payrollEmployee, setPayrollEmployee] = useState<{id: number, name: string} | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const {user} = useAuthStore(); 
 
-  const getData = useCallback(async (page: number = 1) => {
+  const getData = useCallback(async (page: number = 1, rowsLimit: number = 10) => {
     try {
       if (!user?.id) return;
       const resp = await getDataUserslist({
         page,
         user_id: user.id,
-        limit: 10,
+        limit: rowsLimit,
       });
       if (resp.data) {
         setEmployees(resp.data);
@@ -57,10 +58,10 @@ export default function EmployeesView() {
 
   useEffect(() => {
     const handle = requestAnimationFrame(() => {
-      getData(currentPage);
+      getData(currentPage, limit);
     });
     return () => cancelAnimationFrame(handle);
-  }, [getData, currentPage]);
+  }, [getData, currentPage, limit]);
 
   const columns: Column<UserData>[] = [
     {
@@ -218,6 +219,11 @@ export default function EmployeesView() {
         totalPages={meta?.pagination?.last_page}
         onPageChange={(page) => {
           setCurrentPage(page);
+        }}
+        limit={limit}
+        onLimitChange={(newLimit) => {
+          setLimit(newLimit);
+          setCurrentPage(1);
         }}
       />
 
