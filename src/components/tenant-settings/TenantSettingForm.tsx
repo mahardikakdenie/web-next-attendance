@@ -17,6 +17,7 @@ import {
   Upload,
   Link as LinkIcon,
   Loader2,
+  HelpCircle,
 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import { Switch } from "@/components/ui/Switch";
@@ -27,6 +28,7 @@ import { uploadMedia } from "@/service/media";
 import Image from "next/image";
 import { toast } from "sonner";
 import { UserData } from "@/types/api";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 export interface TenantSettingsData {
   id: number;
@@ -389,13 +391,13 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-blue-600">
             <Settings size={16} strokeWidth={3} />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Administration</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">ADMINISTRATION SYSTEM</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-neutral-900 tracking-tight">
-            Tenant Settings
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-neutral-900 tracking-tight uppercase">
+            TENANT <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">SETTINGS</span>
           </h1>
-          <p className="text-sm sm:text-base text-neutral-500 font-medium max-w-2xl leading-relaxed">
-            Configure attendance rules, working hours, and security policies for your organization.
+          <p className="text-sm sm:text-base text-neutral-500 font-medium max-w-2xl leading-relaxed uppercase tracking-tighter opacity-70">
+            Configure attendance rules, operational hours, and organizational security policies.
           </p>
         </div>
         
@@ -406,8 +408,8 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
               <ShieldCheck size={18} strokeWidth={2.5} />
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] font-black text-neutral-400 uppercase leading-none tracking-tight">Access Level</span>
-              <span className="text-sm font-bold text-neutral-900 capitalize">{user?.role?.name.toLowerCase() || 'Admin'}</span>
+              <span className="text-[9px] font-black text-neutral-400 uppercase leading-none tracking-tight">ACCESS LEVEL</span>
+              <span className="text-sm font-bold text-neutral-900 uppercase tracking-tighter">{user?.role?.name.toLowerCase() || 'ADMIN'}</span>
             </div>
           </div>
 
@@ -415,14 +417,14 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
           <Button 
             onClick={onHandleChange} 
             disabled={isSaving || !isDirty}
-            className={`h-14 px-8 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl transition-all flex items-center gap-2 active:scale-95 ${
+            className={`h-14 px-8 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all flex items-center gap-2 active:scale-95 ${
               isDirty 
               ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200" 
               : "bg-neutral-100 text-neutral-400 shadow-none cursor-default"
             }`}
           >
             {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            <span>{isSaving ? "Saving..." : isDirty ? "Save Configuration" : "Up to date"}</span>
+            <span>{isSaving ? "SYNCING..." : isDirty ? "SAVE CONFIGURATION" : "UP TO DATE"}</span>
           </Button>
         </div>
       </header>
@@ -438,18 +440,23 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                   <Settings size={24} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-neutral-900">Basic Rules</h2>
-                  <p className="text-xs font-medium text-neutral-500 mt-0.5">Tolerance & limits</p>
+                  <h2 className="text-xl font-black text-neutral-900 uppercase tracking-tight">BASIC RULES</h2>
+                  <p className="text-[10px] font-bold text-neutral-400 mt-0.5 uppercase tracking-widest">TOLERANCE & LIMITS</p>
                 </div>
               </div>
-              <div className="px-3.5 py-1.5 rounded-full bg-neutral-100 border border-neutral-200 text-[11px] font-bold text-neutral-600 uppercase tracking-widest">
+              <div className="px-3.5 py-1.5 rounded-full bg-neutral-100 border border-neutral-200 text-[11px] font-black text-neutral-600 uppercase tracking-widest">
                 ID: {formData.tenantId}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="group flex flex-col gap-2 rounded-2xl border border-neutral-100 bg-neutral-50/50 p-4 transition-all focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 group-focus-within:text-blue-500">Max Radius (Meters)</label>
+                <div className="flex items-center gap-1.5">
+                   <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 group-focus-within:text-blue-500">MAX RADIUS</label>
+                   <Tooltip content="MAXIMUM DISTANCE (METERS) ALLOWED FROM OFFICE CENTER.">
+                      <HelpCircle size={10} className="text-neutral-300" />
+                   </Tooltip>
+                </div>
                 <div className="flex items-center gap-3">
                   <Zap size={18} className="text-amber-500 shrink-0" />
                   <Input
@@ -462,7 +469,12 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
               </div>
 
               <div className="group flex flex-col gap-2 rounded-2xl border border-neutral-100 bg-neutral-50/50 p-4 transition-all focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-300">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 group-focus-within:text-blue-500">Grace Period (Mins)</label>
+                <div className="flex items-center gap-1.5">
+                   <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 group-focus-within:text-blue-500">GRACE PERIOD</label>
+                   <Tooltip content="MINUTES ALLOWED AFTER START TIME BEFORE MARKED AS LATE.">
+                      <HelpCircle size={10} className="text-neutral-300" />
+                   </Tooltip>
+                </div>
                 <div className="flex items-center gap-3">
                   <Clock size={18} className="text-rose-500 shrink-0" />
                   <Input
@@ -482,8 +494,8 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                 <MapPin size={24} strokeWidth={2.5} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-neutral-900">Office Coordinates</h2>
-                <p className="text-xs font-medium text-neutral-500 mt-0.5">Center point for attendance</p>
+                <h2 className="text-xl font-black text-neutral-900 uppercase tracking-tight">OFFICE GEOLOCATION</h2>
+                <p className="text-[10px] font-bold text-neutral-400 mt-0.5 uppercase tracking-widest">CENTER POINT FOR ATTENDANCE</p>
               </div>
             </div>
 
@@ -498,8 +510,8 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                   src={`https://maps.google.com/maps?q=${formData.officeLatitude},${formData.officeLongitude}&z=16&output=embed`}
                 ></iframe>
                 {showSuccessLocation && (
-                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-xl animate-in slide-in-from-top-4 fade-in duration-300">
-                    <CheckCircle2 size={14} className="text-emerald-400" /> Location Updated
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-neutral-900 text-white px-4 py-2 rounded-full text-[10px] font-black flex items-center gap-2 shadow-xl animate-in slide-in-from-top-4 fade-in duration-300 uppercase tracking-widest">
+                    <CheckCircle2 size={14} className="text-emerald-400" /> COORDINATES UPDATED
                   </div>
                 )}
               </div>
@@ -507,11 +519,11 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
               <div className="flex gap-2">
                 <div className="relative flex-1 group">
                   <Input
-                    placeholder="Search address or paste maps URL..."
+                    placeholder="SEARCH ADDRESS OR PASTE GOOGLE MAPS URL..."
                     value={searchQuery}
                     onChange={handleSmartInput}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearchAddress()}
-                    className="bg-neutral-50/80 border-neutral-200 h-12 rounded-xl text-sm pl-11 w-full focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all font-medium"
+                    className="bg-neutral-50/80 border-neutral-200 h-12 rounded-xl text-xs pl-11 w-full focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all font-black uppercase placeholder:text-neutral-300"
                   />
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" size={18} strokeWidth={2.5} />
                 </div>
@@ -519,31 +531,31 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                   type="button"
                   onClick={handleSearchAddress}
                   disabled={isSearching || !searchQuery.trim()}
-                  className="h-12 px-5 bg-neutral-900 hover:bg-indigo-600 text-white rounded-xl font-bold transition-all disabled:opacity-50"
+                  className="h-12 px-5 bg-neutral-900 hover:bg-indigo-600 text-white rounded-xl font-black transition-all disabled:opacity-50 uppercase text-[10px] tracking-widest"
                 >
-                  {isSearching ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : 'Find'}
+                  {isSearching ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : 'FIND'}
                 </Button>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Latitude</label>
+                  <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">LATITUDE</label>
                   <Input
                     type="number"
                     step="any"
                     value={formData.officeLatitude}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('officeLatitude', e.target.value)}
-                    className="bg-white border-neutral-200 h-9 rounded-lg font-mono text-xs w-full shadow-sm"
+                    className="bg-white border-neutral-200 h-9 rounded-lg font-mono text-[10px] font-bold w-full shadow-sm"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
-                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Longitude</label>
+                  <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">LONGITUDE</label>
                   <Input
                     type="number"
                     step="any"
                     value={formData.officeLongitude}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('officeLongitude', e.target.value)}
-                    className="bg-white border-neutral-200 h-9 rounded-lg font-mono text-xs w-full shadow-sm"
+                    className="bg-white border-neutral-200 h-9 rounded-lg font-mono text-[10px] font-bold w-full shadow-sm"
                   />
                 </div>
               </div>
@@ -552,14 +564,14 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                 type="button"
                 onClick={handleGetLocation}
                 disabled={isLocating}
-                className="w-full flex items-center justify-center gap-2 h-12 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-bold transition-all"
+                className="w-full flex items-center justify-center gap-2 h-12 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-black transition-all uppercase text-[10px] tracking-widest"
               >
                 {isLocating ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-700"></div>
                 ) : (
                   <Navigation size={18} />
                 )}
-                <span>Auto-Detect Current Location</span>
+                <span>AUTO-DETECT CURRENT POSITION</span>
               </Button>
             </div>
           </div>
@@ -574,8 +586,8 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                 <Clock size={24} strokeWidth={2.5} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-neutral-900">Working Schedule</h2>
-                <p className="text-xs font-medium text-neutral-500 mt-0.5">Define operational hours</p>
+                <h2 className="text-xl font-black text-neutral-900 uppercase tracking-tight">OPERATIONAL HOURS</h2>
+                <p className="text-[10px] font-bold text-neutral-400 mt-0.5 uppercase tracking-widest">DEFINE WORK SCHEDULE</p>
               </div>
             </div>
 
@@ -585,17 +597,17 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                   <div className="h-6 w-6 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <Clock size={12} strokeWidth={3} />
                   </div>
-                  <span className="text-[11px] font-bold uppercase tracking-widest">Clock-In</span>
+                  <span className="text-[11px] font-black uppercase tracking-widest">CLOCK-IN WINDOW</span>
                 </div>
                 <div className="flex flex-col gap-2.5">
                   <CustomTimeSelector
-                    label="Start"
+                    label="START"
                     value={formData.clockInStartTime}
                     onChange={(val) => handleInputChange('clockInStartTime', val)}
                     hoverBorderClass="hover:border-emerald-300 focus-within:border-emerald-400 bg-white shadow-sm rounded-lg"
                   />
                   <CustomTimeSelector
-                    label="End"
+                    label="END"
                     value={formData.clockInEndTime}
                     onChange={(val) => handleInputChange('clockInEndTime', val)}
                     hoverBorderClass="hover:border-emerald-300 focus-within:border-emerald-400 bg-white shadow-sm rounded-lg"
@@ -608,17 +620,17 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                   <div className="h-6 w-6 rounded-lg bg-orange-100 flex items-center justify-center">
                     <Clock size={12} strokeWidth={3} />
                   </div>
-                  <span className="text-[11px] font-bold uppercase tracking-widest">Clock-Out</span>
+                  <span className="text-[11px] font-black uppercase tracking-widest">CLOCK-OUT WINDOW</span>
                 </div>
                 <div className="flex flex-col gap-2.5">
                   <CustomTimeSelector
-                    label="Start"
+                    label="START"
                     value={formData.clockOutStartTime}
                     onChange={(val) => handleInputChange('clockOutStartTime', val)}
                     hoverBorderClass="hover:border-orange-300 focus-within:border-orange-400 bg-white shadow-sm rounded-lg"
                   />
                   <CustomTimeSelector
-                    label="End"
+                    label="END"
                     value={formData.clockOutEndTime}
                     onChange={(val) => handleInputChange('clockOutEndTime', val)}
                     hoverBorderClass="hover:border-orange-300 focus-within:border-orange-400 bg-white shadow-sm rounded-lg"
@@ -634,26 +646,26 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                 <Globe size={24} strokeWidth={2.5} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-neutral-900">Tenant Branding</h2>
-                <p className="text-xs font-medium text-neutral-500 mt-0.5">Company identity settings</p>
+                <h2 className="text-xl font-black text-neutral-900 uppercase tracking-tight">TENANT IDENTITY</h2>
+                <p className="text-[10px] font-bold text-neutral-400 mt-0.5 uppercase tracking-widest">BRANDING & VISUALS</p>
               </div>
             </div>
 
             <div className="flex flex-col gap-4 mb-8 p-5 rounded-2xl bg-slate-50 border border-slate-100">
                <div className="flex items-center justify-between mb-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Company Logo</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">CORPORATE LOGO</label>
                   <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-xs">
                     <button 
                       onClick={() => setLogoMode("link")}
                       className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all flex items-center gap-1.5 ${logoMode === 'link' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >
-                      <LinkIcon size={10} /> Link
+                      <LinkIcon size={10} /> LINK
                     </button>
                     <button 
                       onClick={() => setLogoMode("upload")}
                       className={`px-3 py-1 text-[9px] font-black uppercase rounded-md transition-all flex items-center gap-1.5 ${logoMode === 'upload' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                     >
-                      <Upload size={10} /> Upload
+                      <Upload size={10} /> UPLOAD
                     </button>
                   </div>
                </div>
@@ -686,12 +698,12 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                     {logoMode === "link" ? (
                       <div className="space-y-1">
                         <Input 
-                          placeholder="https://example.com/logo.png"
+                          placeholder="HTTPS://EXAMPLE.COM/LOGO.PNG"
                           value={formData.tenantLogo || ""}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('tenantLogo', e.target.value)}
-                          className="h-12 bg-white border-slate-200 rounded-xl text-sm font-medium"
+                          className="h-12 bg-white border-slate-200 rounded-xl text-xs font-black uppercase placeholder:text-slate-300"
                         />
-                        <p className="text-[9px] font-bold text-slate-400 ml-1">Paste a direct image URL</p>
+                        <p className="text-[9px] font-black text-slate-400 ml-1 uppercase">PROVIDE A DIRECT ASSET URL</p>
                       </div>
                     ) : (
                       <div className="relative">
@@ -709,10 +721,10 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                         >
                           <div className="flex items-center gap-2">
                             <Upload size={16} className="text-slate-400 group-hover/upload:text-indigo-600 transition-colors" />
-                            <span className="text-xs font-bold text-slate-500 group-hover/upload:text-indigo-700 transition-colors">Choose local image...</span>
+                            <span className="text-[10px] font-black text-slate-500 group-hover/upload:text-indigo-700 transition-colors uppercase">CHOOSE LOCAL ASSET...</span>
                           </div>
                         </label>
-                        <p className="text-[9px] font-bold text-slate-400 mt-1 ml-1">Max size 5MB (JPG, PNG, SVG)</p>
+                        <p className="text-[9px] font-black text-slate-400 mt-1 ml-1 uppercase tracking-tighter">MAX SIZE 5MB (JPG, PNG, SVG)</p>
                       </div>
                     )}
                   </div>
@@ -724,20 +736,25 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                 <ShieldCheck size={24} strokeWidth={2.5} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-neutral-900">Security & Rules</h2>
-                <p className="text-xs font-medium text-neutral-500 mt-0.5">Toggle validation methods</p>
+                <h2 className="text-xl font-black text-neutral-900 uppercase tracking-tight">SECURITY POLICIES</h2>
+                <p className="text-[10px] font-bold text-neutral-400 mt-0.5 uppercase tracking-widest">VALIDATION & COMPLIANCE</p>
               </div>
             </div>
 
             <div className="flex flex-col border border-neutral-100 rounded-2xl overflow-hidden bg-neutral-50/50">
-              <div className="p-4 flex items-center justify-between border-b border-neutral-100 hover:bg-white transition-colors">
+              <div className="p-4 flex items-center justify-between border-b border-neutral-100 hover:bg-white transition-colors group">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
                     <Globe size={18} strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-neutral-800">Remote Work</span>
-                    <span className="text-[11px] text-neutral-500 font-medium">Allow WFA attendance</span>
+                    <div className="flex items-center gap-1.5">
+                       <span className="text-sm font-black text-neutral-800 uppercase tracking-tight">REMOTE WORK</span>
+                       <Tooltip content="ALLOW EMPLOYEES TO CLOCK-IN FROM ANY LOCATION (WFA).">
+                          <HelpCircle size={12} className="text-neutral-300" />
+                       </Tooltip>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">DISABLE RADIUS RESTRICTIONS</span>
                   </div>
                 </div>
                 <Switch
@@ -747,14 +764,19 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                 />
               </div>
 
-              <div className="p-4 flex items-center justify-between border-b border-neutral-100 hover:bg-white transition-colors">
+              <div className="p-4 flex items-center justify-between border-b border-neutral-100 hover:bg-white transition-colors group">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
                     <Navigation size={18} strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-neutral-800">Geolocation</span>
-                    <span className="text-[11px] text-neutral-500 font-medium">Force GPS verification</span>
+                    <div className="flex items-center gap-1.5">
+                       <span className="text-sm font-black text-neutral-800 uppercase tracking-tight">GEOLOCATION</span>
+                       <Tooltip content="MANDATORY GPS COORDINATES FOR ALL ATTENDANCE LOGS.">
+                          <HelpCircle size={12} className="text-neutral-300" />
+                       </Tooltip>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">FORCE COORDINATE CAPTURE</span>
                   </div>
                 </div>
                 <Switch
@@ -764,14 +786,19 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                 />
               </div>
 
-              <div className="p-4 flex items-center justify-between border-b border-neutral-100 hover:bg-white transition-colors">
+              <div className="p-4 flex items-center justify-between border-b border-neutral-100 hover:bg-white transition-colors group">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
                     <Camera size={18} strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-neutral-800">Face Photo</span>
-                    <span className="text-[11px] text-neutral-500 font-medium">Mandatory selfie proof</span>
+                    <div className="flex items-center gap-1.5">
+                       <span className="text-sm font-black text-neutral-800 uppercase tracking-tight">FACE PHOTO</span>
+                       <Tooltip content="EMPLOYEES MUST SUBMIT A SELFIE DURING CLOCK-IN/OUT.">
+                          <HelpCircle size={12} className="text-neutral-300" />
+                       </Tooltip>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">BIOMETRIC PROOF OF PRESENCE</span>
                   </div>
                 </div>
                 <Switch
@@ -781,14 +808,19 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                 />
               </div>
 
-              <div className="p-4 flex items-center justify-between hover:bg-white transition-colors">
+              <div className="p-4 flex items-center justify-between hover:bg-white transition-colors group">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
                     <Layers size={18} strokeWidth={2.5} />
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-neutral-800">Multiple Logs</span>
-                    <span className="text-[11px] text-neutral-500 font-medium">Allow multiple checks</span>
+                    <div className="flex items-center gap-1.5">
+                       <span className="text-sm font-black text-neutral-800 uppercase tracking-tight">MULTIPLE LOGS</span>
+                       <Tooltip content="ALLOW USERS TO SUBMIT MULTIPLE ATTENDANCE ENTRIES PER DAY.">
+                          <HelpCircle size={12} className="text-neutral-300" />
+                       </Tooltip>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-tighter">PERMIT CONSECUTIVE CHECK-INS</span>
                   </div>
                 </div>
                 <Switch
@@ -803,7 +835,7 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
               <Button 
                 onClick={onHandleChange} 
                 disabled={isSaving || !isDirty}
-                className={`w-full flex items-center justify-center gap-2 h-14 rounded-xl text-base font-bold transition-all shadow-md active:translate-y-0 ${
+                className={`w-full flex items-center justify-center gap-2 h-14 rounded-xl text-base font-black transition-all shadow-md active:translate-y-0 uppercase tracking-widest ${
                   isDirty 
                   ? "bg-neutral-900 hover:bg-neutral-800 text-white hover:shadow-xl hover:-translate-y-0.5" 
                   : "bg-neutral-100 text-neutral-400 cursor-default shadow-none"
@@ -814,7 +846,7 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                 ) : (
                   <>
                     <Save size={20} strokeWidth={2.5} />
-                    {isDirty ? "Save Configuration" : "No Changes Made"}
+                    {isDirty ? "SAVE CONFIGURATION" : "UP TO DATE"}
                   </>
                 )}
               </Button>
@@ -832,8 +864,8 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
               <Zap size={20} className="animate-pulse" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xs font-black text-neutral-900 uppercase tracking-tight">Unsaved Changes</span>
-              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Workspace modified</span>
+              <span className="text-[10px] font-black text-neutral-900 uppercase tracking-tight">UNSAVED CHANGES</span>
+              <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">WORKSPACE MODIFIED</span>
             </div>
           </div>
           
@@ -841,17 +873,17 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
             <button 
               onClick={handleReset}
               disabled={isSaving}
-              className="px-6 h-12 rounded-xl text-xs font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 transition-all"
+              className="px-6 h-12 rounded-xl text-[10px] font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 transition-all"
             >
-              Discard
+              DISCARD
             </button>
             <Button
               onClick={onHandleChange}
               disabled={isSaving}
-              className="px-8 h-12 bg-neutral-900 hover:bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-neutral-200 transition-all flex items-center gap-2 active:scale-95"
+              className="px-8 h-12 bg-neutral-900 hover:bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-neutral-200 transition-all flex items-center gap-2 active:scale-95"
             >
               {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              Save Changes
+              PUSH CHANGES
             </Button>
           </div>
         </div>

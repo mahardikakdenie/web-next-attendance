@@ -18,6 +18,25 @@ export const getSystemRoles = () => {
   return secureRequest<APIResponse<Role[]>>("get", "/v1/superadmin/system-roles");
 };
 
+export const createSystemRole = (data: Omit<Partial<Role>, 'permissions'> & { permissions: string[] }) => {
+  return secureRequest<APIResponse<Role>>("post", "/v1/superadmin/system-roles", data);
+};
+
+export const updateSystemRole = (id: number, data: Omit<Partial<Role>, 'permissions'> & { permissions: string[] }) => {
+  return secureRequest<APIResponse<Role>>("patch", `/v1/superadmin/system-roles/${id}`, data);
+};
+
+export const deleteSystemRole = (id: number) => {
+  return secureRequest<APIResponse<null>>("delete", `/v1/superadmin/system-roles/${id}`);
+};
+
+export const saveSystemRoleHierarchy = (parent_id: number, child_role_ids: number[]) => {
+  return secureRequest<APIResponse<null>>("post", "/v1/superadmin/system-roles/hierarchy", { 
+    parent_role_id: parent_id, 
+    child_role_ids: child_role_ids 
+  });
+};
+
 export const createCustomRole = (data: Omit<Partial<Role>, 'permissions'> & { permissions: string[] }) => {
   return secureRequest<APIResponse<Role>>("post", "/v1/tenant-roles", data);
 };
