@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Settings,
   MapPin,
@@ -26,6 +26,7 @@ import { getDataCurrentTenat, updateDataCurrentTenant } from "@/service/tenantSe
 import { uploadMedia } from "@/service/media";
 import Image from "next/image";
 import { toast } from "sonner";
+import { UserData } from "@/types/api";
 
 export interface TenantSettingsData {
   id: number;
@@ -125,8 +126,42 @@ const INITIAL_DATA: TenantSettingsData = {
   }
 };
 
-export default function TenantSettingForm() {
-  const [formData, setFormData] = useState<TenantSettingsData>(INITIAL_DATA);
+export default function TenantSettingForm({ user }: { user: UserData | null }) {
+  // Map user data to form structure if available
+  const userMappedData: TenantSettingsData | null = useMemo(() => {
+    if (!user || !user.tenant_setting) return null;
+    const ts = user.tenant_setting;
+    return {
+      id: ts.id,
+      tenantId: ts.tenant_id,
+      tenantLogo: ts.tenant_logo || "",
+      officeLatitude: ts.office_latitude,
+      officeLongitude: ts.office_longitude,
+      maxRadiusMeter: ts.max_radius_meter,
+      allowRemote: ts.allow_remote,
+      requireLocation: ts.require_location,
+      clockInStartTime: ts.clock_in_start_time,
+      clockInEndTime: ts.clock_in_end_time,
+      lateAfterMinute: ts.late_after_minute,
+      clockOutStartTime: ts.clock_out_start_time,
+      clockOutEndTime: ts.clock_out_end_time,
+      requireSelfie: ts.require_selfie,
+      allowMultipleCheck: ts.allow_multiple_check,
+      created_at: ts.created_at,
+      updated_at: ts.updated_at,
+      tenant: {
+        code: ts.tenant?.code || "string",
+        createdAt: ts.tenant?.createdAt || ts.created_at,
+        id: ts.tenant?.id || user.tenant_id,
+        name: ts.tenant?.name || user.tenant?.name || "string",
+        tenant_settings: ts.tenant?.tenant_settings || "string",
+        updatedAt: ts.tenant?.updatedAt || ts.updated_at
+      }
+    };
+  }, [user]);
+
+  const [initialData, setInitialData] = useState<TenantSettingsData>(userMappedData || INITIAL_DATA);
+  const [formData, setFormData] = useState<TenantSettingsData>(userMappedData || INITIAL_DATA);
   const [isLocating, setIsLocating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -135,15 +170,27 @@ export default function TenantSettingForm() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuccessLocation, setShowSuccessLocation] = useState(false);
 
-  const handleSwitchChange = (name: keyof TenantSettingsData, checked: boolean): void => {
+  // Adjust state when user data changes (React official recommendation for prop-to-state sync)
+  const [prevUserMappedData, setPrevUserMappedData] = useState(userMappedData);
+  if (userMappedData !== prevUserMappedData) {
+    setPrevUserMappedData(userMappedData);
+    if (userMappedData) {
+      setInitialData(userMappedData);
+      setFormData(userMappedData);
+    }
+  }
+
+  const isDirty = useMemo(() => JSON.stringify(formData) !== JSON.stringify(initialData), [formData, initialData]);
+
+  const handleSwitchChange = useCallback((name: keyof TenantSettingsData, checked: boolean): void => {
     setFormData(prev => ({ ...prev, [name]: checked }));
-  };
+  }, []);
 
-  const handleInputChange = (name: keyof TenantSettingsData, value: string | number): void => {
+  const handleInputChange = useCallback((name: keyof TenantSettingsData, value: string | number): void => {
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -159,7 +206,7 @@ export default function TenantSettingForm() {
     } finally {
       setIsUploadingLogo(false);
     }
-  };
+  }, [handleInputChange]);
 
   const triggerSuccessFeedback = () => {
     setShowSuccessLocation(true);
@@ -240,7 +287,7 @@ export default function TenantSettingForm() {
         
         if (resp && resp.data) {
           const apiData = resp.data;
-          setFormData({
+          const mappedData = {
             id: apiData.id,
             tenantId: apiData.tenant_id,
             tenantLogo: apiData.tenant_logo,
@@ -266,7 +313,9 @@ export default function TenantSettingForm() {
               tenant_settings: apiData.tenant?.tenant_settings || "string",
               updatedAt: apiData.tenant?.UpdatedAt || apiData.tenant?.updatedAt || new Date().toISOString()
             }
-          });
+          };
+          setFormData(mappedData);
+          setInitialData(mappedData);
         }
       } catch (error) {
         console.error(error);
@@ -276,7 +325,12 @@ export default function TenantSettingForm() {
     getData();
   }, []);
 
-  const onHandleChange = async () => {
+  const onHandleChange = useCallback(async () => {
+    if (!isDirty && !isSaving) {
+      toast.info("No changes to save.");
+      return;
+    }
+    
     setIsSaving(true);
     try {
       const payload = {
@@ -300,6 +354,7 @@ export default function TenantSettingForm() {
       };
 
       await updateDataCurrentTenant(payload);
+      setInitialData(formData);
       toast.success("Configuration updated successfully!");
     } catch (error) {
       console.error(error);
@@ -307,14 +362,70 @@ export default function TenantSettingForm() {
     } finally {
       setIsSaving(false);
     }
+  }, [formData, isDirty, isSaving]);
+
+  // Keyboard shortcut Ctrl+S
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        onHandleChange();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onHandleChange]);
+
+
+  const handleReset = () => {
+    setFormData(initialData);
+    toast.info("Changes discarded.");
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto pb-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-neutral-900 tracking-tight">System Settings</h1>
-        <p className="text-sm font-medium text-neutral-500 mt-1">Configure your workspace attendance rules and parameters.</p>
-      </div>
+    <div className="w-full max-w-7xl mx-auto pb-32 relative">
+      {/* MAIN HEADER INTEGRATED */}
+      <header className="flex flex-col gap-6 mb-12 lg:flex-row lg:items-end lg:justify-between animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-blue-600">
+            <Settings size={16} strokeWidth={3} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Administration</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-neutral-900 tracking-tight">
+            Tenant Settings
+          </h1>
+          <p className="text-sm sm:text-base text-neutral-500 font-medium max-w-2xl leading-relaxed">
+            Configure attendance rules, working hours, and security policies for your organization.
+          </p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row items-center gap-4 self-start lg:self-end">
+          {/* Access Level Badge */}
+          <div className="hidden sm:flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white border border-neutral-200 shadow-sm">
+            <div className="h-9 w-9 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100">
+              <ShieldCheck size={18} strokeWidth={2.5} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-neutral-400 uppercase leading-none tracking-tight">Access Level</span>
+              <span className="text-sm font-bold text-neutral-900 capitalize">{user?.role?.name.toLowerCase() || 'Admin'}</span>
+            </div>
+          </div>
+
+          {/* Header Save Action */}
+          <Button 
+            onClick={onHandleChange} 
+            disabled={isSaving || !isDirty}
+            className={`h-14 px-8 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl transition-all flex items-center gap-2 active:scale-95 ${
+              isDirty 
+              ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200" 
+              : "bg-neutral-100 text-neutral-400 shadow-none cursor-default"
+            }`}
+          >
+            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+            <span>{isSaving ? "Saving..." : isDirty ? "Save Configuration" : "Up to date"}</span>
+          </Button>
+        </div>
+      </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         {/* LEFT COLUMN */}
@@ -691,20 +802,57 @@ export default function TenantSettingForm() {
             <div className="mt-8 pt-8 border-t border-neutral-100">
               <Button 
                 onClick={onHandleChange} 
-                disabled={isSaving}
-                className="w-full flex items-center justify-center gap-2 h-14 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-base font-bold transition-all disabled:opacity-70 shadow-md hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+                disabled={isSaving || !isDirty}
+                className={`w-full flex items-center justify-center gap-2 h-14 rounded-xl text-base font-bold transition-all shadow-md active:translate-y-0 ${
+                  isDirty 
+                  ? "bg-neutral-900 hover:bg-neutral-800 text-white hover:shadow-xl hover:-translate-y-0.5" 
+                  : "bg-neutral-100 text-neutral-400 cursor-default shadow-none"
+                }`}
               >
                 {isSaving ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                 ) : (
                   <>
                     <Save size={20} strokeWidth={2.5} />
-                    Save Configuration
+                    {isDirty ? "Save Configuration" : "No Changes Made"}
                   </>
                 )}
               </Button>
             </div>
 
+          </div>
+        </div>
+      </div>
+
+      {/* STICKY SAVE BAR */}
+      <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-full max-w-xl px-4 transition-all duration-500 ${isDirty ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'}`}>
+        <div className="bg-white/80 backdrop-blur-xl border border-neutral-200 p-4 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4 ring-1 ring-neutral-950/5">
+          <div className="flex items-center gap-3 pl-2">
+            <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 border border-amber-100">
+              <Zap size={20} className="animate-pulse" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-black text-neutral-900 uppercase tracking-tight">Unsaved Changes</span>
+              <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Workspace modified</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleReset}
+              disabled={isSaving}
+              className="px-6 h-12 rounded-xl text-xs font-black uppercase tracking-widest text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 transition-all"
+            >
+              Discard
+            </button>
+            <Button
+              onClick={onHandleChange}
+              disabled={isSaving}
+              className="px-8 h-12 bg-neutral-900 hover:bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] shadow-lg shadow-neutral-200 transition-all flex items-center gap-2 active:scale-95"
+            >
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              Save Changes
+            </Button>
           </div>
         </div>
       </div>

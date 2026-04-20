@@ -60,6 +60,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
 export default function TenantRolesView() {
   // --- States ---
   const [roles, setRoles] = useState<Role[]>([]);
+  const [originalRoles, setOriginalRoles] = useState<Role[]>([]); // For dirty check
   const [permissionModules, setPermissionModules] = useState<PermissionModule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPermsLoading, setIsPermsLoading] = useState(true);
@@ -79,6 +80,7 @@ export default function TenantRolesView() {
 
   // Hierarchy State
   const [childRoleIds, setChildRoleIds] = useState<number[]>([]);
+  const [originalChildRoleIds, setOriginalChildRoleIds] = useState<number[]>([]); // For dirty check
 
   // --- Data Fetching ---
   const fetchPermissions = useCallback(async () => {
@@ -109,6 +111,7 @@ export default function TenantRolesView() {
         // FILTER: Jangan tampilkan superadmin di list tenant
         const filtered = resp.data.filter(r => r.name !== 'superadmin');
         setRoles(filtered);
+        setOriginalRoles(JSON.parse(JSON.stringify(filtered))); // Deep copy
         
         if (filtered.length > 0 && (selectedRoleId === null || !filtered.some(r => r.id === selectedRoleId))) {
           setSelectedRoleId(filtered[0].id);
@@ -135,9 +138,26 @@ export default function TenantRolesView() {
     roles.find(r => r.id === selectedRoleId) || null
   , [roles, selectedRoleId]);
 
+  const originalSelectedRole = useMemo(() => 
+    originalRoles.find(r => r.id === selectedRoleId) || null
+  , [originalRoles, selectedRoleId]);
+
   const filteredRoles = useMemo(() => {
     return roles.filter(r => r.name.toLowerCase().includes(roleSearch.toLowerCase()));
   }, [roles, roleSearch]);
+
+  const isPermissionsDirty = useMemo(() => {
+    if (!selectedRole || !originalSelectedRole) return false;
+    const currentPerms = selectedRole.permissions?.map(p => p.id).sort() || [];
+    const originalPerms = originalSelectedRole.permissions?.map(p => p.id).sort() || [];
+    return JSON.stringify(currentPerms) !== JSON.stringify(originalPerms);
+  }, [selectedRole, originalSelectedRole]);
+
+  const isHierarchyDirty = useMemo(() => {
+    return JSON.stringify([...childRoleIds].sort()) !== JSON.stringify([...originalChildRoleIds].sort());
+  }, [childRoleIds, originalChildRoleIds]);
+
+  const isCurrentTabDirty = activeTab === "permissions" ? isPermissionsDirty : isHierarchyDirty;
 
   // Update hierarchy state when role or tab changes
   useEffect(() => {
@@ -146,7 +166,10 @@ export default function TenantRolesView() {
       // For now, let's keep it empty or use existing children if available
       // Backend should provide child roles in the Role object
       Promise.resolve().then(() => {
-        setChildRoleIds([]); // Reset for now, would be populated from API
+        // Mocking population - in real app this comes from API
+        const initialChildren: number[] = []; 
+        setChildRoleIds(initialChildren);
+        setOriginalChildRoleIds(initialChildren);
       });
     }
   }, [selectedRole, activeTab]);
@@ -204,6 +227,15 @@ export default function TenantRolesView() {
     }
   };
 
+  const handleDiscardChanges = () => {
+    if (activeTab === "permissions") {
+      setRoles(JSON.parse(JSON.stringify(originalRoles)));
+    } else {
+      setChildRoleIds([...originalChildRoleIds]);
+    }
+    toast.info("Changes discarded");
+  };
+
   const handleDeleteRole = async (id: number) => {
     if (!confirm("Are you sure you want to delete this role? This cannot be undone.")) return;
 
@@ -250,6 +282,7 @@ export default function TenantRolesView() {
       const resp = await saveRoleHierarchy(selectedRoleId, childRoleIds);
       if (resp.success) {
         toast.success("Reporting hierarchy saved");
+        setOriginalChildRoleIds([...childRoleIds]);
         await fetchRoles();
       }
     } catch (error) {
@@ -408,22 +441,26 @@ export default function TenantRolesView() {
                         </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    {!selectedRole.is_system && selectedRole.tenant_id !== null && (
+                  <div className="flex items-center gap-3">
+                    {isCurrentTabDirty && !selectedRole.is_system && (
                       <button 
-                        onClick={() => handleDeleteRole(selectedRole.id)}
-                        className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all border border-transparent hover:border-rose-100"
+                        onClick={handleDiscardChanges}
+                        className="px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-all"
                       >
-                        <Trash2 size={20} />
+                        Discard
                       </button>
                     )}
                     <Button 
-                      disabled={selectedRole.is_system || isSaving}
+                      disabled={selectedRole.is_system || isSaving || !isCurrentTabDirty}
                       onClick={activeTab === "permissions" ? handleUpdateRole : handleSaveHierarchy}
-                      className="bg-slate-900 hover:bg-blue-600 text-white font-black px-8 py-4 rounded-2xl flex items-center gap-2 shadow-lg shadow-slate-200 transition-all active:scale-95"
+                      className={`font-black px-8 py-4 rounded-2xl flex items-center gap-2 shadow-lg transition-all active:scale-95 ${
+                        isCurrentTabDirty 
+                        ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200" 
+                        : "bg-slate-100 text-slate-400 shadow-none cursor-default"
+                      }`}
                     >
                       {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} strokeWidth={2.5} />} 
-                      Save Changes
+                      {isCurrentTabDirty ? "Save Changes" : "Up to date"}
                     </Button>
                   </div>
                 </div>
@@ -431,19 +468,21 @@ export default function TenantRolesView() {
                 <div className="flex p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/50 w-fit">
                   <button
                     onClick={() => setActiveTab("permissions")}
-                    className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                    className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 relative ${
                       activeTab === "permissions" ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
                     <ShieldAlert size={16} /> Permissions Matrix
+                    {isPermissionsDirty && <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />}
                   </button>
                   <button
                     onClick={() => setActiveTab("hierarchy")}
-                    className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                    className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 relative ${
                       activeTab === "hierarchy" ? "bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
                     <GitBranch size={16} /> Reporting Hierarchy
+                    {isHierarchyDirty && <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />}
                   </button>
                 </div>
               </div>
