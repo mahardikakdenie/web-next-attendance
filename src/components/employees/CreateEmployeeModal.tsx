@@ -23,6 +23,8 @@ import { getTenantRoles } from "@/service/roles";
 import { Role, CreateUserPayload } from "@/types/api";
 import { createUser } from "@/service/users";
 import { getRoleBadgeColor } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth.store";
+import { useRouter } from "next/navigation";
 
 interface Props {
   open: boolean;
@@ -119,6 +121,14 @@ const RoleSelector = ({ value, roles, onChange, disabled }: RoleSelectorProps) =
 export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
+  const { user } = useAuthStore();
+  const router = useRouter();
+
+  const subscription = user?.subscription;
+  const currentCount = subscription?.current_employees || 0;
+  const maxCount = subscription?.max_employees || 0;
+  const isLimitReached = maxCount > 0 && currentCount >= maxCount;
+
   const [formData, setFormData] = useState<CreateUserPayload>({
     name: "",
     email: "",
@@ -161,6 +171,17 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isLimitReached) {
+      toast.error("Employee Limit Reached", {
+        description: `Your plan only allows up to ${maxCount} employees. Please upgrade to add more.`,
+        action: {
+          label: "Upgrade Now",
+          onClick: () => router.push("/tenant-settings/billing"),
+        },
+      });
+      return;
+    }
     
     if (formData.role_id === 0) {
       toast.error("Please select a role");
@@ -224,9 +245,31 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
           </div>
         </div>
 
+        {/* Capacity Warning Banner */}
+        {isLimitReached && (
+          <div className="bg-rose-50 border-b border-rose-100 p-4 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-300">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shadow-sm shrink-0">
+                <ShieldCheck size={16} />
+              </div>
+              <div>
+                <p className="text-xs font-black text-rose-900 uppercase tracking-tight">Upgrade Required</p>
+                <p className="text-[10px] text-rose-600 font-bold">You have reached your limit of {maxCount} employees.</p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => router.push("/tenant-settings/billing")}
+              className="bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase px-4 py-2 rounded-xl h-auto"
+            >
+              Upgrade Now
+            </Button>
+          </div>
+        )}
+
         {/* Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-100 transition-opacity">
+            {isLimitReached && <div className="absolute inset-0 z-10 bg-white/40 cursor-not-allowed" />}
             
             {/* Basic Info Group */}
             <div className="md:col-span-2 flex items-center gap-2 mb-2">
