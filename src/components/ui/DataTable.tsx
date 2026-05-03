@@ -55,14 +55,30 @@ export function DataTable<T extends { id: string | number }>({
   const [searchTerm, setSearchTerm] = useState("");
   const [internalPage, setInternalPage] = useState(1);
 
-  // Sync effective page
-  const currentPage = externalPage !== undefined ? externalPage : internalPage;
+  // Determine active page
+  const activePage = externalPage !== undefined ? externalPage : internalPage;
 
-  const handlePageChange = (page: number) => {
+  // Failsafe for total pages calculation
+  const totalPagesCount = Math.max(1, Math.floor(
+    totalPages !== undefined 
+      ? totalPages 
+      : (limit ? Math.ceil(data.length / limit) : 1)
+  ));
+
+  const handlePageChange = (newPage: number) => {
+    // Only block if clicking the same page
+    if (newPage === activePage) return;
+    
+    // Boundary checks
+    if (newPage < 1 || newPage > totalPagesCount) return;
+
     if (externalPage === undefined) {
-      setInternalPage(page);
+      setInternalPage(newPage);
     }
-    onPageChange?.(page);
+    
+    if (onPageChange) {
+      onPageChange(newPage);
+    }
   };
 
   // Handle Sorting logic
@@ -74,13 +90,11 @@ export function DataTable<T extends { id: string | number }>({
     setSortConfig({ key, direction });
   };
 
-  // Process data (Filter -> Sort)
+  // Process data
   const processedData = useMemo(() => {
-    // Safety check to ensure data is an array
     const safeData = Array.isArray(data) ? data : [];
     let filtered = [...safeData];
 
-    // Search filter (only if not server-side paginated or if we want client-side search on current page)
     if (searchTerm && searchKey) {
       filtered = filtered.filter((item) => {
         const value = item[searchKey];
@@ -88,31 +102,25 @@ export function DataTable<T extends { id: string | number }>({
       });
     }
 
-    // Sorting
     if (sortConfig) {
       filtered.sort((a, b) => {
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
-
         if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
         if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
         return 0;
       });
     }
 
-    // Client-side pagination (if not server-side)
-    if (limit && !totalPages) {
-      const start = ((currentPage || 1) - 1) * limit;
+    if (!totalPages && limit) {
+      const start = (activePage - 1) * limit;
       return filtered.slice(start, start + limit);
     }
 
     return filtered;
-  }, [data, sortConfig, searchTerm, searchKey, limit, currentPage, totalPages]);
+  }, [data, sortConfig, searchTerm, searchKey, limit, activePage, totalPages]);
 
-  const internalTotalPages = totalPages || (limit ? Math.ceil(data.length / limit) : 0);
-  const effectiveCurrentPage = currentPage || 1;
-
-  const showPagination = internalTotalPages > 0 && (onPageChange || onLimitChange);
+  const showPagination = onPageChange || onLimitChange;
 
   return (
     <div className="space-y-4">
@@ -131,8 +139,18 @@ export function DataTable<T extends { id: string | number }>({
       )}
 
       {/* Table Container */}
-      <div className="bg-white rounded-4xl border border-neutral-100 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-4xl border border-neutral-100 shadow-xs">
+        <div className={`overflow-x-auto rounded-4xl relative ${isLoading ? "cursor-wait" : ""}`}>
+          {/* Loading Overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 z-10 bg-slate-900/10 backdrop-blur-[2px] flex items-center justify-center animate-in fade-in duration-300">
+               <div className="flex flex-col items-center gap-2 bg-white px-8 py-5 rounded-[2.5rem] shadow-2xl border border-slate-100 scale-110">
+                  <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+                  <p className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Syncing...</p>
+               </div>
+            </div>
+          )}
+
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-neutral-50/50 border-b border-neutral-100">
@@ -144,8 +162,9 @@ export function DataTable<T extends { id: string | number }>({
                   >
                     {col.sortable && typeof col.accessor === "string" ? (
                       <button 
+                        type="button"
                         onClick={() => handleSort(col.accessor as keyof T)}
-                        className="flex items-center gap-1.5 hover:text-neutral-900 transition-colors"
+                        className="flex items-center gap-1.5 hover:text-neutral-900 transition-colors cursor-pointer"
                       >
                         {col.header}
                         {sortConfig?.key === col.accessor ? (
@@ -163,16 +182,7 @@ export function DataTable<T extends { id: string | number }>({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                       <div className="w-8 h-8 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
-                       <p className="text-sm font-bold text-neutral-400 mt-2">Loading data...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : processedData.length > 0 ? (
+              {processedData.length > 0 ? (
                 processedData.map((item, rowIdx) => (
                   <tr 
                     key={item.id}
@@ -197,7 +207,7 @@ export function DataTable<T extends { id: string | number }>({
                     )}
                   </tr>
                 ))
-              ) : (
+              ) : !isLoading ? (
                 <tr>
                   <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-2">
@@ -208,17 +218,21 @@ export function DataTable<T extends { id: string | number }>({
                     </div>
                   </td>
                 </tr>
+              ) : (
+                <tr>
+                  <td colSpan={columns.length + (actions ? 1 : 0)} className="px-6 py-32"></td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination Footer */}
         {showPagination && (
-          <div className="px-6 py-4 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between bg-neutral-50/30 gap-4">
+          <div className="px-6 py-4 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between bg-neutral-50/30 gap-4 relative z-20">
             <div className="flex items-center gap-4">
               <p className="text-xs font-bold text-neutral-500 uppercase tracking-tight">
-                Page {effectiveCurrentPage} of {internalTotalPages}
+                Page {activePage} of {totalPagesCount}
               </p>
               
               {onLimitChange && limit !== undefined && (
@@ -237,47 +251,50 @@ export function DataTable<T extends { id: string | number }>({
             {onPageChange && (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handlePageChange(effectiveCurrentPage - 1)}
-                  disabled={effectiveCurrentPage === 1 || isLoading}
-                  className="p-2 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                  type="button"
+                  onClick={() => handlePageChange(activePage - 1)}
+                  disabled={activePage === 1}
+                  className="p-2 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:bg-slate-50 disabled:text-slate-300 disabled:border-slate-100 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95"
                 >
                   <ChevronLeft size={18} />
                 </button>
                 <div className="flex items-center gap-1">
-                  {[...Array(internalTotalPages)].map((_, i) => {
-                    const page = i + 1;
-                    // Show current, first, last, and pages around current
+                  {[...Array(totalPagesCount)].map((_, i) => {
+                    const pageNum = i + 1;
                     if (
-                      page === 1 ||
-                      page === internalTotalPages ||
-                      (page >= effectiveCurrentPage - 1 && page <= effectiveCurrentPage + 1)
+                      pageNum === 1 ||
+                      pageNum === totalPagesCount ||
+                      (pageNum >= activePage - 1 && pageNum <= activePage + 1)
                     ) {
+                      const isActive = activePage === pageNum;
                       return (
                         <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
+                          key={pageNum}
+                          type="button"
+                          onClick={() => handlePageChange(pageNum)}
                           className={`w-10 h-10 rounded-xl text-xs font-black transition-all active:scale-95 ${
-                            effectiveCurrentPage === page
-                              ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                              : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                            isActive
+                              ? "bg-blue-600 text-white shadow-md shadow-blue-600/20 cursor-default"
+                              : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50 cursor-pointer"
                           }`}
                         >
-                          {page}
+                          {pageNum}
                         </button>
                       );
                     } else if (
-                      (page === 2 && effectiveCurrentPage > 3) ||
-                      (page === internalTotalPages - 1 && effectiveCurrentPage < internalTotalPages - 2)
+                      (pageNum === 2 && activePage > 3) ||
+                      (pageNum === totalPagesCount - 1 && activePage < totalPagesCount - 2)
                     ) {
-                      return <span key={page} className="px-1 text-neutral-400">...</span>;
+                      return <span key={pageNum} className="px-1 text-neutral-400 font-bold cursor-default">...</span>;
                     }
                     return null;
                   })}
                 </div>
                 <button
-                  onClick={() => handlePageChange(effectiveCurrentPage + 1)}
-                  disabled={effectiveCurrentPage === internalTotalPages || isLoading}
-                  className="p-2 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                  type="button"
+                  onClick={() => handlePageChange(activePage + 1)}
+                  disabled={activePage === totalPagesCount}
+                  className="p-2 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:bg-slate-50 disabled:text-slate-300 disabled:border-slate-100 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-95"
                 >
                   <ChevronRight size={18} />
                 </button>

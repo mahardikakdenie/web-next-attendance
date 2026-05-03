@@ -39,6 +39,12 @@ export default function EmployeesView() {
   const [limit, setLimit] = useState(10);
   const {user} = useAuthStore(); 
 
+  const subscription = user?.subscription;
+  const currentCount = subscription?.current_employees || 0;
+  const maxCount = subscription?.max_employees || 0;
+  const isLimitReached = maxCount > 0 && currentCount >= maxCount;
+  const usagePercentage = maxCount > 0 ? Math.min((currentCount / maxCount) * 100, 100) : 0;
+
   const getData = useCallback(async (page: number = 1, rowsLimit: number = 10) => {
     try {
       if (!user?.id) return;
@@ -208,6 +214,53 @@ export default function EmployeesView() {
           </Can>
         </div>
       </div>
+
+      {/* Plan Capacity Indicator */}
+      {subscription && maxCount > 0 && (
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+                <Users size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Employee Capacity</h3>
+                <p className="text-[11px] text-slate-400 font-bold tracking-widest mt-0.5">
+                  {currentCount} OF {maxCount} SEATS USED
+                </p>
+              </div>
+            </div>
+            {isLimitReached && (
+              <div className="px-3 py-1.5 rounded-full bg-rose-50 border border-rose-100 text-rose-600 text-[10px] font-black uppercase tracking-widest animate-pulse">
+                Limit Reached
+              </div>
+            )}
+          </div>
+          
+          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden relative">
+            <div 
+              className={`h-full transition-all duration-1000 ease-out rounded-full ${
+                usagePercentage > 90 ? 'bg-rose-500' : usagePercentage > 75 ? 'bg-amber-500' : 'bg-blue-600'
+              }`}
+              style={{ width: `${usagePercentage}%` }}
+            />
+          </div>
+          
+          <div className="flex justify-between mt-3">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+              {usagePercentage.toFixed(0)}% Capacity reached
+            </p>
+            {usagePercentage > 80 && (
+              <button 
+                onClick={() => setIsCreateModalOpen(true)} // Will trigger limit check
+                className="text-[10px] text-blue-600 font-black uppercase tracking-widest hover:underline"
+              >
+                Upgrade Plan
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <DataTable 
         data={employees} 

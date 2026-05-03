@@ -32,11 +32,14 @@ import {
   Target,
   Star,
   Briefcase,
-  History as ActivityIcon
+  History as ActivityIcon,
+  Lock
 } from "lucide-react";
 import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
 import { getDataCurrentTenat } from "@/service/tenantSettings";
 import Avatar from "@/components/ui/Avatar";
+import { toast } from "sonner";
+
 
 interface MenuItem {
   key: string;
@@ -49,6 +52,7 @@ interface MenuItem {
   path?: string;
   roles: RoleName[];
   permission?: string;
+  module?: string;
   children?: MenuItem[];
 }
 
@@ -113,6 +117,7 @@ const MENUS: MenuItem[] = [
         icon: LayoutDashboard,
         path: "/",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
+        module: "attendance",
       },
       {
         key: "analytics",
@@ -121,6 +126,7 @@ const MENUS: MenuItem[] = [
         path: "/analytics",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE],
         permission: "analytics.view",
+        module: "analytics",
       },
     ],
   },
@@ -139,6 +145,7 @@ const MENUS: MenuItem[] = [
         path: "/attendances",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
         permission: "attendance.view",
+        module: "attendance",
       },
       {
         key: "all-employees",
@@ -147,6 +154,7 @@ const MENUS: MenuItem[] = [
         path: "/employees",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
         permission: "user.view",
+        module: "user",
       },
       {
         key: "work-schedules",
@@ -155,6 +163,7 @@ const MENUS: MenuItem[] = [
         path: "/schedules",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
         permission: "schedule.view",
+        module: "schedule",
       },
       {
         key: "manage-leaves",
@@ -163,6 +172,7 @@ const MENUS: MenuItem[] = [
         path: "/leaves",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
         permission: "leave.view",
+        module: "leave",
       },
       {
         key: "manage-overtime",
@@ -171,6 +181,7 @@ const MENUS: MenuItem[] = [
         path: "/overtime",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
         permission: "overtime.view",
+        module: "overtime",
       },
       {
         key: "performance-goals",
@@ -179,6 +190,7 @@ const MENUS: MenuItem[] = [
         path: "/performance/goals",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
         permission: "performance.manage",
+        module: "performance",
       },
       {
         key: "performance-appraisals",
@@ -187,6 +199,7 @@ const MENUS: MenuItem[] = [
         path: "/performance/appraisals",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.USER],
         permission: "performance.view",
+        module: "performance",
       },
       {
         key: "projects",
@@ -195,6 +208,7 @@ const MENUS: MenuItem[] = [
         path: "/projects",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
         permission: "project.manage",
+        module: "project",
       },
     ],
   },
@@ -213,6 +227,7 @@ const MENUS: MenuItem[] = [
         path: "/payroll",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
         permission: "payroll.view",
+        module: "payroll",
       },
       {
         key: "payroll-calc",
@@ -221,6 +236,7 @@ const MENUS: MenuItem[] = [
         path: "/payroll/calculator",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
         permission: "payroll.calculate",
+        module: "payroll",
       },
     ],
   },
@@ -239,6 +255,7 @@ const MENUS: MenuItem[] = [
         path: "/finance/expenses",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
         permission: "expense.view",
+        module: "finance",
       },
       {
         key: "loans",
@@ -247,6 +264,7 @@ const MENUS: MenuItem[] = [
         path: "/finance/loans",
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
         permission: "loan.view",
+        module: "finance",
       },
     ],
   },
@@ -314,6 +332,7 @@ const MENUS: MenuItem[] = [
         icon: CalendarX,
         path: "/leaves",
         roles: [ROLES.USER],
+        module: "leave",
       },
       {
         key: "my-overtime",
@@ -321,6 +340,7 @@ const MENUS: MenuItem[] = [
         icon: Clock,
         path: "/overtime",
         roles: [ROLES.USER],
+        module: "overtime",
       },
       {
         key: "my-payroll",
@@ -328,6 +348,7 @@ const MENUS: MenuItem[] = [
         icon: Wallet,
         path: "/payroll",
         roles: [ROLES.USER],
+        module: "payroll",
       },
       {
         key: "my-timesheet",
@@ -335,6 +356,7 @@ const MENUS: MenuItem[] = [
         icon: ActivityIcon,
         path: "/timesheet",
         roles: [ROLES.USER],
+        module: "project",
       },
     ],
   },
@@ -343,20 +365,22 @@ const MENUS: MenuItem[] = [
 const filterMenuByRole = (
   menuList: MenuItem[], 
   userRole: RoleName, 
-  hasPermission: (id: string) => boolean
+  hasPermission: (id: string) => boolean,
+  hasModuleAccess: (module: string) => boolean
 ): MenuItem[] => {
   const normalizedRole = userRole.toLowerCase();
   return menuList
     .filter((menu) => {
       const roleAllowed = menu.roles.map(r => r.toLowerCase()).includes(normalizedRole);
       const permissionAllowed = menu.permission ? hasPermission(menu.permission) : true;
+      // We don't hide items here if module access is missing, we'll disable them in render
       return roleAllowed && permissionAllowed;
     })
     .map((menu) => {
       if (menu.children) {
         return {
           ...menu,
-          children: filterMenuByRole(menu.children, userRole, hasPermission),
+          children: filterMenuByRole(menu.children, userRole, hasPermission, hasModuleAccess),
         };
       }
       return menu;
@@ -374,8 +398,11 @@ export default function Sidebar() {
   const [tenantLogo, setTenantLogo] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string>("Attendance");
 
-  const { logout, user, hasPermission } = useAuthStore();
-  const role = user?.role?.name as RoleName | undefined;
+  const { logout, user, hasPermission, hasModuleAccess } = useAuthStore();
+  
+  // Use base_role for RBAC matching as role names can be custom
+  // Fallback to role.name if base_role is missing, and lowercase for matching with ROLES constant
+  const role = (user?.role?.base_role?.toLowerCase() || user?.base_role?.toLowerCase() || user?.role?.name?.toLowerCase()) as RoleName | undefined;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -401,8 +428,8 @@ export default function Sidebar() {
 
   const filteredMenus = useMemo(() => {
     if (!isMounted || !role) return [];
-    return filterMenuByRole(MENUS, role, hasPermission);
-  }, [role, isMounted, hasPermission]);
+    return filterMenuByRole(MENUS, role, hasPermission, hasModuleAccess);
+  }, [role, isMounted, hasPermission, hasModuleAccess]);
 
   const isActive = useCallback((path?: string) => (path ? pathname === path : false), [pathname]);
 
@@ -454,12 +481,27 @@ export default function Sidebar() {
     const hasChildren = menu.children && menu.children.length > 0;
     const expanded = isMenuExpanded(menu.key);
     const active = hasChildren ? isParentActive(menu) : isActive(menu.path);
+    
+    // Check module access for RBAC 2.1
+    const isLocked = menu.module ? !hasModuleAccess(menu.module) : false;
 
     return (
       <div key={menu.key} className="w-full">
         <button
           type="button"
+          disabled={isLocked && !hasChildren} // Prevent navigation for locked leaf items
           onClick={() => {
+            if (isLocked && !hasChildren) {
+              toast.error("Upgrade Required", {
+                description: `The ${menu.label} module is not available in your current plan.`,
+                action: {
+                  label: "Upgrade",
+                  onClick: () => router.push("/tenant-settings/billing")
+                }
+              });
+              return;
+            }
+
             if (!open) {
               setOpen(true);
               if (hasChildren) {
@@ -482,14 +524,23 @@ export default function Sidebar() {
               ? "bg-white text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/50"
               : active && hasChildren
               ? "text-blue-600 font-black"
+              : isLocked 
+              ? "text-slate-300 cursor-not-allowed opacity-60" 
               : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-900"
           }`}
         >
-          <Icon 
-            size={isChild ? 18 : 20} 
-            strokeWidth={active ? 2.5 : 2} 
-            className={`shrink-0 ${active && !hasChildren && !isChild ? "text-blue-600" : ""}`} 
-          />
+          <div className="relative">
+            <Icon 
+              size={isChild ? 18 : 20} 
+              strokeWidth={active ? 2.5 : 2} 
+              className={`shrink-0 ${active && !hasChildren && !isChild ? "text-blue-600" : ""}`} 
+            />
+            {isLocked && !hasChildren && (
+              <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                <Lock size={8} className="text-slate-400" />
+              </div>
+            )}
+          </div>
 
           <span
             className={`font-bold whitespace-nowrap overflow-hidden transition-all duration-300 ${
@@ -498,6 +549,10 @@ export default function Sidebar() {
           >
             {menu.label}
           </span>
+
+          {isLocked && open && !hasChildren && (
+            <Lock size={12} className="ml-auto text-slate-300" />
+          )}
 
           {hasChildren && (
             <ChevronDown

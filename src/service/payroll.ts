@@ -27,8 +27,12 @@ export const getPayrollList = async (params: { period: string; page?: number; li
   return secureRequest<APIResponse<PayrollRecord[]>>("get", "/v1/payroll", params);
 };
 
-export const generatePayrollCycle = async (period: string) => {
-  return secureRequest<APIResponse<null>>("post", "/v1/payroll/generate", { period });
+export const generatePayrollCycle = async (
+  period: string, 
+  run_type: 'Regular' | 'THR' | 'Bonus' | 'All' = "Regular", 
+  method: 'Gross' | 'Net' = "Gross"
+) => {
+  return secureRequest<APIResponse<null>>("post", "/v1/payroll/generate", { period, run_type, method });
 };
 
 export const publishPayroll = async (id: number) => {

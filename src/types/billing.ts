@@ -11,5 +11,5 @@ export interface MySubscription {
 }
 
 export interface UpgradePayload {
-  plan: SubscriptionPlan;
+  plan_id: number;
 }

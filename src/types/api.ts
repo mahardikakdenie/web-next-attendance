@@ -128,6 +128,7 @@ export interface UserData {
   base_role?: 'SUPERADMIN' | 'ADMIN' | 'HR' | 'FINANCE' | 'EMPLOYEE';
   role?: Role;
   permissions?: string[]; // Array of strings from BE for easy UI toggling
+  plan_features?: string[]; // RBAC 2.1: Plan-based feature locking
   is_owner: boolean;
   must_change_password: boolean;
   base_salary: number;
@@ -135,12 +136,25 @@ export interface UserData {
   delegate_id?: number;
   tenant?: UserTenant;
   tenant_setting?: UserTenantSettings;
+  subscription?: SubscriptionData;
   attendances?: UserAttendance[];
   recent_activities?: UserRecentActivity[];
   ptkp_status: string;
   expense_quota: number;
   shift?: Shift;
   status?: string;
+}
+
+export interface SubscriptionData {
+  id: number;
+  tenant_id: number;
+  plan_name: string; // "Trial", "Starter", "Business", "Enterprise"
+  status: string; // "Active", "Trial", "Expired", "Suspended"
+  max_employees: number;
+  current_employees: number;
+  next_billing_date: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Shift {
@@ -457,8 +471,13 @@ export interface AttendanceFilterParams {
  */
 
 export interface PayrollCalculatePayload {
+  userId?: number;
+  runType: 'Regular' | 'THR' | 'Bonus' | 'All';
+  method: 'Gross' | 'Net';
   basicSalary: number;
   fixedAllowances: number;
+  incentives: number;
+  calculateThr?: boolean;
   dailyMealAllowance: number;
   dailyTransportAllowance: number;
   attendanceDays: number;
@@ -474,14 +493,19 @@ export interface PayrollCalculationResult {
   netSalary: number;
   totalDeductions: number;
   totalCompanyCost: number;
+  run_type: 'Regular' | 'THR' | 'Bonus' | 'All';
+  method: 'Gross' | 'Net';
   breakdown: {
     proratedBasic: number;
     fixedAllowances: number;
     variableAllowances: number;
+    incentives: number;
     unpaidLeaveDeduction: number;
     overtimePay: number;
     grossIncome: number;
     pph21Amount: number;
+    taxAllowance?: number;
+    bpjsAllowance?: number;
     terRate: number;
     bpjs: {
       health: { employee: number; company: number };
@@ -490,6 +514,8 @@ export interface PayrollCalculationResult {
       jkk: number;
       jkm: number;
     };
+    thr?: number;
+    bonus?: number;
   };
 }
 
@@ -541,6 +567,9 @@ export interface PayrollEarnings {
   overtime_pay: number;
   incentives: number;
   bonus: number;
+  thr?: number;
+  tax_allowance?: number;
+  bpjs_allowance?: number;
   gross_income: number;
 }
 
@@ -579,6 +608,8 @@ export interface PayrollRecord {
   working_days: string;
   unpaid_leave_days: number;
   status: 'Draft' | 'Published' | string;
+  run_type: 'Regular' | 'THR' | 'Bonus' | 'All';
+  method: 'Gross' | 'Net';
 }
 
 export interface EmployeeBaseline {
@@ -600,8 +631,11 @@ export interface AttendanceSyncData {
 
 export interface SavePayrollPayload {
   period: string;
+  run_type: 'Regular' | 'THR' | 'Bonus' | 'All';
+  method: 'Gross' | 'Net';
   basic_salary: number;
   fixed_allowances: number;
+  incentives: number;
   daily_meal_allowance: number;
   daily_transport_allowance: number;
   attendance_days: number;

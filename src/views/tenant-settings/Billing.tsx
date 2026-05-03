@@ -20,11 +20,12 @@ import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import { Can } from "@/components/auth/PermissionGuard";
-import { SubscriptionPlan } from "@/types/subscription";
+import { CustomApiError } from "@/types/api";
 
 const PRICING_PLANS = [
   {
-    name: "Starter" as SubscriptionPlan,
+    id: 1,
+    name: "Starter",
     price: 0,
     description: "Essential for small teams just getting started.",
     features: ["Up to 10 Employees", "Basic Attendance Logs", "Manual Reports", "Email Support"],
@@ -32,7 +33,8 @@ const PRICING_PLANS = [
     icon: ShieldCheck
   },
   {
-    name: "Business" as SubscriptionPlan,
+    id: 2,
+    name: "Business",
     price: 500000,
     description: "Advanced features for growing organizations.",
     features: ["Up to 100 Employees", "Advanced Analytics", "Geofence Rules", "Priority Support", "Payroll Integration"],
@@ -41,7 +43,8 @@ const PRICING_PLANS = [
     popular: true
   },
   {
-    name: "Enterprise" as SubscriptionPlan,
+    id: 3,
+    name: "Enterprise",
     price: 1500000,
     description: "Maximum scale and dedicated enterprise support.",
     features: ["Unlimited Employees", "Custom Integrations", "Dedicated Manager", "White-label Options", "SLA Guarantee"],
@@ -59,21 +62,21 @@ export default function BillingView() {
   });
 
   const upgradeMutation = useMutation({
-    mutationFn: (plan: SubscriptionPlan) => upgradePlan({ plan }),
+    mutationFn: (planId: number) => upgradePlan({ plan_id: planId }),
     onSuccess: () => {
       toast.success("Upgrade request submitted successfully!");
       queryClient.invalidateQueries({ queryKey: ["my-subscription"] });
     },
-    onError: () => {
-      toast.error("Failed to process upgrade. Please contact support.");
+    onError: (error: CustomApiError) => {
+      toast.error(error?.response?.data?.meta?.message || "Failed to process upgrade. Please contact support.");
     }
   });
 
   const mySub = subResp?.data;
 
-  const handleUpgrade = (plan: SubscriptionPlan) => {
-    if (window.confirm(`Are you sure you want to upgrade to the ${plan} plan?`)) {
-      upgradeMutation.mutate(plan);
+  const handleUpgrade = (planId: number, planName: string) => {
+    if (window.confirm(`Are you sure you want to upgrade to the ${planName} plan?`)) {
+      upgradeMutation.mutate(planId);
     }
   };
 
@@ -118,13 +121,17 @@ export default function BillingView() {
 
             {/* Current Plan Summary Card */}
             {mySub && (
-              <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 min-w-[280px] shadow-xl ring-1 ring-white/20">
+              <div className="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 min-w-[320px] shadow-xl ring-1 ring-white/20">
                 <div className="flex items-center justify-between mb-4">
                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Current Plan</span>
-                   <Badge className="bg-indigo-500 text-white border-none font-black text-[9px] uppercase px-2 py-0.5">{mySub.status}</Badge>
+                   <Badge className={`border-none font-black text-[9px] uppercase px-2 py-0.5 ${
+                     mySub.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                   }`}>
+                     {mySub.status}
+                   </Badge>
                 </div>
                 <div className="flex items-end gap-2 mb-4">
-                  <span className="text-3xl font-black">{mySub.plan}</span>
+                  <span className="text-3xl font-black">{mySub.plan.name}</span>
                   <span className="text-xs font-bold text-slate-500 mb-1.5">Elite Edition</span>
                 </div>
                 <div className="space-y-2 border-t border-white/5 pt-4">
@@ -132,7 +139,7 @@ export default function BillingView() {
                       <Calendar size={14} /> Next Billing: {dayjs(mySub.next_billing_date).format("MMM DD, YYYY")}
                    </div>
                    <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                      <Wallet size={14} /> Amount: {formatCurrency(mySub.amount)}
+                      <Wallet size={14} /> Monthly: {formatCurrency(mySub.amount)}
                    </div>
                 </div>
               </div>
@@ -140,10 +147,33 @@ export default function BillingView() {
           </div>
         </section>
 
+        {/* Current Active Features (AC: "sisa kuota, dan fitur yang aktif") */}
+        {mySub && (
+          <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm flex flex-col md:flex-row gap-8 items-start md:items-center">
+             <div className="flex-1 space-y-4">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight">Active Plan Features</h3>
+                <div className="flex flex-wrap gap-2">
+                   {mySub.plan.features.map((feat) => (
+                     <Badge key={feat} className="bg-slate-50 text-slate-600 border border-slate-200 font-bold px-3 py-1">
+                        {feat}
+                     </Badge>
+                   ))}
+                </div>
+             </div>
+             <div className="w-full md:w-auto p-6 bg-indigo-50 rounded-2xl border border-indigo-100 flex flex-col items-center text-center">
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Employee Capacity</span>
+                <div className="text-2xl font-black text-indigo-900">
+                  {mySub.plan.max_employees === 0 ? "Unlimited" : `Up to ${mySub.plan.max_employees}`}
+                </div>
+                <span className="text-xs font-bold text-indigo-400">Active Seats</span>
+             </div>
+          </div>
+        )}
+
         {/* Pricing Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-2">
           {PRICING_PLANS.map((plan) => {
-            const isCurrent = mySub?.plan === plan.name;
+            const isCurrent = mySub?.plan.name === plan.name;
             const PlanIcon = plan.icon;
             
             return (
@@ -190,7 +220,7 @@ export default function BillingView() {
 
                 <Button 
                   disabled={isCurrent || upgradeMutation.isPending}
-                  onClick={() => handleUpgrade(plan.name)}
+                  onClick={() => handleUpgrade(plan.id, plan.name)}
                   className={`h-16 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 ${
                     isCurrent 
                     ? "bg-slate-100 text-slate-400 cursor-not-allowed border-none shadow-none" 

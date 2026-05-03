@@ -258,6 +258,40 @@ export const PayslipPDFDocument = ({ data, companyName, logo, ptkp, period, empl
               <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.proratedBasic || 0)}</Text>
             </View>
 
+            {(data?.breakdown?.taxAllowance || 0) > 0 && (
+              <View style={styles.row}>
+                <View style={styles.rowLabelContainer}>
+                  <Text style={styles.rowLabel}>Tax Allowance</Text>
+                  <Text style={styles.rowLabelSub}>Method: Net (Gross Up)</Text>
+                </View>
+                <Text style={[styles.rowValue, { color: '#4f46e5' }]}>{formatCurrency(data?.breakdown?.taxAllowance || 0)}</Text>
+              </View>
+            )}
+
+            {(data?.breakdown?.bpjsAllowance || 0) > 0 && (
+              <View style={styles.row}>
+                <View style={styles.rowLabelContainer}>
+                  <Text style={styles.rowLabel}>BPJS Allowance</Text>
+                  <Text style={styles.rowLabelSub}>Employer covers employee share</Text>
+                </View>
+                <Text style={[styles.rowValue, { color: '#4f46e5' }]}>{formatCurrency(data?.breakdown?.bpjsAllowance || 0)}</Text>
+              </View>
+            )}
+
+            {(data?.breakdown?.thr || 0) > 0 && (
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { color: '#059669' }]}>THR</Text>
+                <Text style={[styles.rowValue, { color: '#059669' }]}>{formatCurrency(data?.breakdown?.thr || 0)}</Text>
+              </View>
+            )}
+
+            {(data?.breakdown?.bonus || 0) > 0 && (
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { color: '#7c3aed' }]}>Bonus</Text>
+                <Text style={[styles.rowValue, { color: '#7c3aed' }]}>{formatCurrency(data?.breakdown?.bonus || 0)}</Text>
+              </View>
+            )}
+
             <View style={styles.row}>
               <Text style={styles.rowLabel}>Allowances (Fixed)</Text>
               <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.fixedAllowances || 0)}</Text>

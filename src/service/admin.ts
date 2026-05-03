@@ -1,5 +1,6 @@
 import { secureRequest } from "@/lib/axios";
 import { APIResponse, UserData } from "@/types/api";
+import { AnalyticsDashboardResponse } from "@/types/analytics";
 
 export interface UpdateTenantPayload {
   name: string;
@@ -7,6 +8,13 @@ export interface UpdateTenantPayload {
   is_suspended: boolean;
   suspended_reason: string;
 }
+
+/**
+ * Superadmin Analytics
+ */
+export const getGlobalAnalytics = (period: string = "this_year") => {
+  return secureRequest<APIResponse<AnalyticsDashboardResponse>>("get", "/v1/superadmin/analytics/dashboard", { period });
+};
 
 /**
  * Superadmin Tenant Management

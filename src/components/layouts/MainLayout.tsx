@@ -3,6 +3,7 @@ import SessionTimeoutWatcher from "@/components/auth/SessionTimeoutWatcher";
 import OfflineIndicator from "@/components/ui/OfflineIndicator";
 import OnboardingTour from "@/components/ui/OnboardingTour";
 import FloatingHelpButton from "@/components/ui/FloatingHelpButton";
+import TrialBanner from "@/components/ui/TrialBanner";
 import Sidebar from "./Sidebar";
 import TopNavbar from "./TopNavbar";
 import BottomNav from "./BottomNav";
@@ -35,6 +36,9 @@ export default function MainLayout({
         <header className="sticky top-0 z-30 w-full bg-white/70 backdrop-blur-2xl border-b border-slate-100/60 transition-all duration-300">
           <TopNavbar />
         </header>
+
+        {/* Plan Capacity & Trial Banner */}
+        <TrialBanner />
 
         {/* Scrollable Content */}
         <main className="flex-1 overflow-y-auto custom-scrollbar pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0">

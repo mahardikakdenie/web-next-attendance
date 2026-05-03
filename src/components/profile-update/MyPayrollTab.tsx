@@ -70,14 +70,21 @@ export default function MyPayrollTab() {
       netSalary: slip.net_salary,
       totalDeductions: slip.breakdown.deductions.total_deductions,
       totalCompanyCost: slip.breakdown.employer_contributions?.total_employer_cost || 0,
+      run_type: slip.run_type,
+      method: slip.method,
       breakdown: {
         proratedBasic: slip.breakdown.earnings.basic_salary,
         fixedAllowances: slip.breakdown.earnings.fixed_allowances,
         variableAllowances: slip.breakdown.earnings.variable_allowances,
         unpaidLeaveDeduction: slip.breakdown.deductions.unpaid_leave_deduction,
         overtimePay: slip.breakdown.earnings.overtime_pay,
+        incentives: slip.breakdown.earnings.incentives,
         grossIncome: slip.breakdown.earnings.gross_income,
         pph21Amount: slip.breakdown.deductions.pph21_amount,
+        taxAllowance: slip.breakdown.earnings.tax_allowance,
+        bpjsAllowance: slip.breakdown.earnings.bpjs_allowance,
+        thr: slip.breakdown.earnings.thr,
+        bonus: slip.breakdown.earnings.bonus,
         terRate: 0, // Not provided in detail breakdown currently
         bpjs: {
           health: {

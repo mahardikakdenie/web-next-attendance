@@ -33,9 +33,10 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Input from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { toast } from "sonner";
 import dayjs from "dayjs";
-import { UserData, PayrollCalculationResult } from "@/types/api";
+import { UserData, PayrollCalculationResult, CustomApiError } from "@/types/api";
 import Image from "next/image";
 
 const DynamicPDFDownload = dynamic(() => import("@/components/payroll/DynamicPDFDownload"), {
@@ -48,7 +49,7 @@ const DynamicPDFDownload = dynamic(() => import("@/components/payroll/DynamicPDF
   )
 });
 
-export default function SalaryCalculatorView() {
+export default function SalaryCalculatorView({ isStateless = false }: { isStateless?: boolean }) {
   const { user, loading: authLoading } = useAuthStore();
   const router = useRouter();
 
@@ -81,12 +82,15 @@ export default function SalaryCalculatorView() {
 
   // Input State
   const [inputs, setInputs] = useState<PayrollInput>({
+    runType: 'Regular',
+    method: 'Gross',
     basicSalary: 0,
     fixedAllowances: 0,
+    incentives: 0,
     dailyMealAllowance: 0,
     dailyTransportAllowance: 0,
     attendanceDays: 0,
-    workingDaysInMonth: 22,
+    workingDaysInMonth: 0,
     overtimeHours: 0,
     unpaidLeaveDays: 0,
     ptkpStatus: "TK/0"
@@ -103,8 +107,8 @@ export default function SalaryCalculatorView() {
         if (resp.data) {
           setEmployees(resp.data);
         }
-      } catch (error) {
-        console.error("Failed to fetch employees:", error);
+      } catch (error: unknown) {
+        console.error("Failed to fetch employees:", error instanceof Error ? error.message : String(error));
       }
     };
     if (user && !authLoading) fetchEmployees();
@@ -128,22 +132,21 @@ export default function SalaryCalculatorView() {
           const baseline = baselineResp.data;
           const sync = syncResp.data;
 
-          setInputs({
+          setInputs(prev => ({
+            ...prev,
             basicSalary: baseline.basic_salary,
             fixedAllowances: baseline.fixed_allowances,
-            dailyMealAllowance: 0, // Manual input for simulation
-            dailyTransportAllowance: 0, // Manual input for simulation
+            incentives: 0,
             attendanceDays: sync.attendance_days,
             workingDaysInMonth: sync.working_days_in_month,
             overtimeHours: sync.overtime_hours,
             unpaidLeaveDays: sync.unpaid_leave_days,
-            ptkpStatus: baseline.ptkp_status as "TK/0" | "TK/1" | "TK/2" | "TK/3" | "K/0" | "K/1" | "K/2" | "K/3",
-          });
-          
+            ptkpStatus: baseline.ptkp_status as PayrollInput['ptkpStatus'],
+          }));
           toast.success(`Data synced for ${baseline.employee_name}`, { id: "sync-payroll" });
         }
-      } catch (error) {
-        console.error("Sync failed:", error);
+      } catch (error: unknown) {
+        console.error("Sync failed:", error instanceof Error ? error.message : String(error));
         toast.error("Failed to sync employee data", { id: "sync-payroll" });
       }
     };
@@ -154,9 +157,8 @@ export default function SalaryCalculatorView() {
   // Debounce logic
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedSearch(inputs);
+      setDebouncedInputs(inputs);
     }, 500);
-    const setDebouncedSearch = (val: typeof inputs) => setDebouncedInputs(val);
     return () => clearTimeout(handler);
   }, [inputs]);
 
@@ -184,7 +186,12 @@ export default function SalaryCalculatorView() {
           fixed_allowances: localResult.breakdown.fixedAllowances,
           variable_allowances: localResult.breakdown.variableAllowances,
           overtime_pay: localResult.breakdown.overtimePay,
+          incentives: localResult.breakdown.incentives,
           gross_income: localResult.breakdown.grossIncome,
+          tax_allowance: localResult.breakdown.taxAllowance,
+          bpjs_allowance: localResult.breakdown.bpjsAllowance,
+          thr: localResult.breakdown.thr,
+          bonus: localResult.breakdown.bonus,
         },
         deductions: {
           pph21_amount: localResult.breakdown.pph21Amount,
@@ -202,9 +209,11 @@ export default function SalaryCalculatorView() {
           bpjs_jkk: localResult.breakdown.bpjs.jkk,
           bpjs_jkm: localResult.breakdown.bpjs.jkm,
         }
-      }
+      },
+      run_type: inputs.runType,
+      method: inputs.method
     };
-  }, [calcResp, localResult]);
+  }, [calcResp, localResult, inputs.runType, inputs.method]);
 
   // Save Mutation
   const saveMutation = useMutation({
@@ -212,8 +221,11 @@ export default function SalaryCalculatorView() {
       if (!selectedUserId) throw new Error("Select an employee first");
       return saveEmployeePayroll(selectedUserId, {
         period: selectedPeriod,
+        run_type: inputs.runType,
+        method: inputs.method,
         basic_salary: inputs.basicSalary,
         fixed_allowances: inputs.fixedAllowances,
+        incentives: inputs.incentives,
         daily_meal_allowance: inputs.dailyMealAllowance,
         daily_transport_allowance: inputs.dailyTransportAllowance,
         attendance_days: inputs.attendanceDays,
@@ -228,9 +240,8 @@ export default function SalaryCalculatorView() {
       toast.success("Payroll successfully saved to dashboard");
       router.push("/payroll");
     },
-    onError: (err) => {
-      console.log(err);
-      toast.error("Failed to save payroll");
+    onError: (err: CustomApiError) => {
+      toast.error(err?.response?.data?.meta?.message || "Failed to save payroll");
     }
   });
 
@@ -275,14 +286,16 @@ export default function SalaryCalculatorView() {
         </div>
         
         <div className="flex flex-wrap gap-3">
-          <Button 
-            disabled={saveMutation.isPending || !selectedUserId}
-            onClick={() => saveMutation.mutate()}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl h-12 shadow-md flex items-center gap-2"
-          >
-            {saveMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-            <span className="font-bold">Save to Dashboard</span>
-          </Button>
+          {!isStateless && (
+            <Button 
+              disabled={saveMutation.isPending || !selectedUserId}
+              onClick={() => saveMutation.mutate()}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl h-12 shadow-md flex items-center gap-2"
+            >
+              {saveMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+              <span className="font-bold">Save to Dashboard</span>
+            </Button>
+          )}
 
           {result && (
             <DynamicPDFDownload 
@@ -292,6 +305,8 @@ export default function SalaryCalculatorView() {
                 netSalary: result?.net_salary,
                 totalDeductions: result?.breakdown?.deductions?.total_deductions,
                 totalCompanyCost: result?.breakdown?.employer_contributions?.total_employer_cost,
+                run_type: result?.run_type,
+                method: result?.method,
                 breakdown: {
                   proratedBasic: result?.breakdown?.earnings?.basic_salary,
                   unpaidLeaveDeduction: result?.breakdown?.deductions?.unpaid_leave_deduction,
@@ -317,6 +332,10 @@ export default function SalaryCalculatorView() {
                   },
                   fixedAllowances: result?.breakdown?.earnings?.fixed_allowances,
                   variableAllowances: result?.breakdown?.earnings?.variable_allowances,
+                  taxAllowance: result?.breakdown?.earnings?.tax_allowance,
+                  bpjsAllowance: result?.breakdown?.earnings?.bpjs_allowance,
+                  thr: result?.breakdown?.earnings?.thr,
+                  bonus: result?.breakdown?.earnings?.bonus,
                 }
               } as PayrollCalculationResult} 
               companyName={user.tenant?.name || "AttendancePro Organization"} 
@@ -391,6 +410,34 @@ export default function SalaryCalculatorView() {
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                 </div>
               </div>
+
+              {/* Run Type & Method */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Run Type</label>
+                  <select 
+                    value={inputs.runType}
+                    onChange={(e) => setInputs(p => ({ ...p, runType: e.target.value as PayrollInput['runType'] }))}
+                    className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none"
+                  >
+                    <option value="Regular" className="text-slate-900">Gaji Reguler</option>
+                    <option value="THR" className="text-slate-900">THR</option>
+                    <option value="Bonus" className="text-slate-900">Bonus</option>
+                    <option value="All" className="text-slate-900">Gabungan</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax Method</label>
+                  <select 
+                    value={inputs.method}
+                    onChange={(e) => setInputs(p => ({ ...p, method: e.target.value as PayrollInput['method'] }))}
+                    className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none"
+                  >
+                    <option value="Gross" className="text-slate-900">Gross (Potong Gaji)</option>
+                    <option value="Net" className="text-slate-900">Net (Gross Up)</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -427,11 +474,22 @@ export default function SalaryCalculatorView() {
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Incentives / Commissions</label>
+                    <div className="relative group">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</div>
+                      <Input 
+                        value={inputs.incentives.toLocaleString('id-ID')}
+                        onChange={(e) => handleNumberInput('incentives', e.target.value)}
+                        className="pl-11 font-bold text-lg"
+                      />
+                    </div>
+                  </div>
                 </div>
               </section>
 
               {/* Daily Allowances */}
-              <section className="space-y-5 pt-8 border-t border-slate-100">
+              <section className={`space-y-5 pt-8 border-t border-slate-100 ${inputs.runType === 'THR' ? 'opacity-40 pointer-events-none' : ''}`}>
                 <div className="flex items-center gap-2 text-slate-400">
                   <Receipt size={16} />
                   <h3 className="text-[10px] font-black uppercase tracking-widest">Daily Allowances (Variable)</h3>
@@ -490,7 +548,7 @@ export default function SalaryCalculatorView() {
                       className="font-bold"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className={`space-y-2 ${inputs.runType === 'THR' ? 'opacity-40 pointer-events-none' : ''}`}>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">OT Hours</label>
                     <div className="relative">
                       <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
@@ -502,7 +560,7 @@ export default function SalaryCalculatorView() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className={`space-y-2 ${inputs.runType === 'THR' ? 'opacity-40 pointer-events-none' : ''}`}>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Unpaid Leave</label>
                     <div className="relative">
                       <MinusCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-rose-300" size={16} />
@@ -528,7 +586,7 @@ export default function SalaryCalculatorView() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">PTKP Status (Effective 2024)</label>
                   <select 
                     value={inputs.ptkpStatus}
-                    onChange={(e) => setInputs(p => ({ ...p, ptkpStatus: e.target.value as "TK/0" | "TK/1" | "TK/2" | "TK/3" | "K/0" | "K/1" | "K/2" | "K/3" }))}
+                    onChange={(e) => setInputs(p => ({ ...p, ptkpStatus: e.target.value as PayrollInput['ptkpStatus'] }))}
                     className="w-full h-14 px-5 bg-white border border-slate-200 rounded-2xl text-[15px] font-bold text-slate-900 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all outline-none appearance-none cursor-pointer"
                   >
                     {["TK/0", "TK/1", "TK/2", "TK/3", "K/0", "K/1", "K/2", "K/3"].map(status => (
@@ -607,7 +665,18 @@ export default function SalaryCalculatorView() {
                 <div className="text-left sm:text-right space-y-1">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Statement Date</p>
                   <p className="text-sm font-bold text-slate-900">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                  <p className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md inline-block uppercase mt-2">Status: {inputs.ptkpStatus}</p>
+                  <div className="flex items-center gap-2 justify-start sm:justify-end mt-2">
+                    <Badge className="bg-indigo-50 text-indigo-600 border-none text-[9px] font-black uppercase tracking-tight px-1.5 py-0.5">
+                      {inputs.ptkpStatus}
+                    </Badge>
+                    <Badge className={`${
+                      inputs.runType === 'THR' ? 'bg-emerald-100 text-emerald-700' : 
+                      inputs.runType === 'Bonus' ? 'bg-purple-100 text-purple-700' : 
+                      'bg-blue-100 text-blue-700'
+                    } border-none text-[9px] font-black uppercase tracking-tight px-1.5 py-0.5`}>
+                      {inputs.runType}
+                    </Badge>
+                  </div>
                 </div>
               </div>
 
@@ -633,10 +702,59 @@ export default function SalaryCalculatorView() {
                       </div>
                       <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.basic_salary)}</span>
                     </div>
+
+                    {(result?.breakdown?.earnings?.tax_allowance ?? 0) > 0 && (
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-bold text-slate-700">Tax Allowance</p>
+                            <div className="group/tip relative cursor-help">
+                              <AlertCircle size={12} className="text-indigo-400" />
+                              <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-slate-900 text-[9px] text-white rounded-lg opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-30">
+                                Pajak ini ditanggung perusahaan (Gross-Up System).
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-indigo-500 font-medium italic">Method: Net</p>
+                        </div>
+                        <span className="text-sm font-bold text-indigo-600">{formatCurrency(result?.breakdown?.earnings?.tax_allowance)}</span>
+                      </div>
+                    )}
+
+                    {(result?.breakdown?.earnings?.bpjs_allowance ?? 0) > 0 && (
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-bold text-slate-700">BPJS Allowance</p>
+                          <p className="text-[10px] text-indigo-500 font-medium italic">Employer covers employee share</p>
+                        </div>
+                        <span className="text-sm font-bold text-indigo-600">{formatCurrency(result?.breakdown?.earnings?.bpjs_allowance)}</span>
+                      </div>
+                    )}
+
+                    {(result?.breakdown?.earnings?.thr ?? 0) > 0 && (
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm font-bold text-emerald-600">THR</p>
+                        <span className="text-sm font-bold text-emerald-600">{formatCurrency(result?.breakdown?.earnings?.thr)}</span>
+                      </div>
+                    )}
+
+                    {(result?.breakdown?.earnings?.bonus ?? 0) > 0 && (
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm font-bold text-purple-600">Bonus</p>
+                        <span className="text-sm font-bold text-purple-600">{formatCurrency(result?.breakdown?.earnings?.bonus)}</span>
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-start">
                       <p className="text-sm font-bold text-slate-700">Allowances (Fixed)</p>
                       <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.fixed_allowances)}</span>
                     </div>
+                    {result?.breakdown?.earnings?.incentives > 0 && (
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm font-bold text-slate-700">Incentives</p>
+                        <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.incentives)}</span>
+                      </div>
+                    )}
                     {result?.breakdown?.earnings?.variable_allowances > 0 && (
                       <div className="flex justify-between items-start">
                         <div className="space-y-0.5">
@@ -646,13 +764,15 @@ export default function SalaryCalculatorView() {
                         <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.variable_allowances)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-bold text-slate-700">Overtime Pay</p>
-                        <p className="text-[10px] text-slate-400 font-medium italic">{inputs.overtimeHours} hours calculated</p>
+                    {result?.breakdown?.earnings?.overtime_pay > 0 && (
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-bold text-slate-700">Overtime Pay</p>
+                          <p className="text-[10px] text-slate-400 font-medium italic">{inputs.overtimeHours} hours calculated</p>
+                        </div>
+                        <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.overtime_pay)}</span>
                       </div>
-                      <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.overtime_pay)}</span>
-                    </div>
+                    )}
                   </div>
                 </div>
 

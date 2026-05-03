@@ -1,6 +1,12 @@
 import { secureRequest } from "@/lib/axios";
 import { APIResponse } from "@/types/api";
-import { SubscriptionsResponse } from "@/types/subscription";
+import { 
+  SubscriptionsResponse, 
+  SubscriptionPlan, 
+  CreatePlanPayload, 
+  UpdatePlanPayload, 
+  OverrideSubscriptionPayload 
+} from "@/types/subscription";
 import { MySubscription, UpgradePayload } from "@/types/billing";
 
 /**
@@ -32,10 +38,34 @@ export const getSubscriptions = (
   });
 };
 
+export const overrideSubscription = (id: number, payload: OverrideSubscriptionPayload) => {
+  return secureRequest<APIResponse<null>>("put", `/v1/superadmin/subscriptions/${id}`, payload);
+};
+
 export const sendBillingReminder = (id: number) => {
   return secureRequest<APIResponse<null>>("post", `/v1/superadmin/subscriptions/${id}/remind`);
 };
 
 export const suspendTenant = (id: number, reason: string) => {
   return secureRequest<APIResponse<null>>("post", `/v1/superadmin/subscriptions/${id}/suspend`, { reason });
+};
+
+/**
+ * SUPERADMIN: Global Plans CRUD
+ */
+
+export const getPlans = () => {
+  return secureRequest<APIResponse<SubscriptionPlan[]>>("get", "/v1/superadmin/plans");
+};
+
+export const createPlan = (payload: CreatePlanPayload) => {
+  return secureRequest<APIResponse<SubscriptionPlan>>("post", "/v1/superadmin/plans", payload);
+};
+
+export const updatePlan = (id: number, payload: UpdatePlanPayload) => {
+  return secureRequest<APIResponse<SubscriptionPlan>>("put", `/v1/superadmin/plans/${id}`, payload);
+};
+
+export const deletePlan = (id: number) => {
+  return secureRequest<APIResponse<null>>("delete", `/v1/superadmin/plans/${id}`);
 };

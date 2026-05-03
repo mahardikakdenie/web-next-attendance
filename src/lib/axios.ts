@@ -1,5 +1,6 @@
 // src/lib/axios.ts
 import axios, { type AxiosRequestConfig } from "axios";
+import { toast } from "sonner";
 
 export const api = axios.create({
   baseURL: "/api",
@@ -73,6 +74,23 @@ api.interceptors.response.use(
     ) {
       isRedirectingToLogin = true;
       window.location.replace("/login?forceLogin=1");
+    }
+
+    if (status === 403) {
+      const message = error?.response?.data?.meta?.message || "";
+      if (message.includes("Feature not available in your current plan")) {
+        toast.error("Feature Locked", {
+          description: "This feature is not available in your current plan. Please upgrade to unlock.",
+          action: {
+            label: "Upgrade",
+            onClick: () => {
+              if (typeof window !== "undefined") {
+                window.location.href = "/tenant-settings/billing";
+              }
+            }
+          }
+        });
+      }
     }
 
     return Promise.reject(error);

@@ -129,6 +129,34 @@ export default function EnhancedPayslipModal({
                       </div>
                       <span className="text-sm font-bold text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.basic_salary)}</span>
                     </div>
+
+                    {(selectedEmployeeSlip.breakdown?.earnings?.tax_allowance ?? 0) > 0 && (
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-bold text-slate-700">Tax Allowance</p>
+                          <p className="text-[10px] text-indigo-500 font-medium italic">Method: Net (Gross Up)</p>
+                        </div>
+                        <span className="text-sm font-bold text-indigo-600">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.tax_allowance)}</span>
+                      </div>
+                    )}
+
+                    {(selectedEmployeeSlip.breakdown?.earnings?.bpjs_allowance ?? 0) > 0 && (
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-bold text-slate-700">BPJS Allowance</p>
+                          <p className="text-[10px] text-indigo-500 font-medium italic">Employer covers employee share</p>
+                        </div>
+                        <span className="text-sm font-bold text-indigo-600">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.bpjs_allowance)}</span>
+                      </div>
+                    )}
+
+                    {(selectedEmployeeSlip.breakdown?.earnings?.thr ?? 0) > 0 && (
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm font-bold text-emerald-600">THR</p>
+                        <span className="text-sm font-bold text-emerald-600">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.thr)}</span>
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-start">
                       <p className="text-sm font-bold text-slate-700">Allowances (Fixed)</p>
                       <span className="text-sm font-bold text-slate-900">{formatCurrency(selectedEmployeeSlip.breakdown?.earnings?.fixed_allowances)}</span>
@@ -230,14 +258,20 @@ export default function EnhancedPayslipModal({
                           netSalary: selectedEmployeeSlip.net_salary,
                           totalDeductions: selectedEmployeeSlip.breakdown?.deductions?.total_deductions,
                           totalCompanyCost: selectedEmployeeSlip.breakdown?.employer_contributions?.total_employer_cost,
-                          breakdown: {
-                            proratedBasic: selectedEmployeeSlip.breakdown?.earnings?.basic_salary,
+                          run_type: selectedEmployeeSlip.run_type,
+                          method: selectedEmployeeSlip.method,
+                          breakdown: {                            proratedBasic: selectedEmployeeSlip.breakdown?.earnings?.basic_salary,
                             fixedAllowances: selectedEmployeeSlip.breakdown?.earnings?.fixed_allowances,
                             variableAllowances: selectedEmployeeSlip.breakdown?.earnings?.variable_allowances,
                             unpaidLeaveDeduction: selectedEmployeeSlip.breakdown?.deductions?.unpaid_leave_deduction,
                             overtimePay: selectedEmployeeSlip.breakdown?.earnings?.overtime_pay,
+                            incentives: selectedEmployeeSlip.breakdown?.earnings?.incentives,
                             grossIncome: selectedEmployeeSlip.breakdown?.earnings?.gross_income,
                             pph21Amount: selectedEmployeeSlip.breakdown?.deductions?.pph21_amount,
+                            taxAllowance: selectedEmployeeSlip.breakdown?.earnings?.tax_allowance,
+                            bpjsAllowance: selectedEmployeeSlip.breakdown?.earnings?.bpjs_allowance,
+                            thr: selectedEmployeeSlip.breakdown?.earnings?.thr,
+                            bonus: selectedEmployeeSlip.breakdown?.earnings?.bonus,
                             terRate: 0,
                             bpjs: {
                               health: { 

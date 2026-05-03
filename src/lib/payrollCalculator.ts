@@ -4,8 +4,13 @@
  */
 
 export interface PayrollInput {
+  userId?: number;
+  runType: 'Regular' | 'THR' | 'Bonus' | 'All';
+  method: 'Gross' | 'Net';
   basicSalary: number;
   fixedAllowances: number;
+  incentives: number;
+  calculateThr?: boolean;
   dailyMealAllowance: number;
   dailyTransportAllowance: number;
   attendanceDays: number;
@@ -99,8 +104,11 @@ const getTERRate = (status: string, bruto: number): number => {
 
 export const calculatePayroll = (input: PayrollInput) => {
   const { 
+    runType,
+    method,
     basicSalary, 
     fixedAllowances, 
+    incentives,
     dailyMealAllowance, 
     dailyTransportAllowance,
     attendanceDays,
@@ -110,66 +118,99 @@ export const calculatePayroll = (input: PayrollInput) => {
     ptkpStatus 
   } = input;
 
-  // 1. Perhitungan Prorata (Jika ada unpaid leave)
-  // Perhitungan pengurang gaji akibat ketidakhadiran
-  const unpaidLeaveDeduction = (unpaidLeaveDays / workingDaysInMonth) * basicSalary;
-  const proratedBasic = basicSalary - unpaidLeaveDeduction;
+  // 1. Perhitungan Prorata (Hanya jika RunType = Regular atau All)
+  const isRegularOrAll = runType === 'Regular' || runType === 'All';
+  const unpaidLeaveDeduction = isRegularOrAll ? (unpaidLeaveDays / workingDaysInMonth) * basicSalary : 0;
+  const proratedBasic = isRegularOrAll ? (basicSalary - unpaidLeaveDeduction) : 0;
 
-  // 2. Perhitungan Tunjangan Tidak Tetap (Daily)
-  const variableAllowances = (dailyMealAllowance + dailyTransportAllowance) * attendanceDays;
+  // 2. Perhitungan Tunjangan Tidak Tetap (Daily) - Hanya jika Regular/All
+  const variableAllowances = isRegularOrAll ? (dailyMealAllowance + dailyTransportAllowance) * attendanceDays : 0;
 
-  // 3. Perhitungan Lembur (Overtime) - Sesuai Depnaker
-  // Rumus: (1/173) * (Gaji Pokok + Tunjangan Tetap) * jam lembur
+  // 3. Perhitungan Lembur (Overtime) - Hanya jika Regular/All
   const overtimeRate = (1 / 173) * (basicSalary + fixedAllowances);
-  const overtimePay = overtimeHours * overtimeRate;
+  const overtimePay = isRegularOrAll ? (overtimeHours * overtimeRate) : 0;
 
-  // 4. Gross Income (Penghasilan Bruto Bulanan)
-  const grossIncome = proratedBasic + fixedAllowances + variableAllowances + overtimePay;
+  // 4. THR & Bonus
+  const thr = (runType === 'THR' || runType === 'All') ? basicSalary : 0;
+  const bonus = (runType === 'Bonus') ? basicSalary : 0; // Simplified for simulation
 
-  // 5. BPJS Calculation (Update 2024)
-  // BPJS Kesehatan: 4% Perusahaan, 1% Karyawan (Max Salary Cap IDR 12jt)
+  // 5. Gross Income (Penghasilan Bruto Bulanan)
+  const grossIncome = proratedBasic + fixedAllowances + variableAllowances + overtimePay + incentives + thr + bonus;
+
+  // 6. BPJS Calculation (Update 2024)
+  const bpjsSalaryBase = basicSalary + fixedAllowances;
   const bpjsKesLimit = 12000000;
-  const bpjsKesEmp = Math.min(basicSalary + fixedAllowances, bpjsKesLimit) * 0.01;
-  const bpjsKesComp = Math.min(basicSalary + fixedAllowances, bpjsKesLimit) * 0.04;
+  const bpjsKesEmp = Math.min(bpjsSalaryBase, bpjsKesLimit) * 0.01;
+  const bpjsKesComp = Math.min(bpjsSalaryBase, bpjsKesLimit) * 0.04;
 
-  // BPJS Ketenagakerjaan
-  // JHT: 2% Karyawan, 3.7% Perusahaan
-  const jhtEmp = (basicSalary + fixedAllowances) * 0.02;
-  const jhtComp = (basicSalary + fixedAllowances) * 0.037;
+  const jhtEmp = bpjsSalaryBase * 0.02;
+  const jhtComp = bpjsSalaryBase * 0.037;
   
-  // JP (Jaminan Pensiun): 1% Karyawan, 2% Perusahaan (Max Salary Cap IDR 10.042.300 - 2024)
   const jpLimit = 10042300;
-  const jpEmp = Math.min(basicSalary + fixedAllowances, jpLimit) * 0.01;
-  const jpComp = Math.min(basicSalary + fixedAllowances, jpLimit) * 0.02;
+  const jpEmp = Math.min(bpjsSalaryBase, jpLimit) * 0.01;
+  const jpComp = Math.min(bpjsSalaryBase, jpLimit) * 0.02;
 
-  // JKK & JKM (Ditanggung Perusahaan sepenuhnya)
-  const jkkComp = (basicSalary + fixedAllowances) * 0.0024; // Contoh tarif terendah 0.24%
-  const jkmComp = (basicSalary + fixedAllowances) * 0.003;  // 0.3%
+  const jkkComp = bpjsSalaryBase * 0.0024;
+  const jkmComp = bpjsSalaryBase * 0.003;
 
-  // 6. PPh 21 TER (Tarif Efektif Rata-rata 2024)
-  // Dasar pengenaan TER adalah Bruto (Gaji + Tunjangan + Premi BPJS dibayar pemberi kerja)
-  const taxableBruto = grossIncome + bpjsKesComp + jkkComp + jkmComp;
-  const terRate = getTERRate(ptkpStatus, taxableBruto);
-  const pph21Amount = taxableBruto * terRate;
+  // 7. BPJS Allowance (Hanya jika Method Net)
+  let bpjsAllowance = 0;
+  if (method === 'Net') {
+    bpjsAllowance = bpjsKesEmp + jhtEmp + jpEmp;
+  }
 
-  // 7. Net Salary Calculation (Take Home Pay)
-  // Potongan Karyawan: PPh 21 + BPJS Kes + JHT + JP
+  // 8. PPh 21 Calculation & Gross-Up Logic
+  let pph21Amount = 0;
+  let taxAllowance = 0;
+
+  const calculateTax = (currentGross: number, currentTaxAllowance: number, currentBpjsAllowance: number) => {
+    const taxableBruto = currentGross + currentTaxAllowance + currentBpjsAllowance + bpjsKesComp + jkkComp + jkmComp;
+    const terRate = getTERRate(ptkpStatus, taxableBruto);
+    return taxableBruto * terRate;
+  };
+
+  if (method === 'Gross') {
+    pph21Amount = calculateTax(grossIncome, 0, 0);
+  } else {
+    // Gross-Up Iteration (Metode Net)
+    // Mencari taxAllowance sehingga taxAllowance == PPh21
+    let allowance = 0;
+    let prevAllowance = -1;
+    let iterations = 0;
+    
+    while (Math.abs(allowance - prevAllowance) > 1 && iterations < 10) {
+      prevAllowance = allowance;
+      allowance = calculateTax(grossIncome, allowance, bpjsAllowance);
+      iterations++;
+    }
+    taxAllowance = allowance;
+    pph21Amount = allowance;
+  }
+
+  // 9. Net Salary Calculation (Take Home Pay)
+  // THP = Gross Income + Tax Allowance + BPJS Allowance - PPh 21 - Employee BPJS
+  // Jika Method Net, Tax Allowance == PPh 21 dan BPJS Allowance == Employee BPJS, maka THP == Gross Income
   const employeeDeductions = pph21Amount + bpjsKesEmp + jhtEmp + jpEmp;
-  const netSalary = grossIncome - employeeDeductions;
+  const netSalary = (grossIncome + taxAllowance + bpjsAllowance) - employeeDeductions;
 
-  // 8. Company Cost (Total beban gaji bagi perusahaan)
-  const companyCost = grossIncome + bpjsKesComp + jhtComp + jpComp + jkkComp + jkmComp;
+  // 10. Company Cost
+  const companyCost = grossIncome + taxAllowance + bpjsAllowance + bpjsKesComp + jhtComp + jpComp + jkkComp + jkmComp;
 
   return {
     breakdown: {
       proratedBasic,
       fixedAllowances,
       variableAllowances,
+      incentives,
       unpaidLeaveDeduction,
       overtimePay,
-      grossIncome,
+      thr,
+      bonus,
+      taxAllowance,
+      bpjsAllowance,
+      grossIncome: grossIncome + taxAllowance + bpjsAllowance,
       pph21Amount,
-      terRate: terRate * 100, // percentage for UI
+      terRate: getTERRate(ptkpStatus, grossIncome + taxAllowance + bpjsAllowance + bpjsKesComp + jkkComp + jkmComp) * 100,
       bpjs: {
         health: { employee: bpjsKesEmp, company: bpjsKesComp },
         jht: { employee: jhtEmp, company: jhtComp },
@@ -180,6 +221,8 @@ export const calculatePayroll = (input: PayrollInput) => {
     },
     netSalary,
     totalDeductions: employeeDeductions,
-    totalCompanyCost: companyCost
+    totalCompanyCost: companyCost,
+    run_type: runType,
+    method: method
   };
 };

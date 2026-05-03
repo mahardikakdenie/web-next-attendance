@@ -28,8 +28,9 @@ import { getDataAttendances, getDataSummary } from "@/service/attendance";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { AttendanceFilterParams, AttendanceRecord } from "@/types/api";
 import CorrectionRequestModal from "@/components/attendance/CorrectionRequestModal";
+import AttendanceDetailModal from "@/components/attendance/AttendanceDetailModal";
 import CorrectionsView from "./Corrections";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData, useQueryClient } from "@tanstack/react-query";
 
 export interface SummaryData {
   total_record: number;
@@ -91,11 +92,14 @@ function StatusBadge({ status }: { status: string }) {
 export default function AttendancesView() {
   const { user, loading: authLoading } = useAuthStore();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<"logs" | "corrections">("logs");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedAttendance, setSelectedAttendance] = useState<AttendanceRecord | null>(null);
 
   const [filters, setFilters] = useState<AttendanceFilterParams>({
     status: '',
@@ -116,8 +120,8 @@ export default function AttendancesView() {
   const summaryData = summaryResp?.data as unknown as SummaryData | null;
 
   // React Query: Attendance List
-  const { data: attendanceResp, isLoading: isAttendanceLoading } = useQuery({
-    queryKey: ["attendance-list", currentPage, filters],
+  const { data: attendanceResp, isLoading: isAttendanceLoading, isFetching: isAttendanceFetching } = useQuery({
+    queryKey: ["attendance-list", currentPage, limit, filters],
     queryFn: () => getDataAttendances(
       limit,
       offset,
@@ -127,11 +131,33 @@ export default function AttendancesView() {
       filters.search
     ),
     enabled: activeTab === "logs",
+    placeholderData: keepPreviousData,
+    staleTime: 10000,
   });
 
   const rawData = useMemo(() => attendanceResp?.data || [], [attendanceResp?.data]);
   const meta = attendanceResp?.meta;
-  const totalPages = meta ? meta?.pagination?.last_page : 1;
+  const totalPages = meta?.pagination?.last_page ?? 1;
+
+  // Prefetching next page for snappy experience
+  useEffect(() => {
+    if (currentPage < totalPages && activeTab === "logs") {
+      const nextPage = currentPage + 1;
+      const nextOffset = (nextPage - 1) * limit;
+      
+      queryClient.prefetchQuery({
+        queryKey: ["attendance-list", nextPage, limit, filters],
+        queryFn: () => getDataAttendances(
+          limit,
+          nextOffset,
+          filters.status.toLowerCase(),
+          filters.date_from,
+          filters.date_to,
+          filters.search
+        ),
+      });
+    }
+  }, [currentPage, totalPages, limit, filters, activeTab, queryClient]);
 
   const data: AttendanceRecord[] = useMemo(() => {
     return rawData.map((item) => ({
@@ -233,9 +259,17 @@ export default function AttendancesView() {
     },
   ], []);
 
-  const actions = useCallback(() => (
+  const handleShowDetail = (item: AttendanceRecord) => {
+    setSelectedAttendance(item);
+    setShowDetailModal(true);
+  };
+
+  const actions = useCallback((item: AttendanceRecord) => (
     <div className="flex items-center justify-end gap-2">
-      <button className="p-2 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+      <button 
+        onClick={() => handleShowDetail(item)}
+        className="p-2 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+      >
         <Eye size={18} />
       </button>
       <button className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all">
@@ -368,8 +402,9 @@ export default function AttendancesView() {
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={handlePageChange}
-                isLoading={isAttendanceLoading}
+                isLoading={isAttendanceLoading || isAttendanceFetching}
                 limit={limit}
+                limitOptions={[5,10]}
                 onLimitChange={(val) => {
                   setLimit(val);
                   setCurrentPage(1);
@@ -389,6 +424,12 @@ export default function AttendancesView() {
           // If we are on corrections tab, it will auto-refetch if we use react-query there too
           // Or we can use queryClient.invalidateQueries(["corrections-list"])
         }}
+      />
+
+      <AttendanceDetailModal
+        open={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        attendance={selectedAttendance}
       />
     </div>
   );

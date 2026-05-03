@@ -28,67 +28,49 @@ export const useOnboardingStore = create<OnboardingState>()(
       currentStep: 0,
       isDismissed: false,
       steps: [
-        // SHARED / TOP LEVEL
-        {
-          targetId: "tour-manager-header",
-          title: "Command Center",
-          content: "Ini adalah ringkasan operasional Anda. Pantau status sistem dan jumlah antrean persetujuan di sini.",
-          position: "bottom"
-        },
+        // SHARED / USER DASHBOARD (Visible first)
         {
           targetId: "tour-clock-card",
           title: "Personal Attendance",
-          content: "Meskipun Anda Manager, jangan lupa untuk mencatat kehadiran harian Anda sendiri di sini.",
+          content: "Ini adalah terminal absensi Anda. Lakukan Clock In dan Clock Out harian dengan mudah di sini.",
           position: "bottom"
         },
-        // MANAGER SPECIFIC
         {
-          targetId: "tour-manager-metrics",
-          title: "Workforce Metrics",
-          content: "Pantau kesehatan tim Anda secara real-time. Lihat tingkat kehadiran dan staf yang membutuhkan perhatian.",
+          targetId: "tour-leave-request",
+          title: "Quick Requests",
+          content: "Butuh izin, lembur, atau reimbursement? Kirim permintaan Anda langsung melalui modul akses cepat ini.",
+          position: "bottom"
+        },
+        {
+          targetId: "tour-attendance-log",
+          title: "Presence History",
+          content: "Pantau riwayat kehadiran Anda secara transparan untuk memastikan semua data tercatat dengan benar.",
           position: "top"
+        },
+        // MANAGER DASHBOARD (If applicable)
+        {
+          targetId: "tour-manager-header",
+          title: "Command Center",
+          content: "Halaman ini memberikan gambaran umum operasional tim Anda secara real-time.",
+          position: "bottom"
         },
         {
           targetId: "tour-manager-approvals",
-          title: "Approvals Hotline",
-          content: "Semua permintaan izin dan cuti staf akan muncul di sini. Segera proses agar operasional tetap lancar.",
+          title: "Team Approvals",
+          content: "Semua permintaan dari tim Anda akan muncul di sini untuk segera diproses.",
           position: "top"
         },
-        {
-          targetId: "tour-manager-leaderboard",
-          title: "Punctuality Squad",
-          content: "Apresiasi staf yang paling rajin dan tepat waktu melalui papan peringkat ini.",
-          position: "top"
-        },
-        {
-          targetId: "tour-manager-analytics",
-          title: "Full Insights",
-          content: "Butuh data lebih dalam? Akses analitik lengkap untuk melihat tren performa jangka panjang.",
-          position: "top"
-        },
-        // HR SPECIFIC
+        // HR ANALYTICS
         {
           targetId: "tour-hr-stats",
-          title: "Organization KPIs",
-          content: "Pantau kesehatan organisasi secara makro melalui indikator utama seperti Presence Rate dan At-Risk Staff.",
+          title: "Organizational KPIs",
+          content: "Pantau kesehatan organisasi melalui indikator utama seperti tingkat kehadiran dan staf berisiko.",
           position: "bottom"
         },
         {
           targetId: "tour-hr-heatmap",
           title: "Activity Heatmap",
-          content: "Visualisasikan kepadatan aktivitas karyawan. Klik pada titik heatmap untuk melihat siapa saja yang aktif di jam tersebut.",
-          position: "top"
-        },
-        {
-          targetId: "tour-hr-leaderboard",
-          title: "Attendance Legends",
-          content: "Temukan bintang-bintang di perusahaan Anda dan identifikasi siapa yang membutuhkan dukungan tambahan.",
-          position: "top"
-        },
-        {
-          targetId: "tour-hr-matrix",
-          title: "Performance Matrix",
-          content: "Analisis mendalam setiap individu. Bandingkan skor, jam lembur, dan tingkat keterlambatan secara transparan.",
+          content: "Visualisasikan kepadatan aktivitas karyawan untuk mengidentifikasi pola kerja tim.",
           position: "top"
         }
       ],

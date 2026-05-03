@@ -85,13 +85,16 @@ export default function OnboardingTour() {
       }, 700);
     } else {
       // SAFETY: Element not found on this page
-      console.warn(`Tour target #${step.targetId} not found.`);
-      // Jika elemen tidak ada, otomatis lanjut ke step berikutnya (jika masih ada)
-      if (currentStep < steps.length - 1) {
-        nextStep();
-      } else {
-        dismissTour();
-      }
+      console.warn(`Tour target #${step.targetId} not found. Skipping...`);
+      // Jika elemen tidak ada, tunda sejenak agar tidak memicu infinite render loop
+      const skipTimer = setTimeout(() => {
+        if (currentStep < steps.length - 1) {
+          nextStep();
+        } else {
+          dismissTour();
+        }
+      }, 50);
+      return () => clearTimeout(skipTimer);
     }
   }, [currentStep, steps, nextStep, dismissTour]);
 

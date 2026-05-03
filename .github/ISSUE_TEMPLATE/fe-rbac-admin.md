@@ -1,0 +1,440 @@
+tolong perbaiki RBAC DI SIDEBAR dengan user data ambil dari /me dengan Response 
+
+```
+{
+    "data": {
+        "id": 2,
+        "name": "Admin PT Friendship",
+        "email": "admin@friendship.com",
+        "role": {
+            "id": 2,
+            "name": "admin",
+            "description": "Tenant Owner / Administrator",
+            "base_role": "ADMIN",
+            "is_system": true,
+            "is_immutable": false
+        },
+        "position_id": 1,
+        "position_name": "",
+        "tenant_id": 2,
+        "employee_id": "ADM-001",
+        "department": "Owner",
+        "address": "Friendship Office",
+        "media_url": "",
+        "phone_number": "0811111111",
+        "manager_id": null,
+        "delegate_id": null,
+        "created_at": "2026-04-21T19:37:27.637078+07:00",
+        "expense_quota": 0,
+        "is_system_created": false,
+        "must_change_password": false,
+        "is_active": false,
+        "base_role": "ADMIN",
+        "permissions": [
+            "attendance.view",
+            "attendance.create",
+            "attendance.edit",
+            "attendance.delete",
+            "attendance.export",
+            "leave.view",
+            "leave.create",
+            "leave.approve",
+            "leave.reject",
+            "overtime.view",
+            "overtime.create",
+            "overtime.approve",
+            "payroll.view",
+            "payroll.calculate",
+            "payroll.approve",
+            "user.view",
+            "user.create",
+            "user.edit",
+            "user.delete",
+            "tenant.view",
+            "tenant.edit",
+            "subscription.manage",
+            "role.view",
+            "role.manage",
+            "support.manage",
+            "project.view",
+            "project.manage",
+            "timesheet.view",
+            "timesheet.create",
+            "timesheet.manage",
+            "finance.view",
+            "finance.manage",
+            "performance.view",
+            "performance.manage"
+        ],
+        "is_owner": true,
+        "tenant": {
+            "id": 2,
+            "name": "PT Friendship Logistics",
+            "plan": "",
+            "is_suspended": false,
+            "tenant_settings": {
+                "id": 2,
+                "tenant_id": 2,
+                "tenant": {
+                    "id": 0,
+                    "name": "",
+                    "code": "",
+                    "plan": "",
+                    "is_suspended": false,
+                    "created_at": "0001-01-01T00:00:00Z",
+                    "updated_at": "0001-01-01T00:00:00Z"
+                },
+                "office_latitude": -6.1339179,
+                "office_longitude": 106.8329504,
+                "max_radius_meter": 100,
+                "allow_remote": false,
+                "require_location": true,
+                "clock_in_start_time": "07:00",
+                "clock_in_end_time": "09:00",
+                "late_after_minute": 480,
+                "clock_out_start_time": "16:00",
+                "clock_out_end_time": "23:00",
+                "require_selfie": true,
+                "allow_multiple_check": false,
+                "tenant_logo": "",
+                "created_at": "2026-04-21T19:37:27.649533+07:00",
+                "updated_at": "2026-04-21T19:37:27.649533+07:00"
+            }
+        },
+        "tenant_setting": {
+            "id": 2,
+            "tenant_id": 2,
+            "tenant": {
+                "id": 0,
+                "name": "",
+                "code": "",
+                "plan": "",
+                "is_suspended": false,
+                "created_at": "0001-01-01T00:00:00Z",
+                "updated_at": "0001-01-01T00:00:00Z"
+            },
+            "office_latitude": -6.1339179,
+            "office_longitude": 106.8329504,
+            "max_radius_meter": 100,
+            "allow_remote": false,
+            "require_location": true,
+            "clock_in_start_time": "07:00",
+            "clock_in_end_time": "09:00",
+            "late_after_minute": 480,
+            "clock_out_start_time": "16:00",
+            "clock_out_end_time": "23:00",
+            "require_selfie": true,
+            "allow_multiple_check": false,
+            "tenant_logo": "",
+            "created_at": "2026-04-21T19:37:27.649533+07:00",
+            "updated_at": "2026-04-21T19:37:27.649533+07:00"
+        },
+        "shift": {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "name": "Standard Shift",
+            "startTime": "07:00",
+            "endTime": "23:00",
+            "type": "Morning",
+            "color": "bg-blue-500",
+            "isDefault": false
+        },
+        "attendances": [
+            {
+                "id": "ce99823b-ca19-47fe-a939-d81ef4f51601",
+                "user_id": 2,
+                "clock_in_time": "2026-03-30T08:01:00+07:00",
+                "clock_out_time": "2026-03-30T17:11:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-03-30T08:01:00+07:00"
+            },
+            {
+                "id": "14acb1d6-9bdf-482b-99b7-4a345bc6084e",
+                "user_id": 2,
+                "clock_in_time": "2026-03-31T07:45:00+07:00",
+                "clock_out_time": "2026-03-31T17:10:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-03-31T07:45:00+07:00"
+            },
+            {
+                "id": "c17b3c9c-0de9-4737-8678-ebcfd16f0de9",
+                "user_id": 2,
+                "clock_in_time": "2026-04-01T08:14:00+07:00",
+                "clock_out_time": "2026-04-01T17:09:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-01T08:14:00+07:00"
+            },
+            {
+                "id": "5184f552-b805-46c5-9943-dcb836866940",
+                "user_id": 2,
+                "clock_in_time": "2026-04-02T08:45:00+07:00",
+                "clock_out_time": "2026-04-02T17:08:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "late",
+                "created_at": "2026-04-02T08:45:00+07:00"
+            },
+            {
+                "id": "b583a669-ecfc-4e6e-b064-cecf3c155197",
+                "user_id": 2,
+                "clock_in_time": "2026-04-03T08:12:00+07:00",
+                "clock_out_time": "2026-04-03T17:07:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-03T08:12:00+07:00"
+            },
+            {
+                "id": "838e587b-a01c-4105-8b1f-78f22718bf82",
+                "user_id": 2,
+                "clock_in_time": "2026-04-06T08:09:00+07:00",
+                "clock_out_time": "2026-04-06T17:04:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-06T08:09:00+07:00"
+            },
+            {
+                "id": "cb185127-9673-407f-9e16-be4797e6c84d",
+                "user_id": 2,
+                "clock_in_time": "2026-04-07T08:08:00+07:00",
+                "clock_out_time": "2026-04-07T17:03:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-07T08:08:00+07:00"
+            },
+            {
+                "id": "9bb63c3c-2816-4079-a32e-f6da62fd7d98",
+                "user_id": 2,
+                "clock_in_time": "2026-04-08T08:07:00+07:00",
+                "clock_out_time": "2026-04-08T17:02:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-08T08:07:00+07:00"
+            },
+            {
+                "id": "b65c0006-36c4-4680-8996-aaaa1a2c16a1",
+                "user_id": 2,
+                "clock_in_time": "2026-04-09T08:45:00+07:00",
+                "clock_out_time": "2026-04-09T17:01:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "late",
+                "created_at": "2026-04-09T08:45:00+07:00"
+            },
+            {
+                "id": "c61cace7-ada6-49f1-a27c-52ad01108d01",
+                "user_id": 2,
+                "clock_in_time": "2026-04-10T07:45:00+07:00",
+                "clock_out_time": "2026-04-10T17:00:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-10T07:45:00+07:00"
+            },
+            {
+                "id": "10e65e17-ea98-4776-a1a2-f30e8b57b315",
+                "user_id": 2,
+                "clock_in_time": "2026-04-13T08:02:00+07:00",
+                "clock_out_time": "2026-04-13T17:17:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-13T08:02:00+07:00"
+            },
+            {
+                "id": "3fe875ae-ca16-4c62-8be8-ecb8081b73ef",
+                "user_id": 2,
+                "clock_in_time": "2026-04-14T08:01:00+07:00",
+                "clock_out_time": "2026-04-14T17:16:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-14T08:01:00+07:00"
+            },
+            {
+                "id": "0ffb1e4c-49e4-4c39-9bec-5b713c72931c",
+                "user_id": 2,
+                "clock_in_time": "2026-04-15T07:45:00+07:00",
+                "clock_out_time": "2026-04-15T17:15:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-15T07:45:00+07:00"
+            },
+            {
+                "id": "90a67032-acbc-4784-a17d-03c9d40c73cd",
+                "user_id": 2,
+                "clock_in_time": "2026-04-16T08:45:00+07:00",
+                "clock_out_time": "2026-04-16T17:14:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "late",
+                "created_at": "2026-04-16T08:45:00+07:00"
+            },
+            {
+                "id": "eec4c640-f021-4f6a-b4a1-6711ea740f00",
+                "user_id": 2,
+                "clock_in_time": "2026-04-17T08:13:00+07:00",
+                "clock_out_time": "2026-04-17T17:13:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-17T08:13:00+07:00"
+            },
+            {
+                "id": "d5619775-32a2-4e2c-bf79-bfa38ac16432",
+                "user_id": 2,
+                "clock_in_time": "2026-04-20T07:45:00+07:00",
+                "clock_out_time": "2026-04-20T17:10:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-20T07:45:00+07:00"
+            },
+            {
+                "id": "da91ed74-0a24-4ff0-a0c8-a6bc5a4f8d45",
+                "user_id": 2,
+                "clock_in_time": "2026-04-21T08:09:00+07:00",
+                "clock_out_time": "2026-04-21T17:09:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-21T08:09:00+07:00"
+            },
+            {
+                "id": "398d01fb-20d7-430e-8e52-93b016abebe3",
+                "user_id": 2,
+                "clock_in_time": "2026-04-22T08:08:00+07:00",
+                "clock_out_time": "2026-04-22T17:08:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-22T08:08:00+07:00"
+            },
+            {
+                "id": "c0daff16-8489-4dd6-b56b-6d1611a4a364",
+                "user_id": 2,
+                "clock_in_time": "2026-04-23T08:45:00+07:00",
+                "clock_out_time": "2026-04-23T17:07:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "late",
+                "created_at": "2026-04-23T08:45:00+07:00"
+            },
+            {
+                "id": "54c211bd-8bab-4c1f-a59e-1e246b63b3cf",
+                "user_id": 2,
+                "clock_in_time": "2026-04-24T08:06:00+07:00",
+                "clock_out_time": "2026-04-24T17:06:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-24T08:06:00+07:00"
+            },
+            {
+                "id": "8806b55d-61bc-4383-b3ba-d9d7d22a05b5",
+                "user_id": 2,
+                "clock_in_time": "2026-04-27T08:03:00+07:00",
+                "clock_out_time": "2026-04-27T17:03:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-27T08:03:00+07:00"
+            },
+            {
+                "id": "ff5674be-1f2a-4f7e-8daf-800d3d7d5d04",
+                "user_id": 2,
+                "clock_in_time": "2026-04-28T08:02:00+07:00",
+                "clock_out_time": "2026-04-28T17:02:00+07:00",
+                "clock_in_latitude": -6.2,
+                "clock_in_longitude": 106.816666,
+                "clock_in_media_url": "https://i.ibb.co.com/p6119B1C/attendance-1775556680532.png",
+                "status": "done",
+                "created_at": "2026-04-28T08:02:00+07:00"
+            }
+        ],
+        "recent_activities": [
+            {
+                "id": 4,
+                "title": "Clocked in",
+                "action": "Attendance",
+                "status": "Late",
+                "created_at": "2026-04-21T19:07:27.652532+07:00"
+            },
+            {
+                "id": 16,
+                "title": "User Login",
+                "action": "Login",
+                "status": "success",
+                "created_at": "2026-04-29T11:17:51.460452+07:00"
+            },
+            {
+                "id": 17,
+                "title": "User Logout",
+                "action": "Logout",
+                "status": "success",
+                "created_at": "2026-04-29T11:18:21.380124+07:00"
+            },
+            {
+                "id": 18,
+                "title": "User Login",
+                "action": "Login",
+                "status": "success",
+                "created_at": "2026-04-29T11:18:24.19562+07:00"
+            },
+            {
+                "id": 19,
+                "title": "User Logout",
+                "action": "Logout",
+                "status": "success",
+                "created_at": "2026-04-29T11:18:31.418458+07:00"
+            },
+            {
+                "id": 22,
+                "title": "User Login",
+                "action": "Login",
+                "status": "success",
+                "created_at": "2026-04-29T11:19:28.13952+07:00"
+            }
+        ]
+    },
+    "includes": [
+        "tenant",
+        "tenant.tenant_settings",
+        "attendances",
+        "role",
+        "recent_activities",
+        "role.permissions",
+        "tenant_setting"
+    ]
+}
+```

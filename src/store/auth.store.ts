@@ -76,6 +76,14 @@ type AuthState = {
    * RBAC 2.0 Helper: Check if user has a specific permission
    */
   hasPermission: (permissionId: string) => boolean;
+  /**
+   * RBAC 2.1 Helper: Check if current plan allows this module
+   */
+  hasModuleAccess: (moduleName: string) => boolean;
+  /**
+   * Helper to check if user has any of the specified roles (based on base_role)
+   */
+  hasRole: (roles: RoleName[]) => boolean;
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -141,11 +149,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const user = get().user;
     if (!user) return false;
     
+    // Get normalized base role
+    const baseRole = (user.role?.base_role || user.base_role || "").toUpperCase();
+
     // Superadmin and Tenant Admin/Owner have all permissions by default
-    if (user.is_owner || user.role?.base_role === 'ADMIN' || user.role?.name === 'superadmin') {
+    if (user.is_owner || 
+        baseRole === 'ADMIN' || 
+        baseRole === 'SUPERADMIN' || 
+        user.role?.name?.toLowerCase() === 'superadmin') {
       return true;
     }
 
     return user.permissions?.includes(permissionId) || false;
+  },
+
+  hasModuleAccess: (moduleName: string) => {
+    const user = get().user;
+    if (!user) return false;
+
+    // Get normalized base role
+    const baseRole = (user.role?.base_role || user.base_role || "").toUpperCase();
+
+    // Superadmin and Owners/Admins (Platform Level & Tenant Owner) always have access to everything
+    // This ensures they don't see lock icons on modules they own
+    if (baseRole === 'SUPERADMIN' || baseRole === 'ADMIN' || user.is_owner || user.role?.name?.toLowerCase() === 'superadmin') {
+      return true;
+    }
+
+    // RBAC 2.1 Logic: plan_features check
+    // We check if any of the user's permissions belong to this module
+    const features = user.permissions || [];
+    
+    if (features.includes('*')) return true;
+    
+    // Check if any permission starts with the module name (e.g., "attendance.view" starts with "attendance")
+    // or if the module name itself is listed as a feature
+    return features.some(f => f.split('.')[0] === moduleName || f === moduleName);
+  },
+
+  hasRole: (roles: RoleName[]) => {
+    const user = get().user;
+    if (!user) return false;
+    
+    // Normalize role for comparison with ROLES constant
+    const baseRole = (user.role?.base_role?.toLowerCase() || user.base_role?.toLowerCase() || user.role?.name?.toLowerCase()) as RoleName;
+    return roles.includes(baseRole);
   }
 }));

@@ -32,7 +32,8 @@ import { TenantPlanBadge } from "../tenant-settings/TenantPlanBadge";
 
 export default function TopNavbar() {
   const { user } = useAuthStore();
-  const role = user?.role?.name as RoleName | undefined;
+  // Use base_role for RBAC matching as role names can be custom
+  const role = (user?.role?.base_role?.toLowerCase() || user?.base_role?.toLowerCase() || user?.role?.name?.toLowerCase()) as RoleName | undefined;
   const isPlatformAdmin = role === ROLES.SUPERADMIN || role === ROLES.ADMIN;
   
   const pathname = usePathname();
@@ -315,12 +316,12 @@ export default function TopNavbar() {
         <div className="fixed inset-0 z-[999] flex items-start justify-center pt-[15vh] px-4">
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300"
+            className="absolute inset-0 bg-slate-900/60 w-full h-full backdrop-blur-md animate-in fade-in duration-300"
             onClick={() => setIsModalOpen(false)}
           />
           
           {/* Modal Card */}
-          <div className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-2xl border border-white ring-1 ring-slate-200/50 overflow-hidden animate-in zoom-in-95 slide-in-from-top-8 duration-300 flex flex-col max-h-[60vh]">
+          <div className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.3)] ring-1 ring-slate-200/50 overflow-hidden animate-in zoom-in-95 slide-in-from-top-8 duration-300 flex flex-col max-h-[60vh]">
             
             {/* Search Header */}
             <div className="flex items-center gap-4 px-6 py-5 border-b border-slate-100 bg-slate-50/50">
@@ -342,9 +343,9 @@ export default function TopNavbar() {
             </div>
 
             {/* Results List */}
-            <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-6 py-3 custom-scrollbar">
               {filteredResults.length > 0 ? (
-                <div className="space-y-1">
+                <div className="space-y-2 pb-2">
                   <div className="px-4 py-2">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Applications & Pages</span>
                   </div>

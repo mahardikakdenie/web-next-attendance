@@ -64,3 +64,29 @@ export interface StatItem {
   color: string;
   shadow: string;
 }
+
+/**
+ * Superadmin Global Analytics Types
+ */
+export interface KPIStat {
+  value: number;
+  growth_pct: number;
+}
+
+export interface AnalyticsDashboardResponse {
+  kpis: {
+    total_tenants: KPIStat;
+    total_users: KPIStat;
+    active_subscriptions: KPIStat;
+    monthly_growth: KPIStat;
+  };
+  growth_chart: {
+    labels: string[];
+    data: number[];
+  };
+  tenant_status: {
+    label: string;
+    value: number;
+    color: string;
+  }[];
+}
