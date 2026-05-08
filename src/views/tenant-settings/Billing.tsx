@@ -34,7 +34,7 @@ const PRICING_PLANS = [
   },
   {
     id: 2,
-    name: "Business",
+    name: "Pro",
     price: 500000,
     description: "Advanced features for growing organizations.",
     features: ["Up to 100 Employees", "Advanced Analytics", "Geofence Rules", "Priority Support", "Payroll Integration"],

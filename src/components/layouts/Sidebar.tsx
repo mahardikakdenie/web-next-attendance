@@ -324,7 +324,7 @@ const MENUS: MenuItem[] = [
     key: "my-workspace",
     label: "My Workspace",
     icon: UserCog,
-    roles: [ROLES.USER],
+    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
     children: [
       {
         key: "my-leaves",
@@ -355,7 +355,7 @@ const MENUS: MenuItem[] = [
         label: "My Timesheet",
         icon: ActivityIcon,
         path: "/timesheet",
-        roles: [ROLES.USER],
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
         module: "project",
       },
     ],

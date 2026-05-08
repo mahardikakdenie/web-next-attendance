@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import dayjs from "dayjs";
 import { useAuthStore } from "@/store/auth.store";
 import Chart from "@/components/ui/Chart";
+import TimeTracker from "@/components/timesheet/TimeTracker";
 
 export default function TimesheetView() {
   const { user } = useAuthStore();
@@ -48,6 +49,10 @@ export default function TimesheetView() {
 
   const report = reportResp?.data;
   const projects = projectsResp?.data || [];
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["timesheet-report"] });
+  };
 
   const navigatePeriod = (direction: 'next' | 'prev') => {
     setSelectedPeriod(prev => 
@@ -152,6 +157,9 @@ export default function TimesheetView() {
           </Button>
         </div>
       </header>
+
+      {/* Real-time Time Tracker */}
+      <TimeTracker projects={projects} onSuccess={handleRefresh} />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
