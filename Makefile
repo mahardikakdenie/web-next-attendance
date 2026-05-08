@@ -14,19 +14,19 @@ help:
 	@echo "  make status  - Check container status"
 
 pull:
-	docker compose -f docker-compose.vps.yml pull
+	docker compose -f docker-compose.yml pull
 
 up:
-	docker compose -f docker-compose.vps.yml up -d
+	docker compose -f docker-compose.yml up -d
 
 down:
-	docker compose -f docker-compose.vps.yml down
+	docker compose -f docker-compose.yml down
 
 restart:
-	docker compose -f docker-compose.vps.yml restart
+	docker compose -f docker-compose.yml restart
 
 logs:
-	docker compose -f docker-compose.vps.yml logs -f
+	docker compose -f docker-compose.yml logs -f
 
 status:
-	docker compose -f docker-compose.vps.yml ps
+	docker compose -f docker-compose.yml ps

@@ -3,7 +3,7 @@ name: CI/CD Deploy to VPS
 on:
   push:
     branches:
-      - master # Sesuaikan dengan nama branch utama Anda
+      - master
 
 jobs:
   build-and-push:
@@ -43,9 +43,9 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.vps.yml,Makefile"
+          source: "docker-compose.vps.yml,Makefile,.env.prod"
           target: "~/attendance-app"
-          rm: false # Jangan hapus file lain di folder tersebut
+          rm: false
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -54,23 +54,24 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # Pindah ke direktori aplikasi
             cd ~/attendance-app
 
-            # Buat file .env secara otomatis dari GitHub Secrets
-            cat <<EOF > .env
-            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
-            API_URL=${{ secrets.API_URL }}
-            INTERNAL_SECRET=${{ secrets.INTERNAL_SECRET }}
-            SIGN_SECRET=${{ secrets.SIGN_SECRET }}
-            APP_URL=${{ secrets.APP_URL }}
-            NODE_ENV=production
-            PORT=3000
-            EOF
+            # Rename docker-compose.vps.yml to docker-compose.yml di server
+            mv docker-compose.vps.yml docker-compose.yml
 
-            # Login ke Docker (wajib jika repo private)
+            # Setup .env dari .env.prod dan secrets
+            cp .env.prod .env
+            echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" >> .env
+            echo "APP_URL=${{ secrets.APP_URL }}" >> .env
+            # Pastikan HOST_PORT tetap 9001 jika belum ada di .env.prod
+            grep -q "HOST_PORT" .env || echo "HOST_PORT=9001" >> .env
+
+            # Pastikan network shared sudah ada
+            docker network create web-proxy || true
+
+            # Login ke Docker
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u kucingemas --password-stdin
 
-            # Eksekusi deployment menggunakan Makefile
+            # Jalankan deployment menggunakan Makefile
             make pull
             make up
