@@ -8,9 +8,22 @@ export const api = axios.create({
 });
 
 export const getSecurityHeaders = () => {
+  // Fallback for randomUUID if crypto is not available (e.g. non-HTTPS/insecure context)
+  const generateUUID = () => {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Simple fallback generator
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
   return {
     "X-Timestamp": Date.now().toString(),
-    "X-Request-ID": crypto.randomUUID(),
+    "X-Request-ID": generateUUID(),
   };
 };
 
