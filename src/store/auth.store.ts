@@ -107,6 +107,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (error: unknown) {
       const err = error as APIError;
+      console.log("🚀 ~ err:", err)
 
       set({ loading: false });
 

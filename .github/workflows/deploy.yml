@@ -54,24 +54,38 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # 1. Pastikan folder tujuan bersih dan siap
+            mkdir -p ~/attendance-app
             cd ~/attendance-app
 
-            # Rename docker-compose.vps.yml to docker-compose.yml di server
-            mv docker-compose.vps.yml docker-compose.yml
+            # 2. Paksa sinkronisasi Docker Compose
+            # Kita timpa docker-compose.yml dengan versi VPS terbaru
+            if [ -f docker-compose.vps.yml ]; then
+                mv -f docker-compose.vps.yml docker-compose.yml
+                echo "✅ docker-compose.yml has been updated from docker-compose.vps.yml"
+            fi
 
-            # Setup .env dari .env.prod dan secrets
-            cp .env.prod .env
+            # 3. Paksa sinkronisasi .env (Hapus yang lama, buat baru dari .env.prod + Secrets)
+            # Ini memastikan tidak ada sisa konfigurasi manual yang tertinggal
+            cat .env.prod > .env
+            echo "" >> .env
+            echo "# --- Dynamic Secrets from GitHub ---" >> .env
             echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" >> .env
             echo "APP_URL=${{ secrets.APP_URL }}" >> .env
-            # Pastikan HOST_PORT tetap 9001 jika belum ada di .env.prod
-            grep -q "HOST_PORT" .env || echo "HOST_PORT=9001" >> .env
+            echo "HOST_PORT=9001" >> .env
+            echo "✅ .env has been synchronized with .env.prod and GitHub Secrets"
 
-            # Pastikan network shared sudah ada
+            # 4. Pastikan Network Shared ada
             docker network create web-proxy || true
 
-            # Login ke Docker
+            # 5. Login & Update Container
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u kucingemas --password-stdin
-
-            # Jalankan deployment menggunakan Makefile
+            
+            echo "🚀 Pulling latest images..."
             make pull
+            
+            echo "🔄 Restarting containers..."
             make up
+            
+            echo "📊 Current Status:"
+            make status
