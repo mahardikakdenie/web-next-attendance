@@ -54,6 +54,7 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
       }
 
       setPreviewImage(image);
+      setIsCameraOpen(false);
       toast.success("Wajah terdeteksi! Foto siap diunggah.");
     } catch (error) {
       console.error("Face analysis error:", error);

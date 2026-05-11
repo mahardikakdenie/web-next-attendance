@@ -5,19 +5,32 @@ import {
   SubscriptionPlan, 
   CreatePlanPayload, 
   UpdatePlanPayload, 
-  OverrideSubscriptionPayload 
+  OverrideSubscriptionPayload,
+  SubscriptionFeature
 } from "@/types/subscription";
-import { MySubscription, UpgradePayload } from "@/types/billing";
+import { MySubscription, UpgradePayload, Invoice } from "@/types/billing";
 
 /**
- * TENANT ADMIN: Manage Own Subscription
+ * TENANT ADMIN: Manage Own Subscription & Billing
  */
 export const getMySubscription = () => {
   return secureRequest<APIResponse<MySubscription>>("get", "/v1/subscriptions/me");
 };
 
+export const getAvailablePlans = () => {
+  return secureRequest<APIResponse<SubscriptionPlan[]>>("get", "/v1/subscriptions/plans");
+};
+
 export const upgradePlan = (payload: UpgradePayload) => {
   return secureRequest<APIResponse<null>>("post", "/v1/subscriptions/upgrade", payload);
+};
+
+export const getInvoices = (page: number = 1, limit: number = 10, status?: string) => {
+  return secureRequest<APIResponse<Invoice[]>>("get", "/v1/billing/invoices", {
+    page,
+    limit,
+    status
+  });
 };
 
 /**
@@ -50,12 +63,20 @@ export const suspendTenant = (id: number, reason: string) => {
   return secureRequest<APIResponse<null>>("post", `/v1/superadmin/subscriptions/${id}/suspend`, { reason });
 };
 
+export const reactivateSubscription = (id: number) => {
+  return secureRequest<APIResponse<null>>("post", `/v1/superadmin/subscriptions/${id}/reactivate`);
+};
+
 /**
  * SUPERADMIN: Global Plans CRUD
  */
 
 export const getPlans = () => {
   return secureRequest<APIResponse<SubscriptionPlan[]>>("get", "/v1/superadmin/plans");
+};
+
+export const getSubscriptionFeatures = () => {
+  return secureRequest<APIResponse<SubscriptionFeature[]>>("get", "/v1/superadmin/subscription-features");
 };
 
 export const createPlan = (payload: CreatePlanPayload) => {

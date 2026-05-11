@@ -1,57 +1,71 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { 
+  Calculator, 
+  Wallet, 
+  Users, 
+  Loader2, 
+  AlertCircle,
   Building2,
   Receipt,
-  Clock,
-  UserCheck,
-  MinusCircle,
+  Download,
+  CheckCircle2,
+  History,
+  TrendingUp,
+  FileText,
+  Banknote,
+  Percent,
   PlusCircle,
-  Scale,
-  Printer,
-  AlertCircle,
-  Calendar,
-  Users,
-  Save,
-  Loader2,
-  ChevronDown,
+  MinusCircle,
+  ShieldCheck,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Save,
+  Printer,
+  Coins,
+  Plus,
+  Trash2,
+  Info,
+  ChevronDown,
+  LayoutGrid,
+  Zap,
+  Briefcase,
+  ArrowRight,
+  Sparkles,
+  ArrowUpRight
 } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { Button } from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import CurrencyInput from "@/components/ui/CurrencyInput";
+import { Badge } from "@/components/ui/Badge";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   calculatePayrollAPI, 
-  getEmployeeBaseline, 
-  getEmployeeAttendanceSync,
-  saveEmployeePayroll
+  saveEmployeePayroll, 
+  getEmployeeAttendanceSync
 } from "@/service/payroll";
-import { calculatePayroll, PayrollInput } from "@/lib/payrollCalculator";
 import { getDataUserslist } from "@/service/users";
-import { useAuthStore, ROLES } from "@/store/auth.store";
-import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
-import Input from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { UserData, CustomApiError, PayrollCalculatePayload, CustomAllowance } from "@/types/api";
 import { toast } from "sonner";
 import dayjs from "dayjs";
-import { UserData, PayrollCalculationResult, CustomApiError } from "@/types/api";
-import Image from "next/image";
-
-const DynamicPDFDownload = dynamic(() => import("@/components/payroll/DynamicPDFDownload"), {
-  ssr: false,
-  loading: () => (
-    <Button disabled className="w-full bg-slate-100 text-slate-400 h-14 rounded-2xl font-black flex items-center justify-center gap-2">
-      <Loader2 className="animate-spin" size={20} />
-      <span>Loading PDF Engine...</span>
-    </Button>
-  )
-});
+import { useAuthStore, ROLES } from "@/store/auth.store";
+import EnhancedPayslipModal from "@/components/ui/EnhancedPayslipModal";
+import Select from "@/components/ui/Select";
 
 export default function SalaryCalculatorView({ isStateless = false }: { isStateless?: boolean }) {
   const { user, loading: authLoading } = useAuthStore();
+  const queryClient = useQueryClient();
   const router = useRouter();
+
+  // Collapsible Sections State
+  const [expandedSections, setExpandedSections] = useState({
+    salary: true,
+    config: true,
+    attendance: true,
+    allowances: true,
+  });
 
   // Access Control
   useEffect(() => {
@@ -59,809 +73,596 @@ export default function SalaryCalculatorView({ isStateless = false }: { isStatel
       const allowedRoles = [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE];
       if (!allowedRoles.includes(user.role?.name as ('superadmin' | 'hr' | 'finance' | 'admin'))) {
         router.replace("/");
-        toast.error("You do not have permission to access the Payroll Calculator.");
+        toast.error("Access denied. HR/Finance permissions required.");
       }
     }
   }, [user, authLoading, router]);
 
-  // Period State
   const [selectedPeriod, setSelectedPeriod] = useState(dayjs().format("YYYY-MM"));
-
-  // Employee Selection State
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [employees, setEmployees] = useState<UserData[]>([]);
-
-  // PDF Filename Memo
-  const pdfFilename = useMemo(() => `payslip-simulation.pdf`, []);
-
-  const navigatePeriod = (direction: 'next' | 'prev') => {
-    setSelectedPeriod(prev => 
-      dayjs(prev).add(direction === 'next' ? 1 : -1, 'month').format("YYYY-MM")
-    );
-  };
+  const [showSlipPreview, setShowSlipPreview] = useState(false);
+  const [customAllowances, setCustomAllowances] = useState<CustomAllowance[]>([]);
+  const totalVariable = useMemo(() => customAllowances.reduce((s, a) => s + (a.amount || 0), 0), [customAllowances]);
 
   // Input State
-  const [inputs, setInputs] = useState<PayrollInput>({
-    runType: 'Regular',
+  const [inputs, setInputs] = useState<PayrollCalculatePayload>({
+    user_id: 0,
+    run_type: 'Regular',
     method: 'Gross',
-    basicSalary: 0,
-    fixedAllowances: 0,
-    incentives: 0,
-    dailyMealAllowance: 0,
-    dailyTransportAllowance: 0,
-    attendanceDays: 0,
-    workingDaysInMonth: 0,
-    overtimeHours: 0,
-    unpaidLeaveDays: 0,
-    ptkpStatus: "TK/0"
+    working_days_in_month: 22,
+    attendance_days: 0,
+    overtime_hours: 0,
+    unpaid_leave_days: 0,
+    basic_salary: 0,
+    fixed_allowance: 0,
+    variable_allowance: 0,
+    bonus: 0,
+    incentives: 0
   });
 
   const [debouncedInputs, setDebouncedInputs] = useState(inputs);
 
-  // Fetch Employees for dropdown
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        if (!user?.id) return;
-        const resp = await getDataUserslist({ user_id: user.id, limit: 100 });
-        if (resp.data) {
-          setEmployees(resp.data);
-        }
-      } catch (error: unknown) {
-        console.error("Failed to fetch employees:", error instanceof Error ? error.message : String(error));
-      }
-    };
-    if (user && !authLoading) fetchEmployees();
-  }, [user, authLoading]);
-
-  // Sync Data when employee or period changes
-  useEffect(() => {
-    const syncEmployeeData = async () => {
-      if (!selectedUserId) return;
-      
-      try {
-        toast.loading("Syncing employee data...", { id: "sync-payroll" });
-        
-        // 1. Fetch Baseline
-        const baselineResp = await getEmployeeBaseline(selectedUserId);
-        
-        // 2. Fetch Attendance Variables
-        const syncResp = await getEmployeeAttendanceSync(selectedUserId, selectedPeriod);
-
-        if (baselineResp.data && syncResp.data) {
-          const baseline = baselineResp.data;
-          const sync = syncResp.data;
-
-          setInputs(prev => ({
-            ...prev,
-            basicSalary: baseline.basic_salary,
-            fixedAllowances: baseline.fixed_allowances,
-            incentives: 0,
-            attendanceDays: sync.attendance_days,
-            workingDaysInMonth: sync.working_days_in_month,
-            overtimeHours: sync.overtime_hours,
-            unpaidLeaveDays: sync.unpaid_leave_days,
-            ptkpStatus: baseline.ptkp_status as PayrollInput['ptkpStatus'],
-          }));
-          toast.success(`Data synced for ${baseline.employee_name}`, { id: "sync-payroll" });
-        }
-      } catch (error: unknown) {
-        console.error("Sync failed:", error instanceof Error ? error.message : String(error));
-        toast.error("Failed to sync employee data", { id: "sync-payroll" });
-      }
-    };
-
-    syncEmployeeData();
-  }, [selectedUserId, selectedPeriod]);
-
-  // Debounce logic
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedInputs(inputs);
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [inputs]);
-
-  // Real-time Calculation Query
-  const { data: calcResp, isLoading: isCalculating } = useQuery({
-    queryKey: ["payroll-calc", debouncedInputs],
-    queryFn: () => calculatePayrollAPI(debouncedInputs),
-    enabled: !!user,
+  const { data: employeesResp } = useQuery({
+    queryKey: ["employees-list-calc"],
+    queryFn: () => getDataUserslist({ limit: 100 }),
+    enabled: !!user && !authLoading
   });
 
-  // Local fallback engine for immediate sync and if API fails (404/Network)
-  const localResult = useMemo(() => calculatePayroll(inputs), [inputs]);
-  
-  // Use API result if available, otherwise fallback to local calculation
-  const result = useMemo(() => {
-    if (calcResp?.data) {
-       return calcResp.data;
-    }
-    // Fallback structure
-    return {
-      net_salary: localResult.netSalary,
-      breakdown: {
-        earnings: {
-          basic_salary: localResult.breakdown.proratedBasic,
-          fixed_allowances: localResult.breakdown.fixedAllowances,
-          variable_allowances: localResult.breakdown.variableAllowances,
-          overtime_pay: localResult.breakdown.overtimePay,
-          incentives: localResult.breakdown.incentives,
-          gross_income: localResult.breakdown.grossIncome,
-          tax_allowance: localResult.breakdown.taxAllowance,
-          bpjs_allowance: localResult.breakdown.bpjsAllowance,
-          thr: localResult.breakdown.thr,
-          bonus: localResult.breakdown.bonus,
-        },
-        deductions: {
-          pph21_amount: localResult.breakdown.pph21Amount,
-          bpjs_health_employee: localResult.breakdown.bpjs.health.employee,
-          bpjs_jht_employee: localResult.breakdown.bpjs.jht.employee,
-          bpjs_jp_employee: localResult.breakdown.bpjs.jp.employee,
-          unpaid_leave_deduction: localResult.breakdown.unpaidLeaveDeduction,
-          total_deductions: localResult.totalDeductions
-        },
-        employer_contributions: {
-          total_employer_cost: localResult.totalCompanyCost,
-          bpjs_health_company: localResult.breakdown.bpjs.health.company,
-          bpjs_jht_company: localResult.breakdown.bpjs.jht.company,
-          bpjs_jp_company: localResult.breakdown.bpjs.jp.company,
-          bpjs_jkk: localResult.breakdown.bpjs.jkk,
-          bpjs_jkm: localResult.breakdown.bpjs.jkm,
-        }
-      },
-      run_type: inputs.runType,
-      method: inputs.method
-    };
-  }, [calcResp, localResult, inputs.runType, inputs.method]);
+  const employeeOptions = useMemo(() => {
+    return (employeesResp?.data || []).map(emp => ({
+      label: `${emp.name} (${emp.employee_id})`,
+      value: emp.id,
+      icon: <Users size={14} />
+    }));
+  }, [employeesResp]);
 
-  // Save Mutation
+  useEffect(() => {
+    const syncAttendance = async () => {
+      if (!selectedUserId) return;
+      try {
+        toast.loading("Syncing attendance variables...", { id: "sync-payroll" });
+        const syncResp = await getEmployeeAttendanceSync(selectedUserId, selectedPeriod);
+        if (syncResp.data) {
+          const sync = syncResp.data;
+          setInputs(prev => ({
+            ...prev,
+            user_id: selectedUserId,
+            attendance_days: sync.attendance_days,
+            working_days_in_month: sync.working_days_in_month,
+            overtime_hours: sync.overtime_hours,
+            unpaid_leave_days: sync.unpaid_leave_days,
+          }));
+          toast.success("Sync complete", { id: "sync-payroll" });
+        }
+      } catch {
+        toast.error("Sync failed", { id: "sync-payroll" });
+      }
+    };
+    syncAttendance();
+  }, [selectedUserId, selectedPeriod]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if ((inputs.user_id || 0) > 0) {
+        setDebouncedInputs({
+          ...inputs,
+          variable_allowance: totalVariable,
+          custom_variable_allowances: customAllowances
+        });
+      }
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [inputs, totalVariable, customAllowances]);
+
+  const { data: calcResp, isLoading: isCalculating } = useQuery({
+    queryKey: ["payroll-calc-v2", debouncedInputs],
+    queryFn: () => calculatePayrollAPI(debouncedInputs),
+    enabled: (debouncedInputs.user_id || 0) > 0,
+    placeholderData: (previousData) => previousData,
+  });
+
+  const result = calcResp?.data;
+
   const saveMutation = useMutation({
     mutationFn: () => {
-      if (!selectedUserId) throw new Error("Select an employee first");
+      if (!selectedUserId || !result) throw new Error("Complete calculation first");
       return saveEmployeePayroll(selectedUserId, {
         period: selectedPeriod,
-        run_type: inputs.runType,
+        run_type: inputs.run_type,
         method: inputs.method,
-        basic_salary: inputs.basicSalary,
-        fixed_allowances: inputs.fixedAllowances,
-        incentives: inputs.incentives,
-        daily_meal_allowance: inputs.dailyMealAllowance,
-        daily_transport_allowance: inputs.dailyTransportAllowance,
-        attendance_days: inputs.attendanceDays,
-        working_days_in_month: inputs.workingDaysInMonth,
-        overtime_hours: inputs.overtimeHours,
-        unpaid_leave_days: inputs.unpaidLeaveDays,
-        ptkp_status: inputs.ptkpStatus,
-        status: 'Draft'
+        basic_salary: result.breakdown.earnings.basic_salary,
+        fixed_allowances: result.breakdown.earnings.fixed_allowances,
+        incentives: inputs.incentives || 0,
+        daily_meal_allowance: 0,
+        daily_transport_allowance: 0,
+        attendance_days: inputs.attendance_days,
+        working_days_in_month: inputs.working_days_in_month,
+        overtime_hours: inputs.overtime_hours || 0,
+        unpaid_leave_days: inputs.unpaid_leave_days || 0,
+        ptkp_status: result.user.ptkp_status,
+        status: 'Published',
       });
     },
     onSuccess: () => {
-      toast.success("Payroll successfully saved to dashboard");
+      toast.success("Payroll record saved to ledger!");
       router.push("/payroll");
     },
-    onError: (err: CustomApiError) => {
-      toast.error(err?.response?.data?.meta?.message || "Failed to save payroll");
+    onError: (error: CustomApiError) => {
+      toast.error(error.response?.data?.meta?.message || "Failed to save record.");
     }
   });
 
-  const formatCurrency = useCallback((amount: number | undefined) => {
+  const formatCurrency = (amount: number | undefined) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(amount || 0);
-  }, []);
-
-  const handleNumberInput = (key: keyof typeof inputs, value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, '');
-    setInputs(prev => ({
-      ...prev,
-      [key]: numericValue ? parseInt(numericValue, 10) : 0
-    }));
   };
 
-  if (authLoading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Verifying Authority</p>
-        </div>
-      </div>
-    );
-  }
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const addAllowance = () => setCustomAllowances([...customAllowances, { name: "", amount: 0 }]);
+  const removeAllowance = (i: number) => setCustomAllowances(customAllowances.filter((_, idx) => idx !== i));
+  const updateAllowance = (i: number, f: keyof CustomAllowance, v: any) => {
+    const updated = [...customAllowances];
+    updated[i] = { ...updated[i], [f]: v };
+    setCustomAllowances(updated);
+  };
+
+  const isTHR = inputs.run_type === 'THR';
 
   return (
-    <div className="max-w-7xl mx-auto pb-20 animate-in fade-in duration-700">
-      {/* Header */}
-      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-indigo-600">
-            <Scale size={18} strokeWidth={2.5} />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Finance Operations</span>
-          </div>
-          <h1 className="text-4xl font-black text-neutral-900 tracking-tight">Payroll Calculator</h1>
-          <p className="text-slate-500 font-medium">Stateless interactive engine for THP estimation & tax simulations.</p>
-        </div>
+    <div className="flex flex-col gap-10 pb-20 animate-in fade-in duration-1000">
+      
+      {/* ELITE HEADER */}
+      <header className="relative overflow-hidden bg-slate-950 rounded-[2.5rem] p-10 shadow-2xl text-white">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-indigo-600 opacity-20 rounded-full blur-[120px] pointer-events-none" />
         
-        <div className="flex flex-wrap gap-3">
-          {!isStateless && (
-            <Button 
-              disabled={saveMutation.isPending || !selectedUserId}
-              onClick={() => saveMutation.mutate()}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl h-12 shadow-md flex items-center gap-2"
-            >
-              {saveMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              <span className="font-bold">Save to Dashboard</span>
-            </Button>
-          )}
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
+               <Sparkles size={14} className="fill-current" /> Next-Gen Payroll Engine
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-tight">
+              Payroll <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400">Intelligence</span>
+            </h1>
+            <p className="text-slate-400 font-medium max-w-xl text-sm leading-relaxed">
+              Automated Indonesian compliance with Smart Profile Lookup (v2.1). Precision tax and benefit orchestration.
+            </p>
+          </div>
 
-          {result && (
-            <DynamicPDFDownload 
-              data={{
-                grossIncome: result?.breakdown?.earnings?.gross_income,
-                pph21Amount: result?.breakdown?.deductions?.pph21_amount,
-                netSalary: result?.net_salary,
-                totalDeductions: result?.breakdown?.deductions?.total_deductions,
-                totalCompanyCost: result?.breakdown?.employer_contributions?.total_employer_cost,
-                run_type: result?.run_type,
-                method: result?.method,
-                breakdown: {
-                  proratedBasic: result?.breakdown?.earnings?.basic_salary,
-                  unpaidLeaveDeduction: result?.breakdown?.deductions?.unpaid_leave_deduction,
-                  overtimePay: result?.breakdown?.earnings?.overtime_pay,
-                  grossIncome: result?.breakdown?.earnings?.gross_income,
-                  pph21Amount: result?.breakdown?.deductions?.pph21_amount,
-                  terRate: 0,
-                  bpjs: {
-                    health: {
-                      employee: result?.breakdown?.deductions?.bpjs_health_employee,
-                      company: result?.breakdown?.employer_contributions?.bpjs_health_company
-                    },
-                    jht: {
-                      employee: result?.breakdown?.deductions?.bpjs_jht_employee,
-                      company: result?.breakdown?.employer_contributions?.bpjs_jht_company
-                    },
-                    jp: {
-                      employee: result?.breakdown?.deductions?.bpjs_jp_employee,
-                      company: result?.breakdown?.employer_contributions?.bpjs_jp_company
-                    },
-                    jkk: result?.breakdown?.employer_contributions?.bpjs_jkk,
-                    jkm: result?.breakdown?.employer_contributions?.bpjs_jkm
-                  },
-                  fixedAllowances: result?.breakdown?.earnings?.fixed_allowances,
-                  variableAllowances: result?.breakdown?.earnings?.variable_allowances,
-                  taxAllowance: result?.breakdown?.earnings?.tax_allowance,
-                  bpjsAllowance: result?.breakdown?.earnings?.bpjs_allowance,
-                  thr: result?.breakdown?.earnings?.thr,
-                  bonus: result?.breakdown?.earnings?.bonus,
-                }
-              } as PayrollCalculationResult} 
-              companyName={user.tenant?.name || "AttendancePro Organization"} 
-              logo={user.tenant?.tenant_settings?.tenant_logo}
-              ptkp={inputs.ptkpStatus}
-              period={dayjs(selectedPeriod).format("MMMM YYYY")}
-              employeeName={employees.find(e => e.id === selectedUserId)?.name || "Simulation User"}
-              employeeRole={employees.find(e => e.id === selectedUserId)?.department || "Personnel"}
-              fileName={pdfFilename}
-            />
-          )}
-          <Button onClick={() => window.print()} variant="secondary" className="rounded-2xl h-12 shadow-sm">
-            <Printer size={18} />
-            <span className="font-bold">Print</span>
-          </Button>
+          <div className="flex items-center gap-4 bg-white/5 backdrop-blur-xl p-1.5 rounded-[24px] border border-white/10 shadow-2xl">
+            <button onClick={() => setSelectedPeriod(p => dayjs(p).subtract(1,'month').format("YYYY-MM"))} className="p-3 hover:bg-white/10 rounded-2xl transition-all text-slate-400 hover:text-white"><ChevronLeft size={20} strokeWidth={3} /></button>
+            <div className="px-8 flex flex-col items-center min-w-[140px]">
+              <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Process Period</span>
+              <span className="text-base font-black text-white leading-none">{dayjs(selectedPeriod).format("MMMM YYYY")}</span>
+            </div>
+            <button onClick={() => setSelectedPeriod(p => dayjs(p).add(1,'month').format("YYYY-MM"))} className="p-3 hover:bg-white/10 rounded-2xl transition-all text-slate-400 hover:text-white"><ChevronRight size={20} strokeWidth={3} /></button>
+          </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         
-        {/* LEFT: Control Panel */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* LEFT: WORKSPACE PANEL */}
+        <div className="xl:col-span-5 space-y-6">
           
-          {/* Employee Selection Section */}
-          <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-xl shadow-slate-900/20 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-            <div className="relative z-10 space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users size={18} className="text-blue-400" />
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">Employee Sync</h3>
-                </div>
-                
-                {/* Island Date Filter */}
-                <div className="flex items-center bg-white/5 p-1 rounded-2xl border border-white/10 shadow-lg backdrop-blur-sm">
-                  <button 
-                    onClick={() => navigatePeriod('prev')}
-                    className="p-1.5 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-white"
-                  >
-                    <ChevronLeft size={14} strokeWidth={3} />
-                  </button>
-                  
-                  <div className="px-3 flex flex-col items-center min-w-[100px]">
-                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest leading-none mb-0.5">Period</span>
-                    <span className="text-[11px] font-black text-white leading-none">
-                      {dayjs(selectedPeriod).format("MMM YYYY")}
-                    </span>
-                  </div>
-
-                  <button 
-                    onClick={() => navigatePeriod('next')}
-                    className="p-1.5 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-white"
-                  >
-                    <ChevronRight size={14} strokeWidth={3} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Select Personnel</label>
-                <div className="relative">
-                  <select 
-                    value={selectedUserId || ""}
-                    onChange={(e) => setSelectedUserId(Number(e.target.value) || null)}
-                    className="w-full h-14 pl-5 pr-12 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold text-white focus:bg-white/10 focus:border-blue-500/50 transition-all outline-none appearance-none cursor-pointer"
-                  >
-                    <option value="" className="text-slate-900">Choose an employee...</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id} className="text-slate-900">{emp.name} ({emp.employee_id})</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                </div>
-              </div>
-
-              {/* Run Type & Method */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Run Type</label>
-                  <select 
-                    value={inputs.runType}
-                    onChange={(e) => setInputs(p => ({ ...p, runType: e.target.value as PayrollInput['runType'] }))}
-                    className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none"
-                  >
-                    <option value="Regular" className="text-slate-900">Gaji Reguler</option>
-                    <option value="THR" className="text-slate-900">THR</option>
-                    <option value="Bonus" className="text-slate-900">Bonus</option>
-                    <option value="All" className="text-slate-900">Gabungan</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Tax Method</label>
-                  <select 
-                    value={inputs.method}
-                    onChange={(e) => setInputs(p => ({ ...p, method: e.target.value as PayrollInput['method'] }))}
-                    className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-white outline-none"
-                  >
-                    <option value="Gross" className="text-slate-900">Gross (Potong Gaji)</option>
-                    <option value="Net" className="text-slate-900">Net (Gross Up)</option>
-                  </select>
-                </div>
-              </div>
+          {/* Staff Focus Card */}
+          <section className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/50 space-y-8 relative overflow-hidden group">
+            <div className="flex items-center justify-between">
+               <div className="space-y-1">
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    <Users className="text-indigo-600" size={20} /> Staff Focus
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Identity synchronization</p>
+               </div>
+               <Badge className="bg-indigo-50 text-indigo-600 border-none font-black text-[9px] uppercase px-4 py-1.5 rounded-full">Automated</Badge>
             </div>
-          </div>
-
-          <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-8 space-y-8">
-              
-              {/* Fixed Components */}
-              <section className="space-y-5">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <PlusCircle size={16} />
-                  <h3 className="text-[10px] font-black uppercase tracking-widest">Fixed Components</h3>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Basic Salary</label>
-                    <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</div>
-                      <Input 
-                        value={inputs.basicSalary.toLocaleString('id-ID')}
-                        onChange={(e) => handleNumberInput('basicSalary', e.target.value)}
-                        className="pl-11 font-bold text-lg"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Fixed Allowances (Position, etc)</label>
-                    <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</div>
-                      <Input 
-                        value={inputs.fixedAllowances.toLocaleString('id-ID')}
-                        onChange={(e) => handleNumberInput('fixedAllowances', e.target.value)}
-                        className="pl-11 font-bold text-lg"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Incentives / Commissions</label>
-                    <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</div>
-                      <Input 
-                        value={inputs.incentives.toLocaleString('id-ID')}
-                        onChange={(e) => handleNumberInput('incentives', e.target.value)}
-                        className="pl-11 font-bold text-lg"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Daily Allowances */}
-              <section className={`space-y-5 pt-8 border-t border-slate-100 ${inputs.runType === 'THR' ? 'opacity-40 pointer-events-none' : ''}`}>
-                <div className="flex items-center gap-2 text-slate-400">
-                  <Receipt size={16} />
-                  <h3 className="text-[10px] font-black uppercase tracking-widest">Daily Allowances (Variable)</h3>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Meal / Day</label>
-                    <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</div>
-                      <Input 
-                        value={inputs.dailyMealAllowance.toLocaleString('id-ID')}
-                        onChange={(e) => handleNumberInput('dailyMealAllowance', e.target.value)}
-                        className="pl-11 font-bold"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Transport / Day</label>
-                    <div className="relative group">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</div>
-                      <Input 
-                        value={inputs.dailyTransportAllowance.toLocaleString('id-ID')}
-                        onChange={(e) => handleNumberInput('dailyTransportAllowance', e.target.value)}
-                        className="pl-11 font-bold"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <p className="text-[9px] text-slate-400 italic">Calculated automatically: (Meal + Transport) × Attendance Days</p>
-              </section>
-
-              {/* Monthly Variables */}
-              <section className="space-y-5 pt-8 border-t border-slate-100">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <Calendar size={16} />
-                  <h3 className="text-[10px] font-black uppercase tracking-widest">Monthly Variables</h3>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Working Days</label>
-                    <Input 
-                      type="number"
-                      value={inputs.workingDaysInMonth}
-                      onChange={(e) => setInputs(p => ({ ...p, workingDaysInMonth: Number(e.target.value) }))}
-                      className="font-bold"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Attendance</label>
-                    <Input 
-                      type="number"
-                      value={inputs.attendanceDays}
-                      onChange={(e) => setInputs(p => ({ ...p, attendanceDays: Number(e.target.value) }))}
-                      className="font-bold"
-                    />
-                  </div>
-                  <div className={`space-y-2 ${inputs.runType === 'THR' ? 'opacity-40 pointer-events-none' : ''}`}>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">OT Hours</label>
-                    <div className="relative">
-                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                      <Input 
-                        type="number"
-                        value={inputs.overtimeHours}
-                        onChange={(e) => setInputs(p => ({ ...p, overtimeHours: Number(e.target.value) }))}
-                        className="pl-11 font-bold"
-                      />
-                    </div>
-                  </div>
-                  <div className={`space-y-2 ${inputs.runType === 'THR' ? 'opacity-40 pointer-events-none' : ''}`}>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Unpaid Leave</label>
-                    <div className="relative">
-                      <MinusCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-rose-300" size={16} />
-                      <Input 
-                        type="number"
-                        value={inputs.unpaidLeaveDays}
-                        onChange={(e) => setInputs(p => ({ ...p, unpaidLeaveDays: Number(e.target.value) }))}
-                        className="pl-11 font-bold text-rose-600"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Tax & PTKP */}
-              <section className="space-y-5 pt-8 border-t border-slate-100">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <UserCheck size={16} />
-                  <h3 className="text-[10px] font-black uppercase tracking-widest">Tax Information</h3>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">PTKP Status (Effective 2024)</label>
-                  <select 
-                    value={inputs.ptkpStatus}
-                    onChange={(e) => setInputs(p => ({ ...p, ptkpStatus: e.target.value as PayrollInput['ptkpStatus'] }))}
-                    className="w-full h-14 px-5 bg-white border border-slate-200 rounded-2xl text-[15px] font-bold text-slate-900 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all outline-none appearance-none cursor-pointer"
-                  >
-                    {["TK/0", "TK/1", "TK/2", "TK/3", "K/0", "K/1", "K/2", "K/3"].map(status => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
-                </div>
-              </section>
-            </div>
-          </div>
-
-          <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex gap-4">
-            <AlertCircle className="text-amber-600 shrink-0" size={20} />
-            <div className="space-y-1">
-              <p className="text-xs font-black text-amber-900 uppercase tracking-tight">Regulatory Update</p>
-              <p className="text-[11px] text-amber-800/70 font-medium leading-relaxed">
-                Calculations based on <strong>PP No. 58/2023 (TER PPh 21)</strong> and latest BPJS thresholds effective 2024.
-              </p>
-            </div>
-          </div>
-
-          <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 flex gap-4 mt-4">
-            <Building2 className="text-blue-600 shrink-0" size={20} />
-            <div className="space-y-1">
-              <p className="text-xs font-black text-blue-900 uppercase tracking-tight">BPJS Maximum Basis</p>
-              <p className="text-[11px] text-blue-800/70 font-medium leading-relaxed">
-                Health basis capped at <strong>Rp 12.000.000</strong>. Pension (JP) basis capped at <strong>Rp 10.042.300</strong>.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: Digital Payslip Preview */}
-        <div className="lg:col-span-7">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden relative">
             
-            {/* Perforated Edge Effect */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-slate-50 flex items-center justify-around px-4">
-              {[...Array(30)].map((_, i) => (
-                <div key={i} className="w-2 h-2 rounded-full bg-slate-200 -mt-1" />
-              ))}
-            </div>
+            <Select 
+              options={employeeOptions}
+              value={selectedUserId || ""}
+              onChange={(val) => { setSelectedUserId(val); setInputs(p => ({ ...p, user_id: val })); }}
+              placeholder="Search employee directory..."
+              searchable
+              className="z-50"
+            />
 
-            {/* Loading Overlay */}
-            {isCalculating && (
-              <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center">
-                <div className="w-12 h-12 border-4 border-indigo-600/20 border-t-indigo-600 rounded-full animate-spin mb-4" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Recalculating...</p>
+            {selectedUserId && (
+              <div className="p-6 bg-slate-950 rounded-[2rem] space-y-5 animate-in slide-in-from-top-4 duration-500 text-white shadow-2xl shadow-indigo-950/30 relative overflow-hidden">
+                 <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-600 opacity-20 rounded-full blur-[60px]" />
+                 <div className="flex items-center gap-5 relative z-10">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center font-black text-xl text-white shadow-lg">
+                       {result?.user.full_name.charAt(0) || "?"}
+                    </div>
+                    <div>
+                       <p className="text-base font-black tracking-tight">{result?.user.full_name || "Synchronizing..."}</p>
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{result?.user.position || "Processing Position"}</p>
+                    </div>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4 relative z-10">
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 hover:border-indigo-500/50 transition-colors">
+                       <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Settlement Bank</p>
+                       <p className="text-xs font-black text-indigo-400">{result?.user.bank_name || "N/A"}</p>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 hover:border-indigo-500/50 transition-colors">
+                       <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Account Hash</p>
+                       <p className="text-xs font-black text-indigo-400">{result?.user.bank_account_number || "N/A"}</p>
+                    </div>
+                 </div>
               </div>
             )}
+          </section>
 
-            <div className="p-10 sm:p-16 space-y-12">
-              {/* Slip Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-8">
-                <div className="space-y-4">
-                  {user.tenant?.tenant_settings?.tenant_logo ? (
-                    <div className="relative h-12 w-32">
-                      <Image
-                        src={user.tenant.tenant_settings.tenant_logo} 
-                        alt="Logo" 
-                        fill
-                        className="object-contain object-left" 
-                        sizes="128px"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
-                      <Building2 size={24} />
-                    </div>
-                  )}
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900">{user.tenant?.name || "AttendancePro Organization"}</h2>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Official Monthly Earnings Statement</p>
+          {/* Configuration Master Section */}
+          <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
+            
+            {/* Section 0: Base Compensation */}
+            <div className="group">
+               <button onClick={() => toggleSection('salary')} className={`w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all text-left ${expandedSections.salary ? 'bg-slate-50/50' : ''}`}>
+                  <div className="flex items-center gap-4">
+                     <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${expandedSections.salary ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-blue-50 text-blue-600'}`}>
+                        <Banknote size={22} />
+                     </div>
+                     <div className="space-y-0.5">
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Base Compensation</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Core monthly contractuals</p>
+                     </div>
                   </div>
-                </div>
-                <div className="text-left sm:text-right space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Statement Date</p>
-                  <p className="text-sm font-bold text-slate-900">{new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                  <div className="flex items-center gap-2 justify-start sm:justify-end mt-2">
-                    <Badge className="bg-indigo-50 text-indigo-600 border-none text-[9px] font-black uppercase tracking-tight px-1.5 py-0.5">
-                      {inputs.ptkpStatus}
-                    </Badge>
-                    <Badge className={`${
-                      inputs.runType === 'THR' ? 'bg-emerald-100 text-emerald-700' : 
-                      inputs.runType === 'Bonus' ? 'bg-purple-100 text-purple-700' : 
-                      'bg-blue-100 text-blue-700'
-                    } border-none text-[9px] font-black uppercase tracking-tight px-1.5 py-0.5`}>
-                      {inputs.runType}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
+                  <ChevronDown className={`text-slate-300 transition-transform duration-500 ${expandedSections.salary ? 'rotate-180 text-blue-600' : 'group-hover:text-slate-400'}`} size={20} strokeWidth={3} />
+               </button>
+               {expandedSections.salary && (
+                 <div className="px-8 pb-8 pt-4 space-y-6 animate-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-2">
+                       <CurrencyInput 
+                        label="Basic Salary Override"
+                        placeholder="Leave zero to use profile value" 
+                        value={inputs.basic_salary || 0} 
+                        onChange={(v) => setInputs(p => ({ ...p, basic_salary: v }))} 
+                       />
+                       {(inputs.basic_salary || 0) > 0 && (
+                         <p className="text-[10px] font-black text-amber-500 flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-lg w-fit mt-3">
+                           <AlertCircle size={12} /> Override Active: Manual entry will take precedence
+                         </p>
+                       )}
+                    </div>
+                 </div>
+               )}
+            </div>
 
-              {/* Slip Body */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-16 relative">
-                {/* Vertical Separator */}
-                <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-100 -translate-x-1/2 border-dashed border-l" />
-
-                {/* Earnings */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                    <div className="w-6 h-6 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
-                      <PlusCircle size={14} />
-                    </div>
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Earnings</h4>
+            {/* Section 1: Logic Configuration */}
+            <div className="group border-t border-slate-50">
+               <button onClick={() => toggleSection('config')} className={`w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all text-left ${expandedSections.config ? 'bg-slate-50/50' : ''}`}>
+                  <div className="flex items-center gap-4">
+                     <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${expandedSections.config ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'bg-slate-100 text-slate-600'}`}>
+                        <LayoutGrid size={22} />
+                     </div>
+                     <div className="space-y-0.5">
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Logic & Tax</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Calculation methodology</p>
+                     </div>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-bold text-slate-700">Basic Salary</p>
-                        <p className="text-[10px] text-slate-400 font-medium italic">Prorated for attendance</p>
+                  <ChevronDown className={`text-slate-300 transition-transform duration-500 ${expandedSections.config ? 'rotate-180 text-slate-900' : 'group-hover:text-slate-400'}`} size={20} strokeWidth={3} />
+               </button>
+               {expandedSections.config && (
+                 <div className="px-8 pb-8 pt-4 grid grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Run Type</label>
+                       <Select value={inputs.run_type} onChange={(v) => setInputs(p => ({ ...p, run_type: v }))} options={[{label:"Regular Payroll", value:"Regular"},{label:"THR Payment", value:"THR"},{label:"Bonus Only", value:"Bonus"},{label:"Consolidated All", value:"All"}]} />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Methodology</label>
+                       <Select value={inputs.method} onChange={(v) => setInputs(p => ({ ...p, method: v }))} options={[{label:"Gross (Ded. Tax)", value:"Gross"},{label:"Net (Cover Tax)", value:"Net"}]} />
+                    </div>
+                 </div>
+               )}
+            </div>
+
+            {/* Section 2: Attendance Variables */}
+            <div className="group border-t border-slate-50">
+               <button onClick={() => toggleSection('attendance')} className={`w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all text-left ${expandedSections.attendance ? 'bg-slate-50/50' : ''}`}>
+                  <div className="flex items-center gap-4">
+                     <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${expandedSections.attendance ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-indigo-50 text-indigo-600'}`}>
+                        <TrendingUp size={22} />
+                     </div>
+                     <div className="space-y-0.5">
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Attendance Stats</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Variable effort components</p>
+                     </div>
+                  </div>
+                  <ChevronDown className={`text-slate-300 transition-transform duration-500 ${expandedSections.attendance ? 'rotate-180 text-indigo-600' : 'group-hover:text-slate-400'}`} size={20} strokeWidth={3} />
+               </button>
+               {expandedSections.attendance && (
+                 <div className="px-8 pb-8 pt-4 space-y-6 animate-in slide-in-from-top-2 duration-300">
+                    {isTHR && (
+                      <div className="p-4 bg-amber-50 border border-amber-100 rounded-[20px] flex gap-4 text-xs font-bold text-amber-700 leading-relaxed shadow-sm">
+                         <AlertCircle size={20} className="shrink-0 text-amber-500" />
+                         <span>Attendance factors are legally ignored during THR computation. Inputs locked.</span>
                       </div>
-                      <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.basic_salary)}</span>
+                    )}
+                    <div className="grid grid-cols-2 gap-6">
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Working Days</label>
+                          <Input type="number" value={inputs.working_days_in_month} onChange={(e) => setInputs(p => ({ ...p, working_days_in_month: Number(e.target.value) }))} className="h-14 font-black" />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Actual Presence</label>
+                          <Input type="number" disabled={isTHR} className={`h-14 font-black ${isTHR ? "opacity-30 grayscale bg-slate-50" : ""}`} value={inputs.attendance_days} onChange={(e) => setInputs(p => ({ ...p, attendance_days: Number(e.target.value) }))} />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Overtime (Hrs)</label>
+                          <Input type="number" disabled={isTHR} className={`h-14 font-black ${isTHR ? "opacity-30 grayscale bg-slate-50" : ""}`} value={inputs.overtime_hours || 0} onChange={(e) => setInputs(p => ({ ...p, overtime_hours: Number(e.target.value) }))} />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Unpaid Absence</label>
+                          <Input type="number" disabled={isTHR} className={`h-14 font-black ${isTHR ? "opacity-30 grayscale bg-slate-50" : ""}`} value={inputs.unpaid_leave_days || 0} onChange={(e) => setInputs(p => ({ ...p, unpaid_leave_days: Number(e.target.value) }))} />
+                       </div>
+                    </div>
+                 </div>
+               )}
+            </div>
+
+            {/* Section 3: Financial Benefits */}
+            <div className="group border-t border-slate-50">
+               <button onClick={() => toggleSection('allowances')} className={`w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all text-left ${expandedSections.allowances ? 'bg-slate-50/50' : ''}`}>
+                  <div className="flex items-center gap-4">
+                     <div className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${expandedSections.allowances ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' : 'bg-emerald-50 text-emerald-600'}`}>
+                        <Coins size={22} />
+                     </div>
+                     <div className="space-y-0.5">
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Financial Benefits</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Allowances, incentives & bonuses</p>
+                     </div>
+                  </div>
+                  <ChevronDown className={`text-slate-300 transition-transform duration-500 ${expandedSections.allowances ? 'rotate-180 text-emerald-600' : 'group-hover:text-slate-400'}`} size={20} strokeWidth={3} />
+               </button>
+               {expandedSections.allowances && (
+                 <div className="px-8 pb-8 pt-4 space-y-10 animate-in slide-in-from-top-2 duration-300">
+                    
+                    {/* Fixed Allowance Override */}
+                    <div className="space-y-2">
+                       <CurrencyInput 
+                         label="Fixed Allowance Override (Tetap)" 
+                         value={inputs.fixed_allowance || 0} 
+                         onChange={(v) => setInputs(p => ({ ...p, fixed_allowance: v }))} 
+                       />
+                       {(inputs.fixed_allowance || 0) > 0 && <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-lg">Override Active</span>}
                     </div>
 
-                    {(result?.breakdown?.earnings?.tax_allowance ?? 0) > 0 && (
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-bold text-slate-700">Tax Allowance</p>
-                            <div className="group/tip relative cursor-help">
-                              <AlertCircle size={12} className="text-indigo-400" />
-                              <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-slate-900 text-[9px] text-white rounded-lg opacity-0 group-hover/tip:opacity-100 transition-opacity pointer-events-none z-30">
-                                Pajak ini ditanggung perusahaan (Gross-Up System).
-                              </div>
+                    {/* Dynamic Variables */}
+                    <div className="space-y-5">
+                       <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Variable Breakdown (Tidak Tetap)</p>
+                          <Button onClick={addAllowance} variant="ghost" className="h-8 px-4 rounded-xl text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 hover:bg-emerald-600 hover:text-white transition-all">
+                            <Plus size={16} className="mr-2" /> Add Line Item
+                          </Button>
+                       </div>
+                       
+                       <div className="space-y-4">
+                          {customAllowances.map((a, i) => (
+                            <div key={i} className="flex items-center gap-3 animate-in slide-in-from-left-4 duration-500">
+                               <div className="flex-[2]">
+                                  <Input placeholder="Component Label (e.g. WiFi)" value={a.name} onChange={(e) => updateAllowance(i, 'name', e.target.value)} className="h-12 text-xs font-bold bg-slate-50 border-none shadow-none" />
+                               </div>
+                               <div className="flex-[1.5]">
+                                  <CurrencyInput value={a.amount} onChange={(v) => updateAllowance(i, 'amount', v)} className="h-12 bg-slate-50 border-none shadow-none" />
+                               </div>
+                               <button onClick={() => removeAllowance(i)} className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-sm">
+                                  <Trash2 size={18} />
+                               </button>
                             </div>
-                          </div>
-                          <p className="text-[10px] text-indigo-500 font-medium italic">Method: Net</p>
-                        </div>
-                        <span className="text-sm font-bold text-indigo-600">{formatCurrency(result?.breakdown?.earnings?.tax_allowance)}</span>
-                      </div>
-                    )}
-
-                    {(result?.breakdown?.earnings?.bpjs_allowance ?? 0) > 0 && (
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-0.5">
-                          <p className="text-sm font-bold text-slate-700">BPJS Allowance</p>
-                          <p className="text-[10px] text-indigo-500 font-medium italic">Employer covers employee share</p>
-                        </div>
-                        <span className="text-sm font-bold text-indigo-600">{formatCurrency(result?.breakdown?.earnings?.bpjs_allowance)}</span>
-                      </div>
-                    )}
-
-                    {(result?.breakdown?.earnings?.thr ?? 0) > 0 && (
-                      <div className="flex justify-between items-start">
-                        <p className="text-sm font-bold text-emerald-600">THR</p>
-                        <span className="text-sm font-bold text-emerald-600">{formatCurrency(result?.breakdown?.earnings?.thr)}</span>
-                      </div>
-                    )}
-
-                    {(result?.breakdown?.earnings?.bonus ?? 0) > 0 && (
-                      <div className="flex justify-between items-start">
-                        <p className="text-sm font-bold text-purple-600">Bonus</p>
-                        <span className="text-sm font-bold text-purple-600">{formatCurrency(result?.breakdown?.earnings?.bonus)}</span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between items-start">
-                      <p className="text-sm font-bold text-slate-700">Allowances (Fixed)</p>
-                      <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.fixed_allowances)}</span>
+                          ))}
+                          
+                          {customAllowances.length > 0 ? (
+                            <div className="p-5 rounded-[24px] bg-emerald-50/50 border border-emerald-100 flex justify-between items-center animate-in zoom-in-95 duration-500">
+                               <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Total Variable Sum</p>
+                               <p className="text-sm font-black text-emerald-700 tabular-nums">{formatCurrency(totalVariable)}</p>
+                            </div>
+                          ) : (
+                            <div className="p-10 border-2 border-dashed border-slate-100 rounded-[2rem] text-center opacity-60">
+                               <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-300"><LayoutGrid size={24} strokeWidth={1} /></div>
+                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-loose">No extra variables defined<br/>Profile standards apply</p>
+                            </div>
+                          )}
+                       </div>
                     </div>
-                    {result?.breakdown?.earnings?.incentives > 0 && (
-                      <div className="flex justify-between items-start">
-                        <p className="text-sm font-bold text-slate-700">Incentives</p>
-                        <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.incentives)}</span>
-                      </div>
-                    )}
-                    {result?.breakdown?.earnings?.variable_allowances > 0 && (
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-0.5">
-                          <p className="text-sm font-bold text-slate-700">Allowances (Daily)</p>
-                          <p className="text-[10px] text-slate-400 font-medium italic">Meal & Transport</p>
-                        </div>
-                        <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.variable_allowances)}</span>
-                      </div>
-                    )}
-                    {result?.breakdown?.earnings?.overtime_pay > 0 && (
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-0.5">
-                          <p className="text-sm font-bold text-slate-700">Overtime Pay</p>
-                          <p className="text-[10px] text-slate-400 font-medium italic">{inputs.overtimeHours} hours calculated</p>
-                        </div>
-                        <span className="text-sm font-bold text-slate-900">{formatCurrency(result?.breakdown?.earnings?.overtime_pay)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Deductions */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                    <div className="w-6 h-6 bg-rose-50 rounded-lg flex items-center justify-center text-rose-600">
-                      <MinusCircle size={14} />
+                    <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
+                       <CurrencyInput label="Performance Incentives" value={inputs.incentives || 0} onChange={(v) => setInputs(p => ({ ...p, incentives: v }))} />
+                       <CurrencyInput label="One-time Bonus" value={inputs.bonus || 0} onChange={(v) => setInputs(p => ({ ...p, bonus: v }))} />
                     </div>
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Deductions</h4>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-bold text-slate-700">Income Tax (PPh 21)</p>
-                        <p className="text-[10px] text-slate-400 font-medium italic">Calculated from TER bracket</p>
-                      </div>
-                      <span className="text-sm font-bold text-rose-600">-{formatCurrency(result?.breakdown?.deductions?.pph21_amount)}</span>
-                    </div>
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-bold text-slate-700">BPJS Health</p>
-                        <p className="text-[10px] text-slate-400 font-medium italic">1% Employee Share</p>
-                      </div>
-                      <span className="text-sm font-bold text-rose-600">-{formatCurrency(result?.breakdown?.deductions?.bpjs_health_employee)}</span>
-                    </div>
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-bold text-slate-700">BPJS Ketenagakerjaan</p>
-                        <p className="text-[10px] text-slate-400 font-medium italic">JHT 2% + JP 1%</p>
-                      </div>
-                      <span className="text-sm font-bold text-rose-600">
-                        -{formatCurrency((result?.breakdown?.deductions?.bpjs_jht_employee || 0) + (result?.breakdown?.deductions?.bpjs_jp_employee || 0))}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Perforated Divider */}
-              <div className="border-t-2 border-dashed border-slate-100 relative">
-                <div className="absolute -left-12 -top-3 w-6 h-6 rounded-full bg-slate-50 border border-slate-100" />
-                <div className="absolute -right-12 -top-3 w-6 h-6 rounded-full bg-slate-50 border border-slate-100" />
-              </div>
-
-              {/* Total Section */}
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-8 bg-slate-50/50 p-8 rounded-[2rem] border border-slate-100">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Net Take Home Pay</p>
-                  <p className="text-sm font-medium text-slate-500 italic">Simulated for current parameters</p>
-                </div>
-                <div className="text-center sm:text-right">
-                  <h3 className="text-4xl sm:text-5xl font-black text-indigo-600 tracking-tighter tabular-nums">
-                    {formatCurrency(result?.net_salary)}
-                  </h3>
-                </div>
-              </div>
-
-              <div className="pt-4 text-center">
-                <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.3em]">Computer Generated Document • Confidential</p>
-              </div>
+                 </div>
+               )}
             </div>
-          </div>
 
-          {/* Secondary Info */}
-          <div className="mt-8 grid grid-cols-2 gap-6">
-            <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
-                <Building2 size={20} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Employer Cost</p>
-                <p className="text-lg font-black text-slate-900">{formatCurrency(result?.breakdown?.employer_contributions?.total_employer_cost)}</p>
-              </div>
+            {/* Action Bar */}
+            <div className="p-8 bg-slate-900">
+               <Button 
+                className="w-full h-18 rounded-[1.5rem] bg-indigo-600 text-white font-black uppercase text-[11px] tracking-[0.3em] shadow-[0_20px_50px_rgba(79,70,229,0.3)] transition-all hover:bg-indigo-500 hover:scale-[1.02] active:scale-95 disabled:bg-slate-800 disabled:text-slate-600 disabled:shadow-none"
+                onClick={() => saveMutation.mutate()}
+                disabled={!result || saveMutation.isPending}
+              >
+                {saveMutation.isPending ? <Loader2 className="animate-spin" size={28} /> : (
+                  <div className="flex items-center gap-4">
+                     <Save size={24} />
+                     <span>Finalize Calculation</span>
+                  </div>
+                )}
+              </Button>
             </div>
-            <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
-              <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600">
-                <Receipt size={20} />
+          </section>
+        </div>
+
+        {/* RIGHT: LIVE PREMIUM PREVIEW */}
+        <div className="xl:col-span-7 space-y-6 sticky top-8">
+           <div className="bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-300/50 overflow-hidden min-h-[850px] flex flex-col group transition-all hover:shadow-indigo-900/10">
+              
+              <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/20 backdrop-blur-3xl">
+                 <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-950 text-white flex items-center justify-center shadow-xl"><Printer size={22} strokeWidth={2.5} /></div>
+                    <div>
+                       <h3 className="text-base font-black text-slate-900 tracking-tight leading-none">Draft Statement</h3>
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Real-time Ledger Preview
+                       </p>
+                    </div>
+                 </div>
+                 <Button onClick={() => setShowSlipPreview(true)} variant="outline" className="h-12 rounded-2xl px-6 text-[10px] font-black uppercase tracking-widest border-slate-200 hover:bg-slate-950 hover:text-white transition-all shadow-sm" disabled={!result}>
+                    <FileText size={18} className="mr-2" /> Detailed View
+                 </Button>
               </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Deductions</p>
-                <p className="text-lg font-black text-slate-900">{formatCurrency(result?.breakdown?.deductions?.total_deductions)}</p>
+
+              <div className="flex-1 p-10 sm:p-16">
+                 {!selectedUserId ? (
+                   <div className="h-full flex flex-col items-center justify-center text-center space-y-8 opacity-20 grayscale transition-all group-hover:opacity-30">
+                      <Calculator size={120} strokeWidth={0.5} className="text-slate-900" />
+                      <div className="space-y-2">
+                         <p className="text-sm font-black text-slate-900 uppercase tracking-[0.4em]">Engine Standby</p>
+                         <p className="text-xs font-medium text-slate-500">Select staff member to initiate smart sync.</p>
+                      </div>
+                   </div>
+                 ) : isCalculating ? (
+                   <div className="h-full flex flex-col items-center justify-center space-y-8">
+                      <div className="relative w-24 h-24">
+                         <div className="absolute inset-0 border-8 border-indigo-100 rounded-full" />
+                         <div className="absolute inset-0 border-8 border-indigo-600 rounded-full border-t-transparent animate-spin" />
+                         <div className="absolute inset-0 flex items-center justify-center font-black text-base text-indigo-600 tracking-tighter italic">AI.2</div>
+                      </div>
+                      <div className="text-center space-y-2">
+                        <p className="text-xs font-black text-slate-900 uppercase tracking-[0.3em]">Processing Ledger</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Applying TER Tax Tables 2024</p>
+                      </div>
+                   </div>
+                 ) : result ? (
+                   <div className="space-y-16 animate-in fade-in zoom-in-95 duration-700">
+                      
+                      {/* Identity Header */}
+                      <div className="flex flex-col md:flex-row justify-between items-start gap-10">
+                         <div className="flex items-center gap-6">
+                            <div className="relative h-20 w-20 bg-slate-50 rounded-[2.2rem] border border-slate-100 flex items-center justify-center overflow-hidden shadow-inner group-hover:rotate-3 transition-transform duration-500">
+                               {result.company_context.logo_url ? <img src={result.company_context.logo_url} className="w-12 h-12 object-contain" alt="Logo" /> : <Building2 size={32} className="text-indigo-600" />}
+                            </div>
+                            <div className="space-y-1">
+                               <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">{result.company_context.name}</h2>
+                               <p className="text-xs font-black text-indigo-500 uppercase tracking-[0.2em]">{result.user.position}</p>
+                            </div>
+                         </div>
+                         <div className="text-left md:text-right space-y-1.5">
+                            <p className="text-base font-black text-slate-900 leading-none">{result.user.full_name}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{result.user.bank_name} • {result.user.bank_account_number}</p>
+                            <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[9px] uppercase px-3 py-1 rounded-full mt-2">Verified Profile</Badge>
+                         </div>
+                      </div>
+
+                      {/* Main Ledger Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-16 relative">
+                         <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-slate-100 -translate-x-1/2 border-dashed border-l" />
+
+                         {/* Earnings Cluster */}
+                         <div className="space-y-8">
+                            <div className="flex items-center gap-4 border-b border-slate-50 pb-5">
+                               <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm"><PlusCircle size={22} strokeWidth={2.5} /></div>
+                               <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Earnings Cluster</h4>
+                            </div>
+                            <div className="space-y-6">
+                               <div className="flex justify-between items-start"><div className="space-y-1"><p className="text-sm font-bold text-slate-700">Gaji Pokok</p><p className="text-[9px] text-slate-400 font-medium">Prorated attendance</p></div><span className="text-sm font-black text-slate-950 tabular-nums">{formatCurrency(result.breakdown.earnings.basic_salary)}</span></div>
+                               <div className="flex justify-between items-start"><p className="text-sm font-bold text-slate-700">Tunjangan Tetap</p><span className="text-sm font-black text-slate-950 tabular-nums">{formatCurrency(result.breakdown.earnings.fixed_allowances)}</span></div>
+                               {result.breakdown.earnings.variable_allowances > 0 && <div className="flex justify-between items-start group"><div className="space-y-1"><p className="text-sm font-bold text-slate-700">Tunjangan Tidak Tetap</p><p className="text-[9px] text-emerald-500 font-bold uppercase group-hover:translate-x-1 transition-transform">Aggregated</p></div><span className="text-sm font-black text-slate-950 tabular-nums">{formatCurrency(result.breakdown.earnings.variable_allowances)}</span></div>}
+                               {result.breakdown.earnings.overtime_pay > 0 && <div className="flex justify-between items-start"><p className="text-sm font-bold text-slate-700">Uang Lembur</p><span className="text-sm font-black text-slate-950 tabular-nums">{formatCurrency(result.breakdown.earnings.overtime_pay)}</span></div>}
+                               {result.breakdown.earnings.incentives > 0 && <div className="flex justify-between items-start"><p className="text-sm font-bold text-slate-700">Insentif Performa</p><span className="text-sm font-black text-slate-950 tabular-nums">{formatCurrency(result.breakdown.earnings.incentives)}</span></div>}
+                               {inputs.method === 'Net' && (
+                                 <div className="flex justify-between items-start p-4 rounded-3xl bg-indigo-50/50 border border-indigo-100/50 animate-in zoom-in-95 duration-700">
+                                    <div className="space-y-1"><p className="text-sm font-bold text-indigo-700">Tunjangan Pajak</p><p className="text-[9px] text-indigo-500 font-black uppercase tracking-widest">Net Method</p></div>
+                                    <span className="text-sm font-black text-indigo-700 tabular-nums">+{formatCurrency(result.breakdown.earnings.tax_allowance)}</span>
+                                 </div>
+                               )}
+                            </div>
+                         </div>
+
+                         {/* Deductions Cluster */}
+                         <div className="space-y-8">
+                            <div className="flex items-center gap-4 border-b border-slate-50 pb-5">
+                               <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-sm"><MinusCircle size={22} strokeWidth={2.5} /></div>
+                               <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Liability Cluster</h4>
+                            </div>
+                            <div className="space-y-6">
+                               <div className="flex justify-between items-start"><div><p className="text-sm font-bold text-slate-700">PPh 21</p><p className="text-[9px] text-slate-400 font-medium">Income tax liability</p></div><span className="text-sm font-black text-rose-600 tabular-nums">-{formatCurrency(result.breakdown.deductions.pph21_amount)}</span></div>
+                               <div className="flex justify-between items-start"><div><p className="text-sm font-bold text-slate-700">Iuran BPJS</p><p className="text-[9px] text-slate-400 font-medium">JHT, JP, Kesehatan (Emp)</p></div><span className="text-sm font-black text-rose-600 tabular-nums">-{formatCurrency(result.breakdown.deductions.bpjs_health_employee + result.breakdown.deductions.bpjs_jht_employee + result.breakdown.deductions.bpjs_jp_employee)}</span></div>
+                               {result.breakdown.deductions.unpaid_leave_deduction > 0 && <div className="flex justify-between items-start"><div><p className="text-sm font-bold text-slate-700">Potongan Absensi</p><p className="text-[9px] text-rose-400 font-medium italic">Unpaid leave days</p></div><span className="text-sm font-black text-rose-600 tabular-nums">-{formatCurrency(result.breakdown.deductions.unpaid_leave_deduction)}</span></div>}
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* Final Settlement Summary - Refined & Compact */}
+                      <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[2.5rem] blur-xl opacity-5 group-hover:opacity-10 transition-opacity duration-700" />
+                        
+                        <div className="relative bg-slate-950 rounded-[2.5rem] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] border border-white/5">
+                           <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[80px] -mr-32 -mt-32" />
+
+                           <div className="relative z-10 p-8 sm:p-10 flex flex-col lg:flex-row items-center justify-between gap-8">
+                              <div className="space-y-4 text-center lg:text-left">
+                                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400">
+                                    <ShieldCheck size={12} /> Pending Approval
+                                 </div>
+                                 <div className="space-y-1">
+                                    <h4 className="text-lg font-black text-white tracking-tight">Final Settlement</h4>
+                                    <p className="text-[11px] font-medium text-slate-500 max-w-xs leading-relaxed">
+                                       Disbursement for <span className="text-slate-300 font-bold">{dayjs(selectedPeriod).format("MMMM YYYY")}</span> cycle.
+                                    </p>
+                                 </div>
+                                 
+                                 {/* Compact Bank Chip */}
+                                 <div className="inline-flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                       <Briefcase size={16} />
+                                    </div>
+                                    <div className="text-left">
+                                       <p className="text-[10px] font-black text-slate-200 leading-none">{result.user.bank_name}</p>
+                                       <p className="text-[9px] font-bold text-slate-500 mt-1">{result.user.bank_account_number}</p>
+                                    </div>
+                                 </div>
+                              </div>
+
+                              <div className="flex flex-col items-center lg:items-end gap-6">
+                                 <div className="text-center lg:text-right space-y-1">
+                                    <div className="flex items-baseline justify-center lg:justify-end gap-2">
+                                       <span className="text-lg font-black text-indigo-500">IDR</span>
+                                       <h3 className="text-5xl font-black text-white tracking-tighter tabular-nums">
+                                          {result.net_salary.toLocaleString('id-ID')}
+                                       </h3>
+                                    </div>
+                                    <div className="flex items-center justify-center lg:justify-end gap-1.5 text-[9px] font-black text-emerald-400 uppercase tracking-widest opacity-80">
+                                       <CheckCircle2 size={10} strokeWidth={3} />
+                                       TER 2024 Compliant
+                                    </div>
+                                 </div>
+
+                                 <Button 
+                                    className="h-12 px-8 rounded-xl bg-white text-slate-950 font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:bg-indigo-500 hover:text-white transition-all active:scale-95 group/btn"
+                                    onClick={() => setShowSlipPreview(true)}
+                                 >
+                                    Review & Approve
+                                    <ArrowRight size={14} className="ml-2 group-hover/btn:translate-x-1 transition-transform" strokeWidth={3} />
+                                 </Button>
+                              </div>
+                           </div>
+                        </div>
+                      </div>
+                   </div>
+                 ) : (
+                   <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30 grayscale"><AlertCircle size={60} strokeWidth={1} className="text-rose-500" /><h4 className="text-2xl font-black text-slate-900 uppercase tracking-widest">Engine Outage</h4><p className="text-sm font-medium text-slate-400 max-w-xs">Failed to communicate with calculation service. Please verify your connection.</p></div>
+                 )}
               </div>
-            </div>
-          </div>
+           </div>
         </div>
 
       </div>
+
+      {result && <EnhancedPayslipModal showSlipPreview={showSlipPreview} setShowSlipPreview={setShowSlipPreview} selectedEmployeeSlip={result} selectedPeriod={selectedPeriod} />}
     </div>
   );
 }

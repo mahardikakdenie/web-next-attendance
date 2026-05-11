@@ -80,13 +80,12 @@ async function handler(
   ////////////////////////////////////////////////////////////
   // 🔥 4. SECURITY (PERBAIKAN)
   ////////////////////////////////////////////////////////////
-  // JANGAN generate Date.now() atau UUID di sini. 
-  // Ambil dari request yang dikirim oleh Browser (Client-side)
   const timestamp = req.headers.get("x-timestamp");
   const requestId = req.headers.get("x-request-id");
+  const isStream = path.includes("notifications/stream");
 
-  // Jika browser tidak mengirim header ini, tolak request
-  if (!timestamp || !requestId) {
+  // Jika bukan stream DAN browser tidak mengirim header ini, tolak request
+  if (!isStream && (!timestamp || !requestId)) {
     return json({ message: "Missing security headers (X-Timestamp / X-Request-ID)" }, 400);
   }
 
@@ -95,8 +94,8 @@ async function handler(
 
   let signature: string | undefined;
 
-  // Gunakan timestamp dan requestId bawaan dari browser untuk hashing
-  if (!isMultipart) {
+  // Signature hanya dibuat jika bukan multipart DAN bukan stream (karena stream tidak butuh headers security)
+  if (!isMultipart && !isStream && timestamp && requestId) {
     signature = generateSignatureRaw(rawBody, timestamp, requestId);
   }
 
@@ -105,9 +104,13 @@ async function handler(
   ////////////////////////////////////////////////////////////
   const headers: Record<string, string> = {
     "X-Internal-Secret": INTERNAL_SECRET,
-    "X-Timestamp": timestamp, // Teruskan timestamp browser ke Go
-    "X-Request-ID": requestId, // Teruskan UUID browser ke Go
   };
+
+  // Hanya teruskan security headers jika bukan stream
+  if (!isStream && timestamp && requestId) {
+    headers["X-Timestamp"] = timestamp;
+    headers["X-Request-ID"] = requestId;
+  }
 
   if (contentType) {
     headers["Content-Type"] = contentType;
@@ -129,11 +132,28 @@ async function handler(
     method,
     headers,
     body: bodyBuffer,
+    // Penting untuk streaming: jangan gunakan cache dan pastikan signal diteruskan jika perlu
+    cache: 'no-store',
   });
 
   ////////////////////////////////////////////////////////////
-  // 🔥 7. RESPONSE
+  // 🔥 7. RESPONSE (STREAMING SUPPORT)
   ////////////////////////////////////////////////////////////
+  
+  // Jika ini adalah stream, kita harus mengembalikan body sebagai stream langsung
+  // agar tidak tertahan oleh buffering res.text()
+  if (isStream && res.body) {
+    return new Response(res.body, {
+      status: res.status,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no", // Mematikan buffering di Nginx jika ada
+      },
+    });
+  }
+
   const data = await res.text();
 
   const responseHeaders: HeadersInit = {

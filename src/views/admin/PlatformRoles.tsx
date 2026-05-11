@@ -6,7 +6,6 @@ import {
   Users, 
   Clock, 
   Wallet, 
-  BarChart3, 
   Plus, 
   ChevronRight,
   ShieldAlert,
@@ -22,7 +21,13 @@ import {
   Search,
   SearchX,
   ArrowRightLeft,
-  HelpCircle
+  HelpCircle,
+  Building2,
+  CreditCard,
+  MessageSquare,
+  UserCog,
+  BarChart3,
+  type LucideIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Switch";
@@ -42,19 +47,21 @@ import {
 } from "@/service/roles";
 import { toast } from "sonner";
 import { getRoleBadgeColor } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
 
-// --- ICON MAPPING FOR DYNAMIC MODULES ---
+// --- ICON MAPPING FOR SYSTEM MODULES ---
 const MODULE_ICONS: Record<string, LucideIcon> = {
+  tenant: Building2,
+  subscription: CreditCard,
+  billing: CreditCard,
+  support: MessageSquare,
+  account: UserCog,
+  role: ShieldAlert,
+  system: ShieldCheck,
   attendance: Clock,
   payroll: Wallet,
   user: Users,
   analytics: BarChart3,
-  support: Sparkles,
-  project: GitBranch,
-  finance: Wallet,
-  employee: Users,
-  system: ShieldCheck
+  project: GitBranch
 };
 
 export default function PlatformRolesView() {

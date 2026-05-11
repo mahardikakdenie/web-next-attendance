@@ -2,390 +2,39 @@
 
 import { startTransition, useMemo, useState, useCallback, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  CalendarDays,
-  Settings,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  UserCog,
-  Building2,
-  CalendarX,
-  Clock,
-  Wallet,
-  Users,
-  Calculator,
+import { 
+  ChevronLeft, 
+  ChevronRight, 
   ChevronDown,
-  ShieldCheck,
-  CreditCard,
-  UserCheck,
-  FileText,
-  TrendingUp,
-  ShieldAlert,
-  Coins,
-  Landmark,
-  Receipt,
-  MessageSquare,
-  Calendar,
-  ListChecks,
-  Target,
-  Star,
-  Briefcase,
-  History as ActivityIcon,
-  Lock
+  LogOut,
+  Settings
 } from "lucide-react";
-import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
+import { useAuthStore } from "@/store/auth.store";
+import { getMyMenus } from "@/service/menu";
 import { getDataCurrentTenat } from "@/service/tenantSettings";
+import { getIcon } from "@/lib/iconMap";
 import Avatar from "@/components/ui/Avatar";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { DynamicMenuItem } from "@/types/api";
+
+const checkIsParentActive = (menu: DynamicMenuItem, pathname: string): boolean => {
+  if (menu.path && pathname === menu.path) return true;
+  if (menu.children) {
+    return menu.children.some((child) => pathname === child.path || (child.children && checkIsParentActive(child, pathname)));
+  }
+  return false;
+};
 
 
-interface MenuItem {
-  key: string;
-  label: string;
-  icon: React.ComponentType<{
-    size?: number;
-    className?: string;
-    strokeWidth?: number;
-  }>;
-  path?: string;
-  roles: RoleName[];
-  permission?: string;
-  module?: string;
-  children?: MenuItem[];
-}
-
-const MENUS: MenuItem[] = [
-  // PLATFORM LEVEL - SUPERADMIN (Owner of SaaS)
-  {
-    key: "platform-group",
-    label: "Platform Admin",
-    icon: ShieldCheck,
-    roles: [ROLES.SUPERADMIN],
-    children: [
-      {
-        key: "manage-tenants",
-        label: "Manage Tenants",
-        icon: Building2,
-        path: "/admin/tenants",
-        roles: [ROLES.SUPERADMIN],
-      },
-      {
-        key: "subscriptions",
-        label: "Subscriptions",
-        icon: CreditCard,
-        path: "/admin/subscriptions",
-        roles: [ROLES.SUPERADMIN],
-      },
-      {
-        key: "accounts",
-        label: "Platform Admins",
-        icon: UserCheck,
-        path: "/admin/accounts",
-        roles: [ROLES.SUPERADMIN],
-      },
-      {
-        key: "platform-roles",
-        label: "System Governance",
-        icon: ShieldAlert,
-        path: "/admin/roles",
-        roles: [ROLES.SUPERADMIN],
-        permission: "platform.roles.view",
-      },
-      {
-        key: "support-desk",
-        label: "Support Desk",
-        icon: MessageSquare,
-        path: "/admin/support",
-        roles: [ROLES.SUPERADMIN],
-        permission: "support.manage",
-      },
-    ],
-  },
-
-  // COMMON - CORE INSIGHTS & DASHBOARD
-  {
-    key: "core-group",
-    label: "Core Insights",
-    icon: LayoutDashboard,
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
-    children: [
-      {
-        key: "dashboard",
-        label: "Attendance",
-        icon: LayoutDashboard,
-        path: "/",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
-        module: "attendance",
-      },
-      {
-        key: "analytics",
-        label: "Analytics",
-        icon: TrendingUp,
-        path: "/analytics",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE],
-        permission: "analytics.view",
-        module: "analytics",
-      },
-    ],
-  },
-
-  // TENANT LEVEL - MANAGEMENT
-  {
-    key: "management-group",
-    label: "Management",
-    icon: Users,
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-    children: [
-      {
-        key: "all-attendance",
-        label: "Attendance List",
-        icon: CalendarDays,
-        path: "/attendances",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-        permission: "attendance.view",
-        module: "attendance",
-      },
-      {
-        key: "all-employees",
-        label: "Employees",
-        icon: Users,
-        path: "/employees",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-        permission: "user.view",
-        module: "user",
-      },
-      {
-        key: "work-schedules",
-        label: "Work Schedules",
-        icon: Clock,
-        path: "/schedules",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-        permission: "schedule.view",
-        module: "schedule",
-      },
-      {
-        key: "manage-leaves",
-        label: "Leave Approvals",
-        icon: CalendarX,
-        path: "/leaves",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-        permission: "leave.view",
-        module: "leave",
-      },
-      {
-        key: "manage-overtime",
-        label: "Overtime Approvals",
-        icon: Clock,
-        path: "/overtime",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-        permission: "overtime.view",
-        module: "overtime",
-      },
-      {
-        key: "performance-goals",
-        label: "Goal Management",
-        icon: Target,
-        path: "/performance/goals",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-        permission: "performance.manage",
-        module: "performance",
-      },
-      {
-        key: "performance-appraisals",
-        label: "Appraisals",
-        icon: Star,
-        path: "/performance/appraisals",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.USER],
-        permission: "performance.view",
-        module: "performance",
-      },
-      {
-        key: "projects",
-        label: "Projects",
-        icon: Briefcase,
-        path: "/projects",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR],
-        permission: "project.manage",
-        module: "project",
-      },
-    ],
-  },
-
-  // TENANT LEVEL - PAYROLL
-  {
-    key: "payroll-group",
-    label: "Payroll Center",
-    icon: Wallet,
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
-    children: [
-      {
-        key: "payroll-list",
-        label: "Payroll & Slips",
-        icon: FileText,
-        path: "/payroll",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
-        permission: "payroll.view",
-        module: "payroll",
-      },
-      {
-        key: "payroll-calc",
-        label: "Salary Calculator",
-        icon: Calculator,
-        path: "/payroll/calculator",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
-        permission: "payroll.calculate",
-        module: "payroll",
-      },
-    ],
-  },
-
-  // TENANT LEVEL - FINANCE OPERATIONS
-  {
-    key: "finance-ops-group",
-    label: "Finance Operations",
-    icon: Coins,
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
-    children: [
-      {
-        key: "expenses",
-        label: "Expenses & Claims",
-        icon: Receipt,
-        path: "/finance/expenses",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
-        permission: "expense.view",
-        module: "finance",
-      },
-      {
-        key: "loans",
-        label: "Loans & Advances",
-        icon: Landmark,
-        path: "/finance/loans",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.FINANCE],
-        permission: "loan.view",
-        module: "finance",
-      },
-    ],
-  },
-
-  // ORGANIZATION SETTINGS - ACCESSIBLE BY TENANT OWNER (ADMIN) & SUPERADMIN
-  {
-    key: "tenant-settings-group",
-    label: "Organization Settings",
-    icon: Settings,
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
-    children: [
-      {
-        key: "tenant-settings-general",
-        label: "General Rules",
-        icon: Building2,
-        path: "/tenant-settings",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
-        permission: "tenant.settings.view",
-      },
-      {
-        key: "tenant-settings-billing",
-        label: "Billing & Plan",
-        icon: CreditCard,
-        path: "/tenant-settings/billing",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
-        permission: "billing.manage",
-      },
-      {
-        key: "company-calendar",
-        label: "Holiday Calendar",
-        icon: Calendar,
-        path: "/tenant-settings/calendar",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
-        permission: "calendar.manage",
-      },
-      {
-        key: "employee-lifecycle",
-        label: "Lifecycle Master",
-        icon: ListChecks,
-        path: "/tenant-settings/lifecycle",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
-        permission: "lifecycle.manage",
-      },
-      {
-        key: "tenant-roles",
-        label: "Roles & Permissions",
-        icon: ShieldAlert,
-        path: "/tenant-settings/roles",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
-        permission: "role.view",
-      },
-    ],
-  },
-
-  // PERSONAL WORKSPACE - FOR ALL EMPLOYEES
-  {
-    key: "my-workspace",
-    label: "My Workspace",
-    icon: UserCog,
-    roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
-    children: [
-      {
-        key: "my-leaves",
-        label: "Leave Request",
-        icon: CalendarX,
-        path: "/leaves",
-        roles: [ROLES.USER],
-        module: "leave",
-      },
-      {
-        key: "my-overtime",
-        label: "Overtime Request",
-        icon: Clock,
-        path: "/overtime",
-        roles: [ROLES.USER],
-        module: "overtime",
-      },
-      {
-        key: "my-payroll",
-        label: "My Salary & Slips",
-        icon: Wallet,
-        path: "/payroll",
-        roles: [ROLES.USER],
-        module: "payroll",
-      },
-      {
-        key: "my-timesheet",
-        label: "My Timesheet",
-        icon: ActivityIcon,
-        path: "/timesheet",
-        roles: [ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE, ROLES.USER],
-        module: "project",
-      },
-    ],
-  },
-];
-
-const filterMenuByRole = (
-  menuList: MenuItem[], 
-  userRole: RoleName, 
-  hasPermission: (id: string) => boolean,
-  hasModuleAccess: (module: string) => boolean
-): MenuItem[] => {
-  const normalizedRole = userRole.toLowerCase();
-  return menuList
-    .filter((menu) => {
-      const roleAllowed = menu.roles.map(r => r.toLowerCase()).includes(normalizedRole);
-      const permissionAllowed = menu.permission ? hasPermission(menu.permission) : true;
-      // We don't hide items here if module access is missing, we'll disable them in render
-      return roleAllowed && permissionAllowed;
-    })
-    .map((menu) => {
-      if (menu.children) {
-        return {
-          ...menu,
-          children: filterMenuByRole(menu.children, userRole, hasPermission, hasModuleAccess),
-        };
-      }
-      return menu;
-    })
-    .filter((menu) => !menu.children || menu.children.length > 0);
+const getGroupBadge = (key: string) => {
+  if (key === "platform-group") return { label: "PLATFORM", color: "bg-indigo-50 text-indigo-500 border-indigo-100" };
+  if (key === "intelligence-group") return { label: "CORE", color: "bg-blue-50 text-blue-500 border-blue-100" };
+  if (key === "workforce-group") return { label: "HR OPS", color: "bg-emerald-50 text-emerald-600 border-emerald-100" };
+  if (key === "performance-group") return { label: "STRATEGY", color: "bg-teal-50 text-teal-600 border-teal-100" };
+  if (key === "financial-group") return { label: "FINANCE", color: "bg-amber-50 text-amber-600 border-amber-100" };
+  if (key === "governance-group") return { label: "SYSTEM", color: "bg-slate-50 text-slate-500 border-slate-200" };
+  if (key === "personal-group") return { label: "SELF", color: "bg-rose-50 text-rose-500 border-rose-100" };
+  return null;
 };
 
 export default function Sidebar() {
@@ -398,11 +47,25 @@ export default function Sidebar() {
   const [tenantLogo, setTenantLogo] = useState<string | null>(null);
   const [tenantName, setTenantName] = useState<string>("Attendance");
 
-  const { logout, user, hasPermission, hasModuleAccess } = useAuthStore();
+  const { logout, user } = useAuthStore();
   
-  // Use base_role for RBAC matching as role names can be custom
-  // Fallback to role.name if base_role is missing, and lowercase for matching with ROLES constant
-  const role = (user?.role?.base_role?.toLowerCase() || user?.base_role?.toLowerCase() || user?.role?.name?.toLowerCase()) as RoleName | undefined;
+  // Task 1: Fetch Dynamic Menus
+  const { data: menuResp, refetch: refetchMenus } = useQuery({
+    queryKey: ["my-menus"],
+    queryFn: getMyMenus,
+    enabled: isMounted && !!user,
+  });
+
+  const filteredMenus = useMemo(() => menuResp?.data || [], [menuResp]);
+
+  // Task 1.3: Auto-Refresh on SSE notification
+  useEffect(() => {
+    const handleRefresh = () => {
+      refetchMenus();
+    };
+    window.addEventListener('refresh-sidebar-menus', handleRefresh);
+    return () => window.removeEventListener('refresh-sidebar-menus', handleRefresh);
+  }, [refetchMenus]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -426,31 +89,19 @@ export default function Sidebar() {
     if (isMounted) fetchTenantData();
   }, [isMounted]);
 
-  const filteredMenus = useMemo(() => {
-    if (!isMounted || !role) return [];
-    return filterMenuByRole(MENUS, role, hasPermission, hasModuleAccess);
-  }, [role, isMounted, hasPermission, hasModuleAccess]);
-
   const isActive = useCallback((path?: string) => (path ? pathname === path : false), [pathname]);
-
-  const isParentActive = useCallback(
-    (menu: MenuItem) => {
-      if (menu.path && isActive(menu.path)) return true;
-      if (menu.children) {
-        return menu.children.some((child) => isActive(child.path));
-      }
-      return false;
-    },
-    [isActive]
-  );
 
   const autoExpandedMenus = useMemo(() => {
     const newExpanded: Record<string, boolean> = {};
-    filteredMenus.forEach((menu) => {
-      if (menu.children && menu.children.some((child) => child.path && pathname === child.path)) {
-        newExpanded[menu.key] = true;
-      }
-    });
+    const checkExpanded = (menus: DynamicMenuItem[]) => {
+      menus.forEach((menu) => {
+        if (menu.children && menu.children.some((child) => (child.path && pathname === child.path) || (child.children && checkIsParentActive(child, pathname)))) {
+          newExpanded[menu.key] = true;
+          checkExpanded(menu.children);
+        }
+      });
+    };
+    checkExpanded(filteredMenus);
     return newExpanded;
   }, [pathname, filteredMenus]);
 
@@ -476,32 +127,18 @@ export default function Sidebar() {
     });
   };
 
-  const renderMenuItem = (menu: MenuItem, isChild = false) => {
-    const Icon = menu.icon;
+  // Task 1.1: Recursive Rendering
+  const renderMenuItem = (menu: DynamicMenuItem, isChild = false) => {
+    const Icon = getIcon(menu.icon);
     const hasChildren = menu.children && menu.children.length > 0;
     const expanded = isMenuExpanded(menu.key);
-    const active = hasChildren ? isParentActive(menu) : isActive(menu.path);
+    const active = hasChildren ? checkIsParentActive(menu, pathname) : isActive(menu.path);
     
-    // Check module access for RBAC 2.1
-    const isLocked = menu.module ? !hasModuleAccess(menu.module) : false;
-
     return (
       <div key={menu.key} className="w-full">
         <button
           type="button"
-          disabled={isLocked && !hasChildren} // Prevent navigation for locked leaf items
           onClick={() => {
-            if (isLocked && !hasChildren) {
-              toast.error("Upgrade Required", {
-                description: `The ${menu.label} module is not available in your current plan.`,
-                action: {
-                  label: "Upgrade",
-                  onClick: () => router.push("/tenant-settings/billing")
-                }
-              });
-              return;
-            }
-
             if (!open) {
               setOpen(true);
               if (hasChildren) {
@@ -524,8 +161,6 @@ export default function Sidebar() {
               ? "bg-white text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.04)] ring-1 ring-slate-200/50"
               : active && hasChildren
               ? "text-blue-600 font-black"
-              : isLocked 
-              ? "text-slate-300 cursor-not-allowed opacity-60" 
               : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-900"
           }`}
         >
@@ -535,11 +170,6 @@ export default function Sidebar() {
               strokeWidth={active ? 2.5 : 2} 
               className={`shrink-0 ${active && !hasChildren && !isChild ? "text-blue-600" : ""}`} 
             />
-            {isLocked && !hasChildren && (
-              <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
-                <Lock size={8} className="text-slate-400" />
-              </div>
-            )}
           </div>
 
           <span
@@ -549,10 +179,6 @@ export default function Sidebar() {
           >
             {menu.label}
           </span>
-
-          {isLocked && open && !hasChildren && (
-            <Lock size={12} className="ml-auto text-slate-300" />
-          )}
 
           {hasChildren && (
             <ChevronDown
@@ -631,15 +257,50 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex w-full flex-row items-center justify-around gap-1 md:h-full md:flex-col md:justify-start md:gap-1.5 overflow-y-auto custom-scrollbar md:px-1">
-        <div className="hidden md:flex flex-col w-full">
-          {isMounted && filteredMenus.map((menu) => renderMenuItem(menu))}
+        <div className="hidden md:flex flex-col w-full gap-2">
+          {isMounted && filteredMenus.map((group) => {
+            const badge = getGroupBadge(group.key);
+
+            return (
+              <div key={group.key} className={`w-full transition-all duration-300 ${open ? "bg-slate-50/40 rounded-[28px] p-2 border border-slate-100/50 mb-2" : "mb-4"}`}>
+                {/* Group Label */}
+                <div 
+                  className={`transition-all duration-300 mb-2 overflow-hidden flex items-center justify-between gap-3 ${
+                    open ? "opacity-100 px-2 h-auto mt-1" : "opacity-0 h-0"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-2.5 bg-slate-200 rounded-full" />
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">
+                      {group.label}
+                    </span>
+                  </div>
+                  
+                  {badge && (
+                    <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md border ${badge.color} transition-all`}>
+                      {badge.label}
+                    </span>
+                  )}
+                </div>
+
+                {/* Group Items / Children */}
+                <div className="space-y-0.5">
+                  {group.children ? (
+                    group.children.map((item) => renderMenuItem(item))
+                  ) : (
+                    renderMenuItem(group)
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex md:hidden w-full flex-row items-center justify-around">
           {isMounted && filteredMenus.slice(0, 5).map((menu) => {
-            const Icon = menu.icon;
+            const Icon = getIcon(menu.icon);
             const path = menu.path || (menu.children && menu.children.length > 0 ? menu.children[0].path : undefined);
-            const active = isParentActive(menu);
+            const active = checkIsParentActive(menu, pathname);
 
             return (
               <button

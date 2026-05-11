@@ -10,25 +10,18 @@ import {
   X, 
   Users, 
   Activity,
-  Loader2
+  Loader2,
+  Calendar,
+  Wallet
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPlans, createPlan, updatePlan, deletePlan } from "@/service/subscription";
+import { getPlans, createPlan, updatePlan, deletePlan, getSubscriptionFeatures } from "@/service/subscription";
 import { SubscriptionPlan, CreatePlanPayload } from "@/types/subscription";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-
-const AVAILABLE_FEATURES = [
-  { id: "user", label: "Employee Management" },
-  { id: "attendance", label: "Advanced Attendance" },
-  { id: "leave", label: "Leave Requests" },
-  { id: "overtime", label: "Overtime Tracking" },
-  { id: "payroll", label: "Payroll & Slips" },
-  { id: "finance", label: "Finance & Claims" },
-  { id: "analytics", label: "Advanced Analytics" },
-];
+import CurrencyInput from "@/components/ui/CurrencyInput";
 
 export default function PlanManagement() {
   const queryClient = useQueryClient();
@@ -36,17 +29,33 @@ export default function PlanManagement() {
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
   const [formData, setFormData] = useState<CreatePlanPayload>({
     name: "",
+    price: 0,
+    days: 30,
     max_employees: 0,
     features: [],
     is_active: true
   });
 
-  const { data: plansData, isLoading } = useQuery({
+  const { data: plansData, isLoading: isPlansLoading } = useQuery({
     queryKey: ["admin-plans"],
     queryFn: () => getPlans()
   });
 
+  const { data: featuresResp, isLoading: isFeaturesLoading } = useQuery({
+    queryKey: ["subscription-features"],
+    queryFn: () => getSubscriptionFeatures()
+  });
+
   const plans = plansData?.data || [];
+  const availableFeatures = featuresResp?.data || [];
+
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(val);
+  };
 
   const createMutation = useMutation({
     mutationFn: (payload: CreatePlanPayload) => createPlan(payload),
@@ -79,6 +88,8 @@ export default function PlanManagement() {
       setEditingPlan(plan);
       setFormData({
         name: plan.name,
+        price: plan.price || 0,
+        days: plan.days || 30,
         max_employees: plan.max_employees,
         features: plan.features,
         is_active: plan.is_active
@@ -87,6 +98,8 @@ export default function PlanManagement() {
       setEditingPlan(null);
       setFormData({
         name: "",
+        price: 0,
+        days: 30,
         max_employees: 0,
         features: [],
         is_active: true
@@ -111,6 +124,11 @@ export default function PlanManagement() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    if (formData.price < 0) return toast.error("Price cannot be negative");
+    if (formData.days < 1) return toast.error("Duration must be at least 1 day");
+
     if (editingPlan) {
       updateMutation.mutate({ id: editingPlan.id, payload: formData });
     } else {
@@ -118,7 +136,7 @@ export default function PlanManagement() {
     }
   };
 
-  if (isLoading) return (
+  if (isPlansLoading || isFeaturesLoading) return (
     <div className="flex flex-col items-center justify-center h-64 gap-4">
       <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
       <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading Global Plans...</p>
@@ -143,7 +161,7 @@ export default function PlanManagement() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.map((plan) => (
-          <div key={plan.id} className="bg-white border border-slate-100 rounded-[32px] p-8 shadow-sm hover:shadow-md transition-all group">
+          <div key={plan.id} className="bg-white border border-slate-100 rounded-[32px] p-8 shadow-sm hover:shadow-md transition-all group flex flex-col">
             <div className="flex justify-between items-start mb-6">
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
                 <Settings2 size={24} />
@@ -168,20 +186,27 @@ export default function PlanManagement() {
               </div>
             </div>
 
-            <div className="space-y-1 mb-6">
+            <div className="space-y-1 mb-4">
               <h4 className="text-2xl font-black text-slate-900 tracking-tight">{plan.name}</h4>
-              <div className="flex items-center gap-2">
-                <Users size={14} className="text-slate-400" />
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  {plan.max_employees === 0 ? "Unlimited Seats" : `Max ${plan.max_employees} Employees`}
-                </span>
-                {!plan.is_active && (
-                   <Badge className="bg-rose-100 text-rose-600 border-none text-[8px] uppercase">Inactive</Badge>
-                )}
+              <div className="flex flex-col gap-1 mt-2">
+                <div className="flex items-center gap-2 text-blue-600 font-black text-lg">
+                  <Wallet size={16} />
+                  <span>{formatCurrency(plan.price || 0)}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">/ {plan.days || 30} Days</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users size={14} className="text-slate-400" />
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    {plan.max_employees === 0 ? "Unlimited Seats" : `Max ${plan.max_employees} Employees`}
+                  </span>
+                  {!plan.is_active && (
+                     <Badge className="bg-rose-100 text-rose-600 border-none text-[8px] uppercase">Inactive</Badge>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="mt-auto pt-4 border-t border-slate-50 space-y-2">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Allowed Modules</p>
               <div className="flex flex-wrap gap-2">
                 {plan.features.map((feat) => (
@@ -245,25 +270,48 @@ export default function PlanManagement() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-6">
+                <CurrencyInput 
+                  label="Plan Price"
+                  value={formData.price}
+                  onChange={(val) => setFormData(prev => ({ ...prev, price: val }))}
+                  placeholder="Set tier price..."
+                />
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Duration (Days)</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Input 
+                      required
+                      type="number"
+                      value={formData.days}
+                      onChange={(e) => setFormData(prev => ({ ...prev, days: Number(e.target.value) }))}
+                      className="pl-12 h-12 text-xs font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Entitled Features</label>
                    <button 
                      type="button" 
-                     onClick={() => setFormData(prev => ({ ...prev, features: AVAILABLE_FEATURES.map(f => f.id) }))}
+                     onClick={() => setFormData(prev => ({ ...prev, features: availableFeatures.map(f => f.feature_key) }))}
                      className="text-[9px] font-black text-blue-500 uppercase tracking-tighter"
                    >
                      Select All
                    </button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  {AVAILABLE_FEATURES.map((feat) => {
-                    const isSelected = formData.features.includes(feat.id);
+                  {availableFeatures.map((feat) => {
+                    const isSelected = formData.features.includes(feat.feature_key);
                     return (
                       <button
                         key={feat.id}
                         type="button"
-                        onClick={() => toggleFeature(feat.id)}
+                        onClick={() => toggleFeature(feat.feature_key)}
                         className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left ${isSelected ? "bg-blue-50 border-blue-200" : "bg-white border-slate-100 hover:border-slate-200"}`}
                       >
                         <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${isSelected ? "bg-blue-600 border-blue-600 text-white" : "bg-slate-50 border-slate-200"}`}>

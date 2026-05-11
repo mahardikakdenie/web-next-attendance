@@ -1,7 +1,25 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import Card from "@/components/ui/Card";
-import { User, Mail, Phone, IdCard, Briefcase, MapPin } from "lucide-react";
+import { 
+  User, 
+  Mail, 
+  Phone, 
+  IdCard, 
+  Briefcase, 
+  MapPin, 
+  ShieldCheck, 
+  Pencil, 
+  Check, 
+  X,
+  Loader2,
+  Save
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { updateProfile } from "@/service/users";
+import { toast } from "sonner";
+import { useAuthStore } from "@/store/auth.store";
 
 // --- Types ---
 type UserCurrentData = {
@@ -18,56 +36,107 @@ type UserCurrentDataCardProps = {
   isLoading?: boolean;
 };
 
-// --- Component ---
 export default function UserCurrentDataCard({ data, isLoading = false }: UserCurrentDataCardProps) {
-  // Menambahkan icon dan pengaturan lebar kolom (span) untuk efek Bento
-  // col-span-1 memastikan tampilan di mobile menumpuk rapi satu kolom ke bawah
+  const [editedData, setEditedData] = useState<UserCurrentData>(data || {});
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Synchronize internal state with external props during render
+  const [prevData, setPrevData] = useState(data);
+  if (data !== prevData) {
+    setPrevData(data);
+    setEditedData(data || {});
+  }
+
+  const isDirty = useMemo(() => {
+    return JSON.stringify(data) !== JSON.stringify(editedData);
+  }, [data, editedData]);
+
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    try {
+      await updateProfile({
+        name: editedData.fullName,
+        email: editedData.email,
+        phone_number: editedData.phoneNumber,
+        address: editedData.address,
+      });
+      toast.success("Change request submitted! Awaiting HR approval.");
+      
+      // Reset local state to original data because changes are not applied yet
+      setEditedData(data || {});
+      setEditingField(null);
+      
+      // We don't need to fetchUser yet as data hasn't actually changed in BE users table
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to submit change request");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const bentoItems = [
     { 
+      id: "fullName",
       label: "Full Name", 
-      value: data?.fullName, 
+      value: editedData.fullName, 
       icon: User, 
-      span: "col-span-1 md:col-span-2 lg:col-span-2" 
+      span: "col-span-1 sm:col-span-2",
+      editable: true
     },
     { 
+      id: "email",
       label: "Email Address", 
-      value: data?.email, 
+      value: editedData.email, 
       icon: Mail, 
-      span: "col-span-1 md:col-span-1 lg:col-span-1" 
+      span: "col-span-1",
+      editable: true
     },
     { 
-      label: "Phone Number", 
-      value: data?.phoneNumber, 
+      id: "phoneNumber",
+      label: "Phone", 
+      value: editedData.phoneNumber, 
       icon: Phone, 
-      span: "col-span-1 md:col-span-1 lg:col-span-1" 
+      span: "col-span-1",
+      editable: true
     },
     { 
+      id: "employeeId",
       label: "Employee ID", 
-      value: data?.employeeId, 
+      value: editedData.employeeId, 
       icon: IdCard, 
-      span: "col-span-1 md:col-span-1 lg:col-span-1" 
+      span: "col-span-1",
+      editable: false
     },
     { 
+      id: "department",
       label: "Department", 
-      value: data?.department, 
+      value: editedData.department, 
       icon: Briefcase, 
-      span: "col-span-1 md:col-span-1 lg:col-span-1" 
+      span: "col-span-1",
+      editable: false
     },
     { 
+      id: "address",
       label: "Current Address", 
-      value: data?.address, 
+      value: editedData.address, 
       icon: MapPin, 
-      span: "col-span-1 md:col-span-2 lg:col-span-3" 
+      span: "col-span-1 sm:col-span-2",
+      editable: true
     },
   ];
 
   if (isLoading) {
     return (
-      <Card className="p-5 md:p-8!">
-        <div className="mb-8 h-10 w-48 md:w-64 animate-pulse rounded-lg bg-neutral-100" />
-        <div className="grid w-full grid-cols-1 gap-4 md:gap-5 md:grid-cols-2 lg:grid-cols-3">
+      <Card className="p-6 md:p-10!">
+        <div className="mb-10 space-y-3">
+          <div className="h-6 w-48 animate-pulse rounded-lg bg-neutral-100" />
+          <div className="h-4 w-64 animate-pulse rounded-lg bg-neutral-50" />
+        </div>
+        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-40 md:h-48 animate-pulse rounded-4xl bg-neutral-50" />
+            <div key={i} className={`h-32 animate-pulse rounded-[2.5rem] bg-neutral-50/50 ${i === 0 || i === 5 ? 'sm:col-span-2' : ''}`} />
           ))}
         </div>
       </Card>
@@ -75,52 +144,120 @@ export default function UserCurrentDataCard({ data, isLoading = false }: UserCur
   }
 
   return (
-    <div className="w-full">
-      <Card className="p-5 md:p-8!">
-        {/* Header Section */}
-        <div className="mb-6 md:mb-8 flex flex-col gap-1.5">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 shrink-0 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-            <h2 className="text-lg md:text-xl font-black tracking-tight text-neutral-900">
-              Current Profile Information
-            </h2>
+    <div className="w-full h-full">
+      <Card className="p-6 md:p-10! h-full border-neutral-200/60 shadow-xl shadow-neutral-200/30 overflow-hidden relative">
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-blue-50/40 blur-3xl pointer-events-none" />
+        <div className="absolute -left-20 bottom-0 h-48 w-48 rounded-full bg-indigo-50/30 blur-3xl pointer-events-none" />
+
+        <div className="mb-10 relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+              <ShieldCheck size={20} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-neutral-900 leading-tight">
+                Profile Information
+              </h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500/70 mt-1">
+                Personal Data Management
+              </p>
+            </div>
           </div>
-          <p className="text-xs md:text-sm font-medium text-neutral-400">
-            Real-time read-only data from your current verified profile.
-          </p>
+
+          {isDirty && (
+            <Button
+              onClick={handleUpdate}
+              disabled={isUpdating}
+              className="bg-neutral-900 text-white hover:bg-neutral-800 rounded-2xl px-8 h-12 shadow-xl shadow-neutral-900/10 animate-in fade-in slide-in-from-right-4 duration-300"
+            >
+              {isUpdating ? <Loader2 size={18} className="animate-spin mr-2" /> : <Save size={18} className="mr-2" />}
+              <span className="font-bold">Save Changes</span>
+            </Button>
+          )}
         </div>
 
-        {/* Bento Grid */}
-        <div className="grid w-full grid-cols-1 gap-4 md:gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 relative">
           {bentoItems.map((item) => {
             const Icon = item.icon;
+            const isEditing = editingField === item.id;
+
             return (
               <div
-                key={item.label}
-                className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl md:rounded-4xl border border-neutral-100 bg-neutral-50/40 p-5 md:p-6 transition-all duration-500 hover:border-blue-200 hover:bg-white hover:shadow-2xl hover:shadow-blue-500/10 ${item.span}`}
+                key={item.id}
+                className={`group relative flex flex-col justify-between overflow-hidden rounded-[2.5rem] border transition-all duration-500 ${
+                  isEditing 
+                    ? "border-blue-500 bg-white shadow-2xl shadow-blue-500/10" 
+                    : "border-neutral-100 bg-white hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/5"
+                } p-6 ${item.span}`}
               >
-                {/* Decorative background element */}
-                <div className="absolute -right-4 -top-4 h-20 w-20 md:h-24 md:w-24 rounded-full bg-blue-50/30 blur-2xl transition-all duration-500 group-hover:bg-blue-100/50" />
+                <div className="flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors duration-300 ${isEditing ? "bg-blue-600 text-white" : "bg-neutral-50 group-hover:bg-blue-50 text-neutral-400 group-hover:text-blue-600"}`}>
+                        <Icon size={14} />
+                      </div>
+                      <p className={`text-[10px] font-black uppercase tracking-[0.15em] transition-colors ${isEditing ? "text-blue-600" : "text-neutral-400 group-hover:text-blue-400"}`}>
+                        {item.label}
+                      </p>
+                    </div>
+                    
+                    {item.editable && !isEditing && (
+                      <button 
+                        onClick={() => setEditingField(item.id)}
+                        className="p-2 bg-neutral-50 rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    )}
+                  </div>
 
-                {/* Icon Box */}
-                <div className="relative mb-6 md:mb-8 flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-neutral-200/50 transition-all duration-500 group-hover:scale-110 group-hover:shadow-md group-hover:ring-blue-100">
-                  <Icon 
-                    size={20} 
-                    strokeWidth={1.8} 
-                    className="text-neutral-400 transition-colors duration-300 group-hover:text-blue-600 md:h-6 md:w-6" 
-                  />
+                  {isEditing ? (
+                    <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                      {item.id === "address" ? (
+                        <textarea
+                          autoFocus
+                          value={item.value || ""}
+                          onChange={(e) => setEditedData(prev => ({ ...prev, [item.id]: e.target.value }))}
+                          className="w-full bg-neutral-50 border border-neutral-100 rounded-xl p-3 text-sm font-bold text-neutral-900 outline-none focus:bg-white focus:border-blue-300 transition-all resize-none"
+                          rows={2}
+                        />
+                      ) : (
+                        <input
+                          autoFocus
+                          type={item.id === "email" ? "email" : "text"}
+                          value={item.value || ""}
+                          onChange={(e) => setEditedData(prev => ({ ...prev, [item.id]: e.target.value }))}
+                          className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-3 h-10 text-sm font-bold text-neutral-900 outline-none focus:bg-white focus:border-blue-300 transition-all"
+                        />
+                      )}
+                      <div className="flex flex-col gap-1">
+                        <button 
+                          onClick={() => setEditingField(null)}
+                          className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-200"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditedData(prev => ({ ...prev, [item.id]: data?.[item.id as keyof UserCurrentData] }));
+                            setEditingField(null);
+                          }}
+                          className="p-2 bg-neutral-100 text-neutral-400 rounded-lg hover:bg-neutral-200"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm md:text-base font-black tracking-tight text-neutral-900 break-words line-clamp-2">
+                      {item.value || "-"}
+                    </p>
+                  )}
                 </div>
-
-                {/* Text Content */}
-                <div className="relative">
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-neutral-400 transition-colors duration-300 group-hover:text-blue-400">
-                    {item.label}
-                  </p>
-                  {/* Penambahan break-words agar email/alamat panjang tidak merusak layout di layar kecil */}
-                  <p className="mt-1.5 text-base md:text-lg font-bold tracking-tight text-neutral-900 wrap-break-word">
-                    {item.value || "-"}
-                  </p>
-                </div>
+                
+                {!isEditing && (
+                  <div className={`absolute right-4 top-4 h-1.5 w-1.5 rounded-full transition-colors ${item.value !== data?.[item.id as keyof UserCurrentData] ? "bg-amber-500 animate-pulse" : "bg-neutral-100 group-hover:bg-blue-400"}`} />
+                )}
               </div>
             );
           })}

@@ -35,6 +35,17 @@ export const generatePayrollCycle = async (
   return secureRequest<APIResponse<null>>("post", "/v1/payroll/generate", { period, run_type, method });
 };
 
+export const bulkGeneratePayroll = async (payload: {
+  period: string;
+  run_type?: 'Regular' | 'THR' | 'Bonus' | 'All';
+  method?: 'Gross' | 'Net';
+  user_ids?: number[];
+  bonus?: number;
+  incentives?: number;
+}) => {
+  return secureRequest<APIResponse<null>>("post", "/v1/payroll/bulk-generate", payload);
+};
+
 export const publishPayroll = async (id: number) => {
   return secureRequest<APIResponse<null>>("patch", `/v1/payroll/${id}/publish`);
 };

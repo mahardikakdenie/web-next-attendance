@@ -15,7 +15,9 @@ import {
   Ban,
   Users,
   Settings2,
-  CheckCircle2
+  CheckCircle2,
+  Eye,
+  RefreshCw
 } from "lucide-react";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
@@ -23,7 +25,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   getSubscriptions, 
   sendBillingReminder, 
-  suspendTenant 
+  suspendTenant,
+  reactivateSubscription
 } from "@/service/subscription";
 import { TenantSubscription, SubscriptionStatus } from "@/types/subscription";
 import { toast } from "sonner";
@@ -84,6 +87,17 @@ export default function SubscriptionManagement({ activeTab }: SubscriptionManage
   const remindMutation = useMutation({
     mutationFn: (id: number) => sendBillingReminder(id),
     onSuccess: () => toast.success("Billing reminder sent to organization owner")
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: (id: number) => reactivateSubscription(id),
+    onSuccess: () => {
+      toast.success("Subscription has been reactivated");
+      queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+    },
+    onError: () => {
+      toast.error("Failed to reactivate subscription");
+    }
   });
 
   const suspendMutation = useMutation({
@@ -308,7 +322,19 @@ export default function SubscriptionManagement({ activeTab }: SubscriptionManage
                 setCurrentPage(1);
               }}
               actions={(s) => (
-                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                <div className="flex items-center justify-end gap-2 transition-all">
+                  <button 
+                    onClick={() => {
+                      toast.info(`Details for ${s.tenant_name}`, {
+                        description: `Status: ${s.status} | Plan: ${s.plan} | MRR: ${formatCurrency(s.amount)}`,
+                        icon: <CreditCard size={18} className="text-blue-500" />
+                      });
+                    }}
+                    className="p-2 text-slate-400 hover:text-slate-900 transition-all rounded-xl hover:bg-slate-50"
+                    title="See Details"
+                  >
+                    <Eye size={18} />
+                  </button>
                   {s.status === "Past Due" && (
                     <button 
                       onClick={() => remindMutation.mutate(s.id)}
@@ -317,6 +343,20 @@ export default function SubscriptionManagement({ activeTab }: SubscriptionManage
                     >
                       {remindMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <BellRing size={12} />}
                       Remind
+                    </button>
+                  )}
+                  {s.status === "Canceled" && (
+                    <button 
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to restore access for ${s.tenant_name}?`)) {
+                          reactivateMutation.mutate(s.id);
+                        }
+                      }}
+                      disabled={reactivateMutation.isPending}
+                      className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-900 transition-all shadow-lg shadow-emerald-600/20 active:scale-95 flex items-center gap-2"
+                    >
+                      {reactivateMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                      Restore
                     </button>
                   )}
                   <button 

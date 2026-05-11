@@ -1,10 +1,10 @@
 import { secureRequest } from "@/lib/axios";
-import { APIResponse, UserData } from "@/types/api";
+import { APIResponse, UserData, TenantFullDetails } from "@/types/api";
 import { AnalyticsDashboardResponse } from "@/types/analytics";
 
 export interface UpdateTenantPayload {
   name: string;
-  plan: string;
+  plan_id: number;
   is_suspended: boolean;
   suspended_reason: string;
 }
@@ -21,6 +21,10 @@ export const getGlobalAnalytics = (period: string = "this_year") => {
  */
 export const updateTenant = (id: number, payload: UpdateTenantPayload) => {
   return secureRequest<APIResponse<null>>("put", `/v1/superadmin/tenants/${id}`, payload);
+};
+
+export const getTenantFullDetails = (id: number) => {
+  return secureRequest<APIResponse<TenantFullDetails>>("get", `/v1/superadmin/tenants/${id}/full-details`);
 };
 
 /**

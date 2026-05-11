@@ -38,3 +38,26 @@ export const getRoleBadgeColor = (baseRole?: string): string => {
       return 'bg-slate-50 text-slate-600 border-slate-100';
   }
 };
+
+/**
+ * Formats duration in hours to a human-readable string.
+ * Converts to seconds/minutes if small, rounds hours if large.
+ */
+export const formatDuration = (hours: number): string => {
+  if (typeof hours !== 'number' || isNaN(hours)) return "0s";
+  
+  // Convert hours to seconds for easier threshold checks
+  const totalSeconds = hours * 3600;
+
+  if (totalSeconds < 60) {
+    return `${Math.round(totalSeconds)}s`;
+  }
+  
+  if (totalSeconds < 3600) {
+    return `${Math.round(totalSeconds / 60)}m`;
+  }
+  
+  // For hours, use 1 decimal place if not a whole number, otherwise integer
+  const h = Math.round(hours * 10) / 10;
+  return `${h % 1 === 0 ? Math.round(h) : h}h`;
+};

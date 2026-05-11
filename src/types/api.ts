@@ -87,6 +87,8 @@ export interface UserTenantSettings {
 export interface UserTenant {
   id: number;
   name: string;
+  is_suspended: boolean;
+  suspended_reason: string;
   tenant_settings: UserTenantSettings;
 }
 
@@ -114,6 +116,21 @@ export interface UserRecentActivity {
   created_at: string;
 }
 
+export interface BillingHealth {
+  has_unpaid_invoice: boolean;
+  days_until_due: number;
+  lock_website: boolean;
+  warning_message: string;
+}
+
+export interface DynamicMenuItem {
+  key: string;
+  label: string;
+  icon: string;
+  path?: string;
+  children?: DynamicMenuItem[];
+}
+
 export interface UserData {
   id: number;
   employee_id: string;
@@ -137,6 +154,7 @@ export interface UserData {
   tenant?: UserTenant;
   tenant_setting?: UserTenantSettings;
   subscription?: SubscriptionData;
+  billing_health?: BillingHealth;
   attendances?: UserAttendance[];
   recent_activities?: UserRecentActivity[];
   ptkp_status: string;
@@ -436,6 +454,8 @@ export interface OwnerStats {
   tenant_name: string;
   tenant_code: string;
   tenant_plan?: string;
+  tenant_status: "Active" | "Suspended" | string;
+  suspended_reason?: string;
   employee_count: number;
   attendance_count: number;
   leave_count: number;
@@ -448,6 +468,40 @@ export interface OwnerStats {
 export interface OwnerStatsResponse {
   items: OwnerStats[];
   total: number;
+}
+
+export interface TenantFullDetails {
+  tenant: {
+    id: number;
+    name: string;
+    code: string;
+    created_at: string;
+    is_suspended: boolean;
+    suspended_reason: string;
+  };
+  subscription: {
+    plan_name: string;
+    status: string;
+    amount: number;
+    billing_cycle: string;
+    next_billing_date: string;
+  };
+  usage_stats: {
+    total_employees: number;
+    total_attendances: number;
+    total_leaves: number;
+    total_payrolls: number;
+    total_expenses: number;
+  };
+  employees: Array<{
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    position: string;
+    department: string;
+    created_at: string;
+  }>;
 }
 
 export interface AttendanceSummary {
@@ -470,43 +524,48 @@ export interface AttendanceFilterParams {
  * PAYROLL
  */
 
-export interface PayrollCalculatePayload {
-  userId?: number;
-  runType: 'Regular' | 'THR' | 'Bonus' | 'All';
-  method: 'Gross' | 'Net';
-  basicSalary: number;
-  fixedAllowances: number;
-  incentives: number;
-  calculateThr?: boolean;
-  dailyMealAllowance: number;
-  dailyTransportAllowance: number;
-  attendanceDays: number;
-  workingDaysInMonth: number;
-  overtimeHours: number;
-  unpaidLeaveDays: number;
-  ptkpStatus: string;
+export interface CustomAllowance {
+  name: string;
+  amount: number;
 }
 
+export interface PayrollCalculatePayload {
+  user_id: number;
+  run_type: 'Regular' | 'THR' | 'Bonus' | 'All';
+  method: 'Gross' | 'Net';
+  working_days_in_month: number;
+  attendance_days: number;
+  overtime_hours?: number;
+  unpaid_leave_days?: number;
+  basic_salary?: number;
+  fixed_allowance?: number;
+  variable_allowance?: number;
+  custom_variable_allowances?: CustomAllowance[];
+  bonus?: number;
+  incentives?: number;
+}
+
+
 export interface PayrollCalculationResult {
-  grossIncome: number;
-  pph21Amount: number;
-  netSalary: number;
-  totalDeductions: number;
-  totalCompanyCost: number;
+  gross_income: number;
+  pph21_amount: number;
+  net_salary: number;
+  total_deductions: number;
+  total_employer_cost: number;
   run_type: 'Regular' | 'THR' | 'Bonus' | 'All';
   method: 'Gross' | 'Net';
   breakdown: {
-    proratedBasic: number;
-    fixedAllowances: number;
-    variableAllowances: number;
+    prorated_basic: number;
+    fixed_allowances: number;
+    variable_allowances: number;
     incentives: number;
-    unpaidLeaveDeduction: number;
-    overtimePay: number;
-    grossIncome: number;
-    pph21Amount: number;
-    taxAllowance?: number;
-    bpjsAllowance?: number;
-    terRate: number;
+    unpaid_leave_deduction: number;
+    overtime_pay: number;
+    gross_income: number;
+    pph21_amount: number;
+    tax_allowance?: number;
+    bpjs_allowance?: number;
+    ter_rate: number;
     bpjs: {
       health: { employee: number; company: number };
       jht: { employee: number; company: number };
@@ -534,6 +593,7 @@ export interface CompanyContext {
 }
 
 export interface PayrollUser {
+  id: number;
   full_name: string;
   employee_id: string;
   position: string;
@@ -741,14 +801,16 @@ export interface ProjectTask {
 }
 
 export interface TimesheetEntry {
-  id: number;
-  user_id: number;
-  project_id: number;
+  id: number | string;
+  user_id?: number;
+  project_id?: number;
+  project_name?: string; // New: Flat field
   task_name: string;
+  task_id?: number;
   date: string;
   duration_hours: number;
   description: string;
-  project?: Project;
+  project?: Project; // Kept for backward compatibility if needed, but project_name is the new source
   user?: UserData;
   created_at: string;
 }
@@ -780,5 +842,49 @@ export interface CustomApiError extends Error {
       };
       data?: string;
     };
+  };
+}
+
+export interface ProfileChangeRequest {
+  id: number;
+  user_id: number;
+  tenant_id: number;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  old_data: {
+    name?: string;
+    email?: string;
+    phone_number?: string;
+    address?: string;
+    department?: string;
+  };
+  new_data: {
+    name?: string;
+    email?: string;
+    phone_number?: string;
+    address?: string;
+    department?: string;
+  };
+  admin_notes?: string;
+  processed_at?: string;
+  processed_by?: number;
+  created_at: string;
+  updated_at: string;
+  user?: UserData;
+}
+
+export interface NotificationPayload {
+  id: number;
+  title: string;
+  message: string;
+  type: 'leave' | 'overtime' | 'expense' | 'payroll' | 'profile' | 'support' | 'system' | 'subscription';
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  success: boolean;
+  data: NotificationPayload[];
+  meta: {
+    unread_count: number;
   };
 }

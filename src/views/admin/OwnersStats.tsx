@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import dayjs from "dayjs";
 import { Can } from "@/components/auth/PermissionGuard";
 import EditTenantModal from "@/components/admin/EditTenantModal";
+import TenantDetailModal from "@/components/admin/TenantDetailModal";
 import { Edit } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -48,6 +49,9 @@ export default function OwnersStatsView() {
 
   const [selectedTenant, setSelectedTenant] = useState<OwnerStats | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const [selectedDetailId, setSelectedDetailId] = useState<number | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const { data: resp, isLoading, isError } = useQuery({
     queryKey: ["owners-stats", limit, currentPage],
@@ -125,6 +129,17 @@ export default function OwnersStatsView() {
       },
       sortable: true
     },
+    {
+      header: "Status",
+      accessor: (o) => (
+        <Badge className={`border-none font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg ${
+          o.tenant_status === "Suspended" ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-700"
+        }`}>
+          {o.tenant_status}
+        </Badge>
+      ),
+      sortable: true
+    },
     { 
       header: "Employees", 
       accessor: (o) => (
@@ -148,31 +163,46 @@ export default function OwnersStatsView() {
             <StatTooltip label="Total employee clock-in/out attendance logs recorded across the entire organization.">
               <Clock size={12} className="text-indigo-500" />
             </StatTooltip>
-            <span className="text-[10px] font-black text-slate-600">{o.attendance_count}</span>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-[10px] font-black text-slate-600">{o.attendance_count}</span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase">logs</span>
+            </div>
           </div>
           <div className="flex items-center gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-100/50">
             <StatTooltip label="Number of approved leave requests, including annual and special leave types.">
               <Plane size={12} className="text-emerald-500" />
             </StatTooltip>
-            <span className="text-[10px] font-black text-slate-600">{o.leave_count}</span>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-[10px] font-black text-slate-600">{o.leave_count}</span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase">req</span>
+            </div>
           </div>
           <div className="flex items-center gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-100/50">
             <StatTooltip label="Cumulative overtime hours submitted by staff and validated within the system.">
               <TrendingUp size={12} className="text-amber-500" />
             </StatTooltip>
-            <span className="text-[10px] font-black text-slate-600">{o.overtime_count}</span>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-[10px] font-black text-slate-600">{o.overtime_count}</span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase">hrs</span>
+            </div>
           </div>
           <div className="flex items-center gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-100/50">
             <StatTooltip label="Number of payroll cycles and salary disbursement events successfully executed.">
               <Wallet size={12} className="text-blue-500" />
             </StatTooltip>
-            <span className="text-[10px] font-black text-slate-600">{o.payroll_count}</span>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-[10px] font-black text-slate-600">{o.payroll_count}</span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase">cyc</span>
+            </div>
           </div>
           <div className="flex items-center gap-1.5 p-2 bg-slate-50 rounded-xl border border-slate-100/50">
             <StatTooltip label="Total reimbursement claims and corporate expense requests processed for this tenant.">
               <Receipt size={12} className="text-rose-500" />
             </StatTooltip>
-            <span className="text-[10px] font-black text-slate-600">{o.expense_count}</span>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-[10px] font-black text-slate-600">{o.expense_count}</span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase">req</span>
+            </div>
           </div>
         </div>
       )
@@ -272,7 +302,7 @@ export default function OwnersStatsView() {
                 }}
                 isLoading={isLoading}
                 actions={(o) => (
-                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                  <div className="flex items-center justify-end gap-2 transition-all">
                     <button 
                       onClick={() => {
                         setSelectedTenant(o);
@@ -283,7 +313,14 @@ export default function OwnersStatsView() {
                     >
                       <Edit size={18} />
                     </button>
-                    <button className="p-2 text-slate-300 hover:text-slate-900 transition-all rounded-xl hover:bg-slate-50">
+                    <button 
+                      onClick={() => {
+                        setSelectedDetailId(o.tenant_id);
+                        setIsDetailModalOpen(true);
+                      }}
+                      className="p-2 text-slate-400 hover:text-slate-900 transition-all rounded-xl hover:bg-slate-50"
+                      title="See Details"
+                    >
                       <MoreVertical size={18} />
                     </button>
                   </div>
@@ -302,6 +339,7 @@ export default function OwnersStatsView() {
         </div>
 
         <EditTenantModal 
+          key={selectedTenant?.tenant_id || 'new'}
           isOpen={isEditModalOpen}
           tenant={selectedTenant}
           onClose={() => {
@@ -310,6 +348,24 @@ export default function OwnersStatsView() {
           }}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["owners-stats"] });
+          }}
+        />
+
+        <TenantDetailModal 
+          isOpen={isDetailModalOpen}
+          tenantId={selectedDetailId}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setSelectedDetailId(null);
+          }}
+          onEdit={() => {
+            // Find the owner stats object for the selected detail ID to pass to edit modal
+            const tenantObj = data.find(item => item.tenant_id === selectedDetailId);
+            if (tenantObj) {
+              setSelectedTenant(tenantObj);
+              setIsDetailModalOpen(false);
+              setIsEditModalOpen(true);
+            }
           }}
         />
       </div>

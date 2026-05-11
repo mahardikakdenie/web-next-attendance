@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
 import { toast } from "sonner";
 import { submitTrialRequest } from "@/service/support";
 import Link from "next/link";
@@ -61,6 +62,13 @@ export default function LoginView() {
     industry: "",
     phone: ""
   });
+
+  const workforceOptions = [
+    { label: "1 - 10 Employees", value: "1-10", icon: <Users size={14} /> },
+    { label: "11 - 50 Employees", value: "11-50", icon: <Users size={14} /> },
+    { label: "51 - 200 Employees", value: "51-200", icon: <Users size={14} /> },
+    { label: "201+ Employees", value: "201+", icon: <Users size={14} /> },
+  ];
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -345,24 +353,13 @@ export default function LoginView() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Workforce Size</label>
-                    <div className="relative group">
-                      <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5 z-10" />
-                      <select 
-                        value={trialData.employeeCount}
-                        onChange={(e) => setTrialData({...trialData, employeeCount: e.target.value})}
-                        className="w-full pl-12 h-14 bg-slate-50 border border-transparent rounded-2xl font-bold text-sm focus:bg-white outline-none appearance-none transition-all cursor-pointer shadow-xs"
-                      >
-                        <option value="">Select range...</option>
-                        <option value="1-10">1 - 10 Employees</option>
-                        <option value="11-50">11 - 50 Employees</option>
-                        <option value="51-200">51 - 200 Employees</option>
-                        <option value="201+">201+ Employees</option>
-                      </select>
-                      <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90" />
-                    </div>
-                  </div>
+                  <Select 
+                    label="Workforce Size"
+                    options={workforceOptions}
+                    value={trialData.employeeCount}
+                    onChange={(val) => setTrialData({...trialData, employeeCount: val})}
+                    placeholder="Select range..."
+                  />
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Phone Number</label>
                     <div className="relative group">

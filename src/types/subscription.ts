@@ -1,12 +1,22 @@
 export type PlanType = "Starter" | "Business" | "Enterprise" | "Custom";
 export type SubscriptionStatus = "Active" | "Past Due" | "Canceled" | "Trial";
 
+export interface SubscriptionFeature {
+  id: number;
+  feature_key: string;
+  label: string;
+  description?: string;
+  is_active: boolean;
+}
+
 /**
  * Global Subscription Plan (CRUD)
  */
 export interface SubscriptionPlan {
   id: number;
   name: string;
+  price: number;
+  days: number;
   max_employees: number;
   features: string[];
   is_active: boolean;
@@ -16,6 +26,8 @@ export interface SubscriptionPlan {
 
 export interface CreatePlanPayload {
   name: string;
+  price: number;
+  days: number;
   max_employees: number;
   features: string[];
   is_active: boolean;

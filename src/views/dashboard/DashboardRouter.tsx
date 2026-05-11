@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthStore, ROLES } from "@/store/auth.store";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { 
   Users, 
   Wallet, 
@@ -18,7 +18,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 type AnalyticsTab = "platform" | "hr" | "finance" | "user";
 
-export default function DashboardRouter({ initialTab }: { initialTab?: AnalyticsTab }) {
+function DashboardContent({ initialTab }: { initialTab?: AnalyticsTab }) {
   const { user } = useAuthStore();
   const isMobile = useIsMobile();
   const router = useRouter();
@@ -148,3 +148,12 @@ export default function DashboardRouter({ initialTab }: { initialTab?: Analytics
 
   return <UserDashboardPage />;
 }
+
+export default function DashboardRouter({ initialTab }: { initialTab?: AnalyticsTab }) {
+  return (
+    <Suspense fallback={null}>
+      <DashboardContent initialTab={initialTab} />
+    </Suspense>
+  );
+}
+

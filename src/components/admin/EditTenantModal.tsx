@@ -1,21 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   X, 
   Building2, 
   ShieldAlert, 
   CheckCircle2, 
   Loader2,
-  AlertTriangle,
-  Info
+  CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
 import { updateTenant, UpdateTenantPayload } from "@/service/admin";
+import { getPlans } from "@/service/subscription";
 import { OwnerStats } from "@/types/api";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface EditTenantModalProps {
   tenant: OwnerStats | null;
@@ -25,178 +27,175 @@ interface EditTenantModalProps {
 }
 
 export default function EditTenantModal({ tenant, isOpen, onClose, onSuccess }: EditTenantModalProps) {
-  const [formData, setFormData] = useState<UpdateTenantPayload>({
-    name: "",
-    plan: "Basic",
-    is_suspended: false,
-    suspended_reason: ""
-  });
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (tenant) {
-      Promise.resolve().then(() => {
-        setFormData({
-          name: tenant.tenant_name,
-          plan: tenant.tenant_plan || "Basic",
-          is_suspended: false, // In a real scenario, this would come from the API as well
-          suspended_reason: ""
-        });
-      });
-    }
-  }, [tenant]);
+  const { data: plansResp, isLoading: isPlansLoading } = useQuery({
+    queryKey: ["admin-plans-list"],
+    queryFn: () => getPlans(),
+    enabled: isOpen
+  });
 
-  if (!isOpen || !tenant) return null;
+  const plans = useMemo(() => plansResp?.data || [], [plansResp]);
+
+  const planOptions = useMemo(() => plans.map(p => ({
+    label: `${p.name} Tier`,
+    value: p.id,
+    icon: <CreditCard size={14} className="text-blue-500" />
+  })), [plans]);
+
+  // Initial state based on current tenant and plans
+  const [formData, setFormData] = useState<UpdateTenantPayload>(() => ({
+    name: tenant?.tenant_name || "",
+    plan_id: 0, // Will be updated by useEffect when plans load
+    is_suspended: tenant?.tenant_status === "Suspended",
+    suspended_reason: tenant?.suspended_reason || ""
+  }));
+
+  // Update plan_id once plans are loaded
+  useEffect(() => {
+    if (tenant && plans.length > 0) {
+      const currentPlan = plans.find(p => p.name === tenant.tenant_plan);
+      if (currentPlan) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFormData(prev => ({ ...prev, plan_id: currentPlan.id }));
+      }
+    }
+  }, [tenant, plans]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (formData.is_suspended && !formData.suspended_reason.trim()) {
-      toast.error("Please provide a reason for suspension");
-      return;
-    }
+    if (!tenant) return;
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      const resp = await updateTenant(tenant.tenant_id, formData);
-      if (resp.success) {
-        toast.success("Organization updated successfully");
-        onSuccess();
-        onClose();
-      }
-    } catch {
-      toast.error("Failed to update organization details");
+      // Use tenant_id specifically for the organization update endpoint
+      await updateTenant(tenant.tenant_id, formData);
+      toast.success("Organization updated successfully");
+      
+      // Invalidate both lists since this endpoint updates both tenant & subscription data
+      void queryClient.invalidateQueries({ queryKey: ["owners-stats"] });
+      void queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+      
+      onSuccess();
+      onClose();
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error("Failed to update organization");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
-        onClick={onClose}
-      />
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
       
-      <div className="relative w-full max-w-lg bg-white rounded-[40px] shadow-2xl border border-white ring-1 ring-slate-200/50 overflow-hidden animate-in zoom-in-95 duration-300">
-        <form onSubmit={handleSubmit} className="flex flex-col">
-          
+      <div className="relative bg-white rounded-[40px] w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+        <form onSubmit={handleSubmit}>
           {/* Header */}
-          <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+          <div className="p-8 pb-0 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
-                <Building2 size={24} />
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm">
+                <Building2 size={24} strokeWidth={2.5} />
               </div>
               <div>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight">Edit Organization</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Tenant Registry Management</p>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">Edit Organization</h2>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Configuration & Governance</p>
               </div>
             </div>
             <button 
               type="button"
               onClick={onClose}
-              className="p-2 hover:bg-white hover:shadow-md rounded-xl text-slate-400 transition-all"
+              className="w-10 h-10 rounded-xl hover:bg-slate-50 flex items-center justify-center text-slate-400 transition-colors"
             >
               <X size={20} />
             </button>
           </div>
 
-          {/* Body */}
-          <div className="p-8 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
-            
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Organization Code (Read-Only)</label>
-              <div className="h-12 bg-slate-100 border border-slate-200 rounded-2xl px-4 flex items-center text-sm font-bold text-slate-500 cursor-not-allowed">
-                {tenant.tenant_code}
-              </div>
-              <p className="text-[9px] text-slate-400 font-medium ml-1 flex items-center gap-1">
-                <Info size={10} /> Internal identifiers cannot be modified.
-              </p>
-            </div>
+          <div className="p-8 space-y-8">
+            {/* General Info */}
+            <div className="space-y-4">
+               <div className="space-y-2">
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Organization Name</label>
+                 <Input 
+                  placeholder="Enter company name..."
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+               </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Display Name</label>
-              <Input 
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-12 bg-slate-50 border-slate-200 rounded-2xl font-bold"
-                placeholder="e.g. Acme Corp Revised"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Subscription Plan</label>
-              <select 
-                value={formData.plan}
-                onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
-                className="w-full h-12 bg-slate-50 border border-slate-200 rounded-2xl px-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all appearance-none cursor-pointer"
-              >
-                <option value="Basic">Basic Plan</option>
-                <option value="Pro">Pro Business</option>
-                <option value="Enterprise">Enterprise Elite</option>
-              </select>
-            </div>
-
-            <div className="pt-4 border-t border-slate-50">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-[24px] border border-slate-100">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${formData.is_suspended ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600"}`}>
-                    {formData.is_suspended ? <ShieldAlert size={20} /> : <CheckCircle2 size={20} />}
-                  </div>
-                  <div>
-                    <p className={`text-sm font-black tracking-tight ${formData.is_suspended ? "text-rose-600" : "text-emerald-600"}`}>
-                      {formData.is_suspended ? "Organization Suspended" : "Organization Active"}
-                    </p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Tenant Access Status</p>
-                  </div>
-                </div>
-                <Switch 
-                  checked={formData.is_suspended}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_suspended: checked })}
+              <div className="space-y-2">
+                <Select 
+                  label="Subscription Plan"
+                  value={formData.plan_id}
+                  onChange={(val) => setFormData({ ...formData, plan_id: Number(val) })}
+                  options={planOptions}
+                  placeholder={isPlansLoading ? "Loading plans..." : "Select Plan"}
+                  disabled={isPlansLoading}
                 />
               </div>
             </div>
 
-            {formData.is_suspended && (
-              <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                <label className="text-[10px] font-black text-rose-500 uppercase tracking-widest ml-1">Suspension Reason</label>
-                <textarea 
-                  value={formData.suspended_reason}
-                  onChange={(e) => setFormData({ ...formData, suspended_reason: e.target.value })}
-                  className="w-full min-h-[100px] bg-rose-50/30 border border-rose-100 rounded-2xl p-4 text-sm font-medium text-slate-900 focus:ring-4 focus:ring-rose-500/5 outline-none transition-all placeholder:text-rose-200"
-                  placeholder="Explain why this organization is being suspended..."
-                  required={formData.is_suspended}
-                />
-                <div className="flex items-center gap-2 p-3 bg-rose-50 rounded-xl text-[10px] font-bold text-rose-600 border border-rose-100/50">
-                   <AlertTriangle size={14} />
-                   This will block all users from this organization immediately.
-                </div>
-              </div>
-            )}
+            <div className="h-px bg-slate-100" />
 
+            {/* Security & Access */}
+            <div className="space-y-6">
+               <div className="flex items-center justify-between p-6 rounded-3xl bg-slate-50/50 border border-slate-100 group transition-all hover:bg-slate-50">
+                  <div className="flex gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${formData.is_suspended ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
+                       <ShieldAlert size={20} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                       <p className="text-sm font-black text-slate-900">Suspend Access</p>
+                       <p className="text-[11px] font-medium text-slate-400">Instantly block all organization members</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={formData.is_suspended}
+                    onCheckedChange={(val) => setFormData({ ...formData, is_suspended: val })}
+                  />
+               </div>
+
+               {formData.is_suspended && (
+                 <div className="animate-in slide-in-from-top-2 duration-300">
+                    <label className="text-[10px] font-black text-rose-500 uppercase tracking-widest ml-1 mb-2 block">Suspension Reason</label>
+                    <textarea 
+                      required
+                      value={formData.suspended_reason}
+                      onChange={(e) => setFormData({ ...formData, suspended_reason: e.target.value })}
+                      placeholder="Specify the policy violation or reason..."
+                      className="w-full p-5 bg-rose-50/20 border border-rose-100 rounded-3xl text-sm font-bold text-slate-900 outline-none focus:ring-4 focus:ring-rose-500/5 transition-all min-h-[100px] resize-none"
+                    />
+                 </div>
+               )}
+            </div>
           </div>
 
-          {/* Footer */}
-          <div className="p-8 bg-slate-50 border-t border-slate-100 flex gap-3">
+          {/* Footer Actions */}
+          <div className="p-8 pt-0 flex gap-3">
             <Button 
-              type="button"
+              type="button" 
               variant="secondary" 
-              className="flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest"
               onClick={onClose}
-              disabled={isSubmitting}
+              className="flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest border-slate-200"
             >
-              Discard
+              Cancel
             </Button>
             <Button 
-              type="submit"
-              className="flex-1 h-14 rounded-2xl bg-slate-900 hover:bg-indigo-600 shadow-xl shadow-indigo-600/10 font-black text-xs uppercase tracking-widest transition-all active:scale-95"
               disabled={isSubmitting}
+              className="flex-[2] h-14 rounded-2xl bg-slate-900 hover:bg-indigo-600 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-200 transition-all active:scale-95"
             >
               {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                "Save Changes"
+                <div className="flex items-center gap-2">
+                   <CheckCircle2 size={18} />
+                   <span>Save Changes</span>
+                </div>
               )}
             </Button>
           </div>

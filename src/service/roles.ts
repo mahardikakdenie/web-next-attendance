@@ -14,6 +14,10 @@ export const getAllPermissions = () => {
   return secureRequest<APIResponse<PermissionModule[]>>("get", "/v1/superadmin/permissions");
 };
 
+export const getTenantModules = () => {
+  return secureRequest<APIResponse<PermissionModule[]>>("get", "/v1/superadmin/tenant-modules");
+};
+
 export const getSystemRoles = () => {
   return secureRequest<APIResponse<Role[]>>("get", "/v1/superadmin/system-roles");
 };

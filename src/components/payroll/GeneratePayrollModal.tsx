@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { 
   X, 
-  Plus, 
+  Loader2, 
   Info, 
   CheckCircle2, 
   AlertTriangle 
@@ -14,9 +14,15 @@ import Select from "@/components/ui/Select";
 interface GeneratePayrollModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (data: { run_type: string; method: string }) => void;
+  onConfirm: (data: { 
+    run_type: string; 
+    method: string;
+    bonus: number;
+    incentives: number;
+  }) => void;
   isPending: boolean;
   period: string;
+  selectedCount: number;
 }
 
 const RUN_TYPES = [
@@ -36,10 +42,18 @@ export default function GeneratePayrollModal({
   onClose,
   onConfirm,
   isPending,
-  period
+  period,
+  selectedCount
 }: GeneratePayrollModalProps) {
   const [runType, setRunType] = useState("Regular");
   const [method, setMethod] = useState("Gross");
+  const [bonus, setBonus] = useState<number>(0);
+  const [incentives, setIncentives] = useState<number>(0);
+
+  const handleNumberInput = (val: string, setter: (v: number) => void) => {
+    const num = parseInt(val.replace(/[^0-9]/g, ""), 10);
+    setter(isNaN(num) ? 0 : num);
+  };
 
   if (!open) return null;
 
@@ -50,7 +64,13 @@ export default function GeneratePayrollModal({
         <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div>
             <h3 className="text-xl font-black text-slate-900 tracking-tight">Generate Payroll</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Period: {period}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{period}</p>
+              <span className="w-1 h-1 rounded-full bg-slate-300" />
+              <p className="text-xs font-black text-blue-600 uppercase tracking-widest">
+                {selectedCount > 0 ? `${selectedCount} Selected` : "All Employees"}
+              </p>
+            </div>
           </div>
           <button 
             onClick={onClose}
@@ -61,7 +81,7 @@ export default function GeneratePayrollModal({
         </div>
 
         {/* Content */}
-        <div className="p-8 space-y-6">
+        <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto">
           <div className="space-y-4">
             <Select
               label="Run Type"
@@ -76,6 +96,33 @@ export default function GeneratePayrollModal({
               value={method}
               onChange={(val) => setMethod(String(val))}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bonus</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Rp</span>
+                  <input 
+                    type="text"
+                    value={bonus.toLocaleString("id-ID")}
+                    onChange={(e) => handleNumberInput(e.target.value, setBonus)}
+                    className="w-full h-11 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:border-blue-500 transition-all outline-none"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Incentives</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Rp</span>
+                  <input 
+                    type="text"
+                    value={incentives.toLocaleString("id-ID")}
+                    onChange={(e) => handleNumberInput(e.target.value, setIncentives)}
+                    className="w-full h-11 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:bg-white focus:border-blue-500 transition-all outline-none"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Info Card */}
@@ -99,7 +146,7 @@ export default function GeneratePayrollModal({
               <span className="text-[10px] font-black uppercase tracking-widest">Confirmation Required</span>
             </div>
             <p className="text-[11px] font-bold text-amber-800 leading-tight">
-              Akan membuat draft slip gaji untuk seluruh karyawan aktif di periode ini.
+              Akan membuat draft slip gaji untuk {selectedCount > 0 ? `${selectedCount} karyawan terpilih` : "seluruh karyawan aktif"} di periode ini.
             </p>
           </div>
         </div>
@@ -114,12 +161,12 @@ export default function GeneratePayrollModal({
             Cancel
           </Button>
           <Button 
-            onClick={() => onConfirm({ run_type: runType, method })}
+            onClick={() => onConfirm({ run_type: runType, method, bonus, incentives })}
             disabled={isPending}
             className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-lg shadow-blue-600/20"
           >
             {isPending ? (
-              <Plus className="animate-spin" size={18} />
+              <Loader2 className="animate-spin" size={18} />
             ) : (
               <CheckCircle2 size={18} />
             )}

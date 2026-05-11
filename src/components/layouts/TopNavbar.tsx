@@ -3,7 +3,6 @@
 import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
 import Image from "next/image";
 import { 
-  Bell, 
   ChevronDown, 
   Building2, 
   Search,
@@ -29,6 +28,7 @@ import { usePathname, useRouter } from "next/navigation";
 import React, { useState, useMemo, useEffect, useRef, useCallback, Fragment } from "react";
 import { SearchLink, BreadcrumbSegment } from "@/types/layout";
 import { TenantPlanBadge } from "../tenant-settings/TenantPlanBadge";
+import NotificationDropdown from "./NotificationDropdown";
 
 export default function TopNavbar() {
   const { user } = useAuthStore();
@@ -273,10 +273,7 @@ export default function TopNavbar() {
           <button className="hidden sm:flex p-2.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100/80 rounded-xl transition-all">
             <Globe size={18} strokeWidth={2.5} />
           </button>
-          <button className="relative p-2.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100/80 rounded-xl transition-all">
-            <Bell size={18} strokeWidth={2.5} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
-          </button>
+          <NotificationDropdown />
         </div>
 
         <div className="w-px h-6 bg-slate-200 hidden sm:block" />

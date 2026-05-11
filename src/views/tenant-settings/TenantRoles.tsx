@@ -6,7 +6,6 @@ import {
   Users, 
   Clock, 
   Wallet, 
-  BarChart3, 
   Plus, 
   ChevronRight,
   ShieldAlert,
@@ -23,7 +22,14 @@ import {
   SearchX,
   ArrowRightLeft,
   HelpCircle,
-  Info
+  Info,
+  CalendarX,
+  Calculator,
+  History,
+  Target,
+  Briefcase,
+  BarChart3,
+  type LucideIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Switch";
@@ -39,23 +45,23 @@ import {
   updateCustomRole, 
   deleteCustomRole, 
   saveRoleHierarchy,
-  getAllPermissions 
+  getTenantModules 
 } from "@/service/roles";
 import { toast } from "sonner";
 import { getRoleBadgeColor } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
 
-// --- ICON MAPPING FOR DYNAMIC MODULES ---
+// --- ICON MAPPING FOR TENANT MODULES ---
 const MODULE_ICONS: Record<string, LucideIcon> = {
   attendance: Clock,
-  payroll: Wallet,
+  leave: CalendarX,
+  payroll: Calculator,
+  finance: Calculator,
+  timesheet: History,
+  performance: Target,
+  project: Briefcase,
   user: Users,
-  analytics: BarChart3,
-  support: Sparkles,
-  project: GitBranch,
-  finance: Wallet,
-  employee: Users,
-  system: ShieldCheck
+  system: ShieldCheck,
+  analytics: BarChart3
 };
 
 export default function TenantRolesView() {
@@ -87,7 +93,7 @@ export default function TenantRolesView() {
   const fetchPermissions = useCallback(async () => {
     try {
       setIsPermsLoading(true);
-      const resp = await getAllPermissions();
+      const resp = await getTenantModules();
       if (resp.data) {
         const mappedModules = resp.data.map(mod => ({
           ...mod,
@@ -97,7 +103,7 @@ export default function TenantRolesView() {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load permission catalog");
+      toast.error("Failed to load organization capability catalog");
     } finally {
       setIsPermsLoading(false);
     }

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { ForcedChangePassword } from "./ForcedChangePassword";
+import NotificationBootstrap from "./NotificationBootstrap";
 
 export default function AuthBootstrap() {
   const user = useAuthStore((state) => state.user);
@@ -19,5 +20,10 @@ export default function AuthBootstrap() {
     void fetchUser();
   }, [fetchUser, loading, user]);
 
-  return <ForcedChangePassword />;
+  return (
+    <>
+      <ForcedChangePassword />
+      <NotificationBootstrap />
+    </>
+  );
 }

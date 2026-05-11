@@ -30,11 +30,12 @@ import { DataTable, Column } from "@/components/ui/DataTable";
 import EnhancedPayslipModal from "@/components/ui/EnhancedPayslipModal"; 
 import GeneratePayrollModal from "@/components/payroll/GeneratePayrollModal";
 import SalaryCalculatorView from "./calculator/Index";
+import BulkSimulation from "./BulkSimulation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   getPayrollSummary, 
   getPayrollList, 
-  generatePayrollCycle, 
+  bulkGeneratePayroll, 
   publishPayroll 
 } from "@/service/payroll";
 import { CustomApiError, PayrollRecord } from "@/types/api";
@@ -47,13 +48,16 @@ export default function PayrollView() {
   const queryClient = useQueryClient();
   const isAdmin = user?.role?.name === ROLES.SUPERADMIN || user?.role?.name === ROLES.ADMIN || user?.role?.name === ROLES.HR || user?.role?.name === ROLES.FINANCE;
   
-  const [mainTab, setMainTab] = useState<"bulk" | "calculator" | "individual">("bulk");
+  const [mainTab, setMainTab] = useState<"bulk" | "calculator" | "individual" | "simulation">("bulk");
   const [activeTab, setActiveTab] = useState<"hr" | "finance">("hr");
   const [selectedPeriod, setSelectedPeriod] = useState(dayjs().format("YYYY-MM"));
   const [showSlipPreview, setShowSlipPreview] = useState<number | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [isMasked, setIsMasked] = useState(true);
   
+  // Selection State
+  const [selectedRowIds, setSelectedRowIds] = useState<(string | number)[]>([]);
+
   // Search & Pagination State
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -75,6 +79,7 @@ export default function PayrollView() {
     setSelectedPeriod(prev => 
       dayjs(prev).add(direction === 'next' ? 1 : -1, 'month').format("YYYY-MM")
     );
+    setSelectedRowIds([]); // Reset selection when period changes
   };
 
   // Queries
@@ -95,18 +100,38 @@ export default function PayrollView() {
     enabled: !!user && isAdmin && mainTab === "bulk",
   });
 
+  const payrollData = useMemo(() => {
+    return listResp?.data || [];
+  }, [listResp?.data]);
+
+  // Derived user_ids from selected payroll records
+  const selectedUserIds = useMemo(() => {
+    return payrollData
+      .filter(record => selectedRowIds.includes(record.id))
+      .map(record => record.user.id);
+  }, [payrollData, selectedRowIds]);
+
   // Mutations
   const generateMutation = useMutation({
-    mutationFn: ({ run_type, method }: { run_type: string, method: string }) => 
-      generatePayrollCycle(
-        selectedPeriod, 
-        run_type as 'Regular' | 'THR' | 'Bonus' | 'All', 
-        method as 'Gross' | 'Net'
-      ),
+    mutationFn: (data: { 
+      run_type: string, 
+      method: string, 
+      bonus: number, 
+      incentives: number 
+    }) => 
+      bulkGeneratePayroll({
+        period: selectedPeriod,
+        run_type: data.run_type as 'Regular' | 'THR' | 'Bonus' | 'All',
+        method: data.method as 'Gross' | 'Net',
+        user_ids: selectedUserIds,
+        bonus: data.bonus,
+        incentives: data.incentives
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payroll-list"] });
       queryClient.invalidateQueries({ queryKey: ["payroll-summary"] });
-      toast.success("Payroll cycle generated successfully");
+      setSelectedRowIds([]);
+      toast.success("Payroll records generated successfully");
     },
     onError: (err: CustomApiError) => {
       toast.error(err.response?.data?.meta?.message || "Failed to generate payroll");
@@ -133,9 +158,6 @@ export default function PayrollView() {
     }).format(amount || 0);
   }, [isMasked]);
 
-  const payrollData = useMemo(() => {
-    return listResp?.data || [];
-  }, [listResp?.data]);
   const meta = listResp?.meta;
   const stats = summaryResp?.data;
 
@@ -321,6 +343,13 @@ export default function PayrollView() {
           <UserPlus size={16} />
           <span>Individual Save</span>
         </button>
+        <button 
+          onClick={() => setMainTab("simulation")}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-[18px] text-[11px] font-black uppercase tracking-wider transition-all ${mainTab === "simulation" ? "bg-white text-blue-600 shadow-md" : "text-neutral-400 hover:text-neutral-900"}`}
+        >
+          <Calculator size={16} />
+          <span>Bulk Simulation</span>
+        </button>
       </div>
 
       {mainTab === "bulk" && (
@@ -469,6 +498,9 @@ export default function PayrollView() {
                 setLimit(newLimit);
                 setCurrentPage(1);
               }}
+              selectable={isAdmin}
+              selectedIds={selectedRowIds}
+              onSelectionChange={setSelectedRowIds}
             />
           </div>
         </div>
@@ -477,6 +509,12 @@ export default function PayrollView() {
       {(mainTab === "calculator" || mainTab === "individual") && (
         <div className="animate-in fade-in slide-in-from-right-4 duration-500">
            <SalaryCalculatorView isStateless={mainTab === "calculator"} />
+        </div>
+      )}
+
+      {mainTab === "simulation" && (
+        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+           <BulkSimulation period={selectedPeriod} />
         </div>
       )}
 
@@ -494,6 +532,7 @@ export default function PayrollView() {
         onClose={() => setShowGenerateModal(false)}
         period={dayjs(selectedPeriod).format("MMMM YYYY")}
         isPending={generateMutation.isPending}
+        selectedCount={selectedRowIds.length}
         onConfirm={(data) => {
           generateMutation.mutate(data, {
             onSuccess: () => setShowGenerateModal(false)

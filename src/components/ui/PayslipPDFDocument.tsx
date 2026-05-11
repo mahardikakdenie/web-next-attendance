@@ -255,26 +255,26 @@ export const PayslipPDFDocument = ({ data, companyName, logo, ptkp, period, empl
                 <Text style={styles.rowLabel}>Basic Salary</Text>
                 <Text style={styles.rowLabelSub}>Prorated for attendance</Text>
               </View>
-              <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.proratedBasic || 0)}</Text>
+              <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.prorated_basic || 0)}</Text>
             </View>
 
-            {(data?.breakdown?.taxAllowance || 0) > 0 && (
+            {(data?.breakdown?.tax_allowance || 0) > 0 && (
               <View style={styles.row}>
                 <View style={styles.rowLabelContainer}>
                   <Text style={styles.rowLabel}>Tax Allowance</Text>
                   <Text style={styles.rowLabelSub}>Method: Net (Gross Up)</Text>
                 </View>
-                <Text style={[styles.rowValue, { color: '#4f46e5' }]}>{formatCurrency(data?.breakdown?.taxAllowance || 0)}</Text>
+                <Text style={[styles.rowValue, { color: '#4f46e5' }]}>{formatCurrency(data?.breakdown?.tax_allowance || 0)}</Text>
               </View>
             )}
 
-            {(data?.breakdown?.bpjsAllowance || 0) > 0 && (
+            {(data?.breakdown?.bpjs_allowance || 0) > 0 && (
               <View style={styles.row}>
                 <View style={styles.rowLabelContainer}>
                   <Text style={styles.rowLabel}>BPJS Allowance</Text>
                   <Text style={styles.rowLabelSub}>Employer covers employee share</Text>
                 </View>
-                <Text style={[styles.rowValue, { color: '#4f46e5' }]}>{formatCurrency(data?.breakdown?.bpjsAllowance || 0)}</Text>
+                <Text style={[styles.rowValue, { color: '#4f46e5' }]}>{formatCurrency(data?.breakdown?.bpjs_allowance || 0)}</Text>
               </View>
             )}
 
@@ -294,33 +294,40 @@ export const PayslipPDFDocument = ({ data, companyName, logo, ptkp, period, empl
 
             <View style={styles.row}>
               <Text style={styles.rowLabel}>Allowances (Fixed)</Text>
-              <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.fixedAllowances || 0)}</Text>
+              <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.fixed_allowances || 0)}</Text>
             </View>
 
-            {data?.breakdown?.variableAllowances > 0 && (
+            {(data?.breakdown?.incentives || 0) > 0 && (
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>Incentives / Commissions</Text>
+                <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.incentives || 0)}</Text>
+              </View>
+            )}
+
+            {(data?.breakdown?.variable_allowances || 0) > 0 && (
               <View style={styles.row}>
                 <View style={styles.rowLabelContainer}>
                   <Text style={styles.rowLabel}>Allowances (Daily)</Text>
                   <Text style={styles.rowLabelSub}>Meal & Transport</Text>
                 </View>
-                <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.variableAllowances)}</Text>
+                <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.variable_allowances || 0)}</Text>
               </View>
             )}
 
-            {data?.breakdown?.overtimePay > 0 && (
+            {(data?.breakdown?.overtime_pay || 0) > 0 && (
                <View style={styles.row}>
                 <View style={styles.rowLabelContainer}>
                   <Text style={styles.rowLabel}>Overtime Pay</Text>
                   <Text style={styles.rowLabelSub}>Calculated from OT hours</Text>
                 </View>
-                <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.overtimePay)}</Text>
+                <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.overtime_pay || 0)}</Text>
               </View>
             )}
 
             <View style={styles.divider} />
             <View style={styles.row}>
               <Text style={[styles.rowValue, { color: '#64748b' }]}>Gross Income</Text>
-              <Text style={styles.rowValue}>{formatCurrency(data?.grossIncome || 0)}</Text>
+              <Text style={styles.rowValue}>{formatCurrency(data?.breakdown?.gross_income || 0)}</Text>
             </View>
           </View>
 
@@ -333,9 +340,9 @@ export const PayslipPDFDocument = ({ data, companyName, logo, ptkp, period, empl
             <View style={styles.row}>
               <View style={styles.rowLabelContainer}>
                 <Text style={styles.rowLabel}>Income Tax (PPh 21)</Text>
-                <Text style={styles.rowLabelSub}>TER Scheme {data?.breakdown?.terRate?.toFixed(2) || "0.00"}%</Text>
+                <Text style={styles.rowLabelSub}>TER Scheme {data?.breakdown?.ter_rate?.toFixed(2) || "0.00"}%</Text>
               </View>
-              <Text style={styles.deductionValue}>-{formatCurrency(data?.pph21Amount || 0)}</Text>
+              <Text style={styles.deductionValue}>-{formatCurrency(data?.breakdown?.pph21_amount || 0)}</Text>
             </View>
 
             <View style={styles.row}>
@@ -346,20 +353,20 @@ export const PayslipPDFDocument = ({ data, companyName, logo, ptkp, period, empl
               <Text style={styles.deductionValue}>-{formatCurrency(totalBpjs)}</Text>
             </View>
 
-            {data?.breakdown?.unpaidLeaveDeduction > 0 && (
+            {(data?.breakdown?.unpaid_leave_deduction || 0) > 0 && (
               <View style={styles.row}>
                 <View style={styles.rowLabelContainer}>
                   <Text style={styles.rowLabel}>Unpaid Leave</Text>
                   <Text style={styles.rowLabelSub}>Attendance adjustment</Text>
                 </View>
-                <Text style={styles.deductionValue}>-{formatCurrency(data?.breakdown?.unpaidLeaveDeduction)}</Text>
+                <Text style={styles.deductionValue}>-{formatCurrency(data?.breakdown?.unpaid_leave_deduction || 0)}</Text>
               </View>
             )}
 
             <View style={styles.divider} />
             <View style={styles.row}>
               <Text style={[styles.rowValue, { color: '#64748b' }]}>Total Deductions</Text>
-              <Text style={styles.deductionValue}>-{formatCurrency(data?.totalDeductions || 0)}</Text>
+              <Text style={styles.deductionValue}>-{formatCurrency(data?.total_deductions || 0)}</Text>
             </View>
           </View>
         </View>
@@ -370,7 +377,7 @@ export const PayslipPDFDocument = ({ data, companyName, logo, ptkp, period, empl
             <Text style={styles.totalLabel}>Net Take Home Pay</Text>
             <Text style={styles.totalSublabel}>Transferred to registered account</Text>
           </View>
-          <Text style={styles.totalValue}>{formatCurrency(data?.netSalary || 0)}</Text>
+          <Text style={styles.totalValue}>{formatCurrency(data?.net_salary || 0)}</Text>
         </View>
 
         <Text style={styles.footer}>Computer Generated Document • Confidential</Text>

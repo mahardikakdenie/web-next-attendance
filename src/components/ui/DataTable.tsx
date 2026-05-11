@@ -17,6 +17,8 @@ export interface Column<T> {
   sortable?: boolean;
   className?: string;
   align?: "left" | "center" | "right";
+  name?: string;
+  key?: string;
 }
 
 interface DataTableProps<T> {
@@ -26,6 +28,10 @@ interface DataTableProps<T> {
   searchKey?: keyof T;
   onRowClick?: (item: T) => void;
   actions?: (item: T) => React.ReactNode;
+  // Selection Props
+  selectable?: boolean;
+  selectedIds?: (string | number)[];
+  onSelectionChange?: (ids: (string | number)[]) => void;
   // Pagination Props
   currentPage?: number;
   totalPages?: number;
@@ -43,6 +49,9 @@ export function DataTable<T extends { id: string | number }>({
   searchKey,
   onRowClick,
   actions,
+  selectable = false,
+  selectedIds = [],
+  onSelectionChange,
   currentPage: externalPage,
   totalPages,
   onPageChange,
@@ -57,6 +66,62 @@ export function DataTable<T extends { id: string | number }>({
 
   // Determine active page
   const activePage = externalPage !== undefined ? externalPage : internalPage;
+
+  // Process data
+  const processedData = useMemo(() => {
+    const safeData = Array.isArray(data) ? data : [];
+    let filtered = [...safeData];
+
+    if (searchTerm && searchKey) {
+      filtered = filtered.filter((item) => {
+        const value = item[searchKey];
+        return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+      });
+    }
+
+    if (sortConfig) {
+      filtered.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    if (!totalPages && limit) {
+      const start = (activePage - 1) * limit;
+      return filtered.slice(start, start + limit);
+    }
+
+    return filtered;
+  }, [data, sortConfig, searchTerm, searchKey, limit, activePage, totalPages]);
+
+  // Selection Logic
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!onSelectionChange) return;
+    if (e.target.checked) {
+      const allIds = processedData.map(item => item.id);
+      onSelectionChange(allIds);
+    } else {
+      onSelectionChange([]);
+    }
+  };
+
+  const handleSelectRow = (e: React.ChangeEvent<HTMLInputElement>, id: string | number) => {
+    e.stopPropagation();
+    if (!onSelectionChange) return;
+    if (e.target.checked) {
+      onSelectionChange([...selectedIds, id]);
+    } else {
+      onSelectionChange(selectedIds.filter(item => item !== id));
+    }
+  };
+
+  const isAllSelected = useMemo(() => {
+    if (processedData.length === 0) return false;
+    return processedData.every(item => selectedIds.includes(item.id));
+  }, [processedData, selectedIds]);
 
   // Failsafe for total pages calculation
   const totalPagesCount = Math.max(1, Math.floor(
@@ -89,36 +154,6 @@ export function DataTable<T extends { id: string | number }>({
     }
     setSortConfig({ key, direction });
   };
-
-  // Process data
-  const processedData = useMemo(() => {
-    const safeData = Array.isArray(data) ? data : [];
-    let filtered = [...safeData];
-
-    if (searchTerm && searchKey) {
-      filtered = filtered.filter((item) => {
-        const value = item[searchKey];
-        return String(value).toLowerCase().includes(searchTerm.toLowerCase());
-      });
-    }
-
-    if (sortConfig) {
-      filtered.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
-      });
-    }
-
-    if (!totalPages && limit) {
-      const start = (activePage - 1) * limit;
-      return filtered.slice(start, start + limit);
-    }
-
-    return filtered;
-  }, [data, sortConfig, searchTerm, searchKey, limit, activePage, totalPages]);
 
   const showPagination = onPageChange || onLimitChange;
 
@@ -154,6 +189,16 @@ export function DataTable<T extends { id: string | number }>({
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-neutral-50/50 border-b border-neutral-100">
+                {selectable && (
+                  <th className="px-6 py-5 w-10">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                      checked={isAllSelected}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
+                )}
                 {columns.map((col, idx) => (
                   <th 
                     key={idx}
@@ -187,8 +232,18 @@ export function DataTable<T extends { id: string | number }>({
                   <tr 
                     key={item.id}
                     onClick={() => onRowClick?.(item)}
-                    className={`group hover:bg-neutral-50/50 transition-colors ${onRowClick ? "cursor-pointer" : ""}`}
+                    className={`group hover:bg-neutral-50/50 transition-colors ${onRowClick ? "cursor-pointer" : ""} ${selectedIds.includes(item.id) ? "bg-blue-50/30" : ""}`}
                   >
+                    {selectable && (
+                      <td className="px-6 py-4">
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={(e) => handleSelectRow(e, item.id)}
+                        />
+                      </td>
+                    )}
                     {columns.map((col, idx) => (
                       <td 
                         key={idx}

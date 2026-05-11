@@ -306,10 +306,22 @@ export default function SupportDeskView() {
               onLimitChange={setLimit}
               currentPage={currentPage}
               onPageChange={setCurrentPage}
-              actions={() => (
-                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+              actions={(m) => (
+                <div className="flex items-center justify-end gap-1 transition-all">
                   <button type="button" className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Reply"><Send size={18} /></button>
-                  <button type="button" className="p-2 text-slate-400 hover:text-slate-900 rounded-xl transition-all"><MoreHorizontal size={18} /></button>
+                  <button 
+                    onClick={() => {
+                      toast.info(`Support Context: ${m.subject}`, {
+                        description: `Tenant: ${m.tenant_name} | Category: ${m.category} | Status: ${m.status}`,
+                        icon: <MessageSquare size={18} className="text-blue-500" />
+                      });
+                    }}
+                    type="button" 
+                    className="p-2 text-slate-400 hover:text-slate-900 rounded-xl transition-all" 
+                    title="See Details"
+                  >
+                    <MoreHorizontal size={18} />
+                  </button>
                 </div>
               )}
             />
@@ -324,7 +336,7 @@ export default function SupportDeskView() {
               currentPage={currentPage}
               onPageChange={setCurrentPage}
               actions={(t) => (
-                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                <div className="flex items-center justify-end gap-2 transition-all">
                   {t.status !== "APPROVED" && (
                     <button 
                       onClick={() => handleApproveTrial(t.id)} 
@@ -333,6 +345,19 @@ export default function SupportDeskView() {
                       Approve Trial
                     </button>
                   )}
+                  <button 
+                    onClick={() => {
+                      toast.info(`Trial Request: ${t.company_name}`, {
+                        description: `Contact: ${t.contact_name} | Range: ${t.employee_count_range} Users | Industry: ${t.industry}`,
+                        icon: <UserPlus size={18} className="text-blue-500" />
+                      });
+                    }}
+                    type="button" 
+                    className="p-2 text-slate-400 hover:text-slate-900 transition-all rounded-xl hover:bg-slate-50"
+                    title="See Details"
+                  >
+                    <MoreHorizontal size={18} />
+                  </button>
                   <button type="button" className="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><X size={18} /></button>
                 </div>
               )}
@@ -367,7 +392,17 @@ export default function SupportDeskView() {
                       <RotateCcw size={14} strokeWidth={3} /> Retry
                     </button>
                   )}
-                  <button type="button" className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all">
+                  <button 
+                    onClick={() => {
+                      toast.info(`Ticket Details: ${t.trial_request.company_name}`, {
+                        description: `Provisioning ID: ${t.id} | Status: ${t.status} | Admin: ${t.admin_email}`,
+                        icon: <TicketCheck size={18} className="text-blue-500" />
+                      });
+                    }}
+                    type="button" 
+                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all"
+                    title="See Details"
+                  >
                     <MoreHorizontal size={18} />
                   </button>
                 </div>
