@@ -41,135 +41,144 @@ async function handler(
   context: RouteContext,
   method: HttpMethod
 ): Promise<Response> {
-  const { path: pathArray = [] } = await context.params;
+  try {
+    const { path: pathArray = [] } = await context.params;
 
-  if (!pathArray.length) {
-    return json({ message: "Invalid API path" }, 400);
-  }
+    if (!pathArray.length) {
+      return json({ message: "Invalid API path" }, 400);
+    }
 
-  ////////////////////////////////////////////////////////////
-  // 🔥 1. BUILD URL
-  ////////////////////////////////////////////////////////////
-  const path = pathArray.join("/");
-  const fullURL = `${BASE_URL}/api/${path}${req.nextUrl.search}`;
+    ////////////////////////////////////////////////////////////
+    // 🔥 1. BUILD URL
+    ////////////////////////////////////////////////////////////
+    const path = pathArray.join("/");
+    const fullURL = `${BASE_URL}/api/${path}${req.nextUrl.search}`;
 
-  ////////////////////////////////////////////////////////////
-  // 🔥 2. ORIGIN CHECK
-  ////////////////////////////////////////////////////////////
-  const origin = req.headers.get("origin");
-  if (origin && APP_URL && origin !== APP_URL) {
-    return json({ message: "Forbidden origin" }, 403);
-  }
+    ////////////////////////////////////////////////////////////
+    // 🔥 2. ORIGIN CHECK
+    ////////////////////////////////////////////////////////////
+    const origin = req.headers.get("origin");
+    if (origin && APP_URL && origin !== APP_URL) {
+      return json({ message: "Forbidden origin" }, 403);
+    }
 
-  ////////////////////////////////////////////////////////////
-  // 🔥 3. BODY (RAW BUFFER)
-  ////////////////////////////////////////////////////////////
-  let bodyBuffer: ArrayBuffer | undefined =
-    method !== "GET" ? await req.arrayBuffer() : undefined;
+    ////////////////////////////////////////////////////////////
+    // 🔥 3. BODY (RAW BUFFER)
+    ////////////////////////////////////////////////////////////
+    let bodyBuffer: ArrayBuffer | undefined =
+      method !== "GET" ? await req.arrayBuffer() : undefined;
 
-  // Ensure body is at least "{}" for signing and forwarding if empty
-  if (method !== "GET" && (!bodyBuffer || bodyBuffer.byteLength === 0)) {
-    bodyBuffer = new TextEncoder().encode("{}").buffer;
-  }
+    // Ensure body is at least "{}" for signing and forwarding if empty
+    if (method !== "GET" && (!bodyBuffer || bodyBuffer.byteLength === 0)) {
+      bodyBuffer = new TextEncoder().encode("{}").buffer;
+    }
 
-  const rawBody: Buffer =
-    bodyBuffer !== undefined
-      ? Buffer.from(bodyBuffer)
-      : Buffer.from("{}");
+    const rawBody: Buffer =
+      bodyBuffer !== undefined
+        ? Buffer.from(bodyBuffer)
+        : Buffer.from("{}");
 
-  ////////////////////////////////////////////////////////////
-  // 🔥 4. SECURITY (PERBAIKAN)
-  ////////////////////////////////////////////////////////////
-  const timestamp = req.headers.get("x-timestamp");
-  const requestId = req.headers.get("x-request-id");
-  const isStream = path.includes("notifications/stream");
+    ////////////////////////////////////////////////////////////
+    // 🔥 4. SECURITY (PERBAIKAN)
+    ////////////////////////////////////////////////////////////
+    const timestamp = req.headers.get("x-timestamp");
+    const requestId = req.headers.get("x-request-id");
+    const isStream = path.includes("notifications/stream");
 
-  // Jika bukan stream DAN browser tidak mengirim header ini, tolak request
-  if (!isStream && (!timestamp || !requestId)) {
-    return json({ message: "Missing security headers (X-Timestamp / X-Request-ID)" }, 400);
-  }
+    // Jika bukan stream DAN browser tidak mengirim header ini, tolak request
+    if (!isStream && (!timestamp || !requestId)) {
+      return json({ message: "Missing security headers (X-Timestamp / X-Request-ID)" }, 400);
+    }
 
-  const contentType = req.headers.get("content-type") ?? "";
-  const isMultipart = contentType.includes("multipart/form-data");
+    const contentType = req.headers.get("content-type") ?? "";
+    const isMultipart = contentType.includes("multipart/form-data");
 
-  let signature: string | undefined;
+    let signature: string | undefined;
 
-  // Signature hanya dibuat jika bukan multipart DAN bukan stream (karena stream tidak butuh headers security)
-  if (!isMultipart && !isStream && timestamp && requestId) {
-    signature = generateSignatureRaw(rawBody, timestamp, requestId);
-  }
+    // Signature hanya dibuat jika bukan multipart DAN bukan stream (karena stream tidak butuh headers security)
+    if (!isMultipart && !isStream && timestamp && requestId) {
+      signature = generateSignatureRaw(rawBody, timestamp, requestId);
+    }
 
-  ////////////////////////////////////////////////////////////
-  // 🔥 5. BUILD HEADERS
-  ////////////////////////////////////////////////////////////
-  const headers: Record<string, string> = {
-    "X-Internal-Secret": INTERNAL_SECRET,
-  };
+    ////////////////////////////////////////////////////////////
+    // 🔥 5. BUILD HEADERS
+    ////////////////////////////////////////////////////////////
+    const headers: Record<string, string> = {
+      "X-Internal-Secret": INTERNAL_SECRET,
+    };
 
-  // Hanya teruskan security headers jika bukan stream
-  if (!isStream && timestamp && requestId) {
-    headers["X-Timestamp"] = timestamp;
-    headers["X-Request-ID"] = requestId;
-  }
+    // Hanya teruskan security headers jika bukan stream
+    if (!isStream && timestamp && requestId) {
+      headers["X-Timestamp"] = timestamp;
+      headers["X-Request-ID"] = requestId;
+    }
 
-  if (contentType) {
-    headers["Content-Type"] = contentType;
-  }
+    if (contentType) {
+      headers["Content-Type"] = contentType;
+    }
 
-  const cookie = req.headers.get("cookie");
-  if (cookie) {
-    headers["Cookie"] = cookie;
-  }
+    const cookie = req.headers.get("cookie");
+    if (cookie) {
+      headers["Cookie"] = cookie;
+    }
 
-  if (signature) {
-    headers["X-Signature"] = signature;
-  }
+    if (signature) {
+      headers["X-Signature"] = signature;
+    }
 
-  ////////////////////////////////////////////////////////////
-  // 🔥 6. FORWARD REQUEST
-  ////////////////////////////////////////////////////////////
-  const res = await fetch(fullURL, {
-    method,
-    headers,
-    body: bodyBuffer,
-    // Penting untuk streaming: jangan gunakan cache dan pastikan signal diteruskan jika perlu
-    cache: 'no-store',
-  });
-
-  ////////////////////////////////////////////////////////////
-  // 🔥 7. RESPONSE (STREAMING SUPPORT)
-  ////////////////////////////////////////////////////////////
-  
-  // Jika ini adalah stream, kita harus mengembalikan body sebagai stream langsung
-  // agar tidak tertahan oleh buffering res.text()
-  if (isStream && res.body) {
-    return new Response(res.body, {
-      status: res.status,
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        "Connection": "keep-alive",
-        "X-Accel-Buffering": "no", // Mematikan buffering di Nginx jika ada
-      },
+    ////////////////////////////////////////////////////////////
+    // 🔥 6. FORWARD REQUEST
+    ////////////////////////////////////////////////////////////
+    const res = await fetch(fullURL, {
+      method,
+      headers,
+      body: bodyBuffer,
+      // Penting untuk streaming: jangan gunakan cache dan pastikan signal diteruskan jika perlu
+      cache: 'no-store',
     });
+
+    ////////////////////////////////////////////////////////////
+    // 🔥 7. RESPONSE (STREAMING SUPPORT)
+    ////////////////////////////////////////////////////////////
+    
+    // Jika ini adalah stream, kita harus mengembalikan body sebagai stream langsung
+    // agar tidak tertahan oleh buffering res.text()
+    if (isStream && res.body) {
+      return new Response(res.body, {
+        status: res.status,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          "Connection": "keep-alive",
+          "X-Accel-Buffering": "no", // Mematikan buffering di Nginx jika ada
+        },
+      });
+    }
+
+    const data = await res.text();
+
+    const responseHeaders: HeadersInit = {
+      "Content-Type":
+        res.headers.get("content-type") ?? "application/json",
+    };
+
+    const setCookie = res.headers.get("set-cookie");
+    if (setCookie) {
+      responseHeaders["set-cookie"] = setCookie;
+    }
+
+    return new Response(data, {
+      status: res.status,
+      headers: responseHeaders,
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("🔥 Proxy Error:", errorMessage);
+    return json({ 
+      message: "Internal Proxy Error", 
+      error: errorMessage 
+    }, 500);
   }
-
-  const data = await res.text();
-
-  const responseHeaders: HeadersInit = {
-    "Content-Type":
-      res.headers.get("content-type") ?? "application/json",
-  };
-
-  const setCookie = res.headers.get("set-cookie");
-  if (setCookie) {
-    responseHeaders["set-cookie"] = setCookie;
-  }
-
-  return new Response(data, {
-    status: res.status,
-    headers: responseHeaders,
-  });
 }
 
 //////////////////////////////////////////////////////////////
