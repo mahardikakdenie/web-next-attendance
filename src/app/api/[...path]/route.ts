@@ -51,8 +51,20 @@ async function handler(
     ////////////////////////////////////////////////////////////
     // 🔥 1. BUILD URL
     ////////////////////////////////////////////////////////////
+    if (!BASE_URL) {
+      console.error("❌ CRITICAL: API_URL environment variable is not defined!");
+      return json({ 
+        message: "Proxy Configuration Error", 
+        error: "API_URL is missing on the server. Please check your .env file." 
+      }, 500);
+    }
+
     const path = pathArray.join("/");
-    const fullURL = `${BASE_URL}/api/${path}${req.nextUrl.search}`;
+    // Remove trailing slash from BASE_URL if exists, and ensure path doesn't start with /api if redundant
+    const cleanBaseURL = BASE_URL.replace(/\/$/, "");
+    const fullURL = `${cleanBaseURL}/${path}${req.nextUrl.search}`;
+
+    console.log(`📡 Proxying [${method}] to: ${fullURL}`);
 
     ////////////////////////////////////////////////////////////
     // 🔥 2. ORIGIN CHECK
