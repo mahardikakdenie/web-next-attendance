@@ -39,9 +39,16 @@ import Avatar from "@/components/ui/Avatar";
 type TabId = "profile" | "requests" | "payroll" | "verification" | "security";
 
 export default function ProfileUpdateView() {
-  const { user, loading, fetchUser } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const loading = useAuthStore((state) => state.loading);
+  const fetchUser = useAuthStore((state) => state.fetchUser);
+  
   const queryClient = useQueryClient();
-  const isAdmin = user?.role?.name === ROLES.SUPERADMIN || user?.role?.name === ROLES.ADMIN || user?.role?.name === ROLES.HR;
+  const isAdmin = useMemo(() => 
+    user?.role?.name === ROLES.SUPERADMIN || 
+    user?.role?.name === ROLES.ADMIN || 
+    user?.role?.name === ROLES.HR, 
+  [user]);
   
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,7 +59,7 @@ export default function ProfileUpdateView() {
 
   useEffect(() => {
     fetchUser();
-  }, [fetchUser]);
+  }, []); // Only fetch on mount to prevent infinite loops
 
   // Admin Queries
   const { data: adminRequestsResp, isLoading: isAdminRequestsLoading } = useQuery({
