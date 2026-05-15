@@ -50,3 +50,11 @@ export const approveLeave = (id: number, notes?: string) => {
 export const rejectLeave = (id: number, notes?: string) => {
   return secureRequest<APIResponse<null>>("post", `/v1/leaves/reject/${id}`, { notes });
 };
+
+export const updateLeaveQuota = async (userId: number, payload: { 
+  leave_type_id?: number; 
+  balance: number; 
+  is_special?: boolean;
+}) => {
+  return secureRequest<APIResponse<null>>("patch", `/v1/leaves/quotas/${userId}`, payload);
+};

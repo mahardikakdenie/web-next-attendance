@@ -836,6 +836,7 @@ export interface TimesheetReport {
 
 export interface CustomApiError extends Error {
   response?: {
+    status?: number;
     data?: {
       meta?: {
         message?: string;

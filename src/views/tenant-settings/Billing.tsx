@@ -24,6 +24,8 @@ import { getMySubscription, upgradePlan, getInvoices, getAvailablePlans } from "
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DataTable, Column } from "@/components/ui/DataTable";
+import { AccessDenied } from "@/components/ui/AccessDenied";
+import { EmptySubscription } from "@/components/ui/EmptySubscription";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import { Can } from "@/components/auth/PermissionGuard";
@@ -36,9 +38,10 @@ export default function BillingView() {
   const [showPlans, setShowPlans] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: subResp, isLoading: isSubLoading } = useQuery({
+  const { data: subResp, isLoading: isSubLoading, error: subError } = useQuery({
     queryKey: ["my-subscription"],
-    queryFn: () => getMySubscription()
+    queryFn: () => getMySubscription(),
+    retry: 1
   });
 
   const { data: plansResp } = useQuery({
@@ -65,6 +68,11 @@ export default function BillingView() {
   });
 
   const mySub = subResp?.data;
+  const isError403 = (subError as CustomApiError)?.response?.status === 403;
+  
+  // Requirement 3: Handle empty state ({}) or null/undefined
+  const hasNoSubscription = !mySub || Object.keys(mySub).length === 0;
+
   const availablePlans = plansResp?.data || [];
   const invoices = invResp?.data || [];
   const pagination = invResp?.meta?.pagination;
@@ -156,8 +164,13 @@ export default function BillingView() {
     );
   }
 
+  // Requirement 2: Handle 403 Forbidden
+  if (isError403) {
+    return <AccessDenied message="Akses Ditolak: Halaman billing hanya dapat diakses oleh Admin atau Finance perusahaan." />;
+  }
+
   return (
-    <Can permission="billing.manage">
+    <Can permission="billing.manage" fallback={<AccessDenied />}>
       <div className="flex flex-col gap-10 w-full max-w-7xl mx-auto pb-20 animate-in fade-in duration-700">
         
         {/* Header Section */}
@@ -190,100 +203,107 @@ export default function BillingView() {
 
         {!showPlans ? (
           <>
-            {/* Quick Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Upcoming Billing */}
-              <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                  <TrendingUp size={80} />
-                </div>
-                <div className="flex justify-between items-start mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
-                    <Wallet size={22} strokeWidth={2.5} />
-                  </div>
-                  <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[10px] uppercase">{mySub?.status || "Active"}</Badge>
-                </div>
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Upcoming Billing</p>
-                <h3 className="text-3xl font-black text-slate-900 mb-4">{mySub ? formatCurrency(mySub.amount) : "IDR 0"}</h3>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                  <Calendar size={14} /> Due {mySub ? dayjs(mySub.next_billing_date).format("MMM DD, YYYY") : "-"}
-                </div>
-              </div>
-
-              {/* Current Plan */}
-              <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                  <Crown size={80} />
-                </div>
-                <div className="flex justify-between items-start mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-                    <ShieldCheck size={22} strokeWidth={2.5} />
-                  </div>
-                </div>
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Tier</p>
-                <h3 className="text-3xl font-black text-slate-900 mb-4">{mySub?.plan?.name || "None"}</h3>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                   Billed {mySub?.billing_cycle || "Monthly"}
-                </div>
-              </div>
-
-              {/* Employee Capacity */}
-              <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                  <Zap size={80} />
-                </div>
-                <div className="flex justify-between items-start mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
-                    <Zap size={22} strokeWidth={2.5} />
-                  </div>
-                </div>
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">License Capacity</p>
-                <h3 className="text-3xl font-black text-slate-900 mb-4">
-                  {mySub?.plan?.max_employees === 0 ? "Unlimited" : `${mySub?.plan?.max_employees || 0} Seats`}
-                </h3>
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-500">
-                   Enterprise Ready
-                </div>
-              </div>
-            </div>
-
-            {/* Billing History Section */}
-            <div className="bg-white rounded-[40px] shadow-sm border border-slate-100 flex flex-col min-h-[500px] overflow-hidden">
-              <div className="p-8 border-b border-slate-50 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
-                  <History size={24} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 tracking-tight">Billing History</h3>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Previous transaction records</p>
-                </div>
-              </div>
-
-              <div className="p-8 flex-1">
-                {isInvLoading ? (
-                  <div className="flex flex-col items-center justify-center h-64 gap-4">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fetching Invoices...</p>
-                  </div>
-                ) : invoices.length > 0 ? (
-                  <DataTable 
-                    data={invoices}
-                    columns={invoiceColumns}
-                    currentPage={currentPage}
-                    totalPages={pagination?.last_page || 1}
-                    onPageChange={setCurrentPage}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-80 text-center">
-                    <div className="w-20 h-20 rounded-[32px] bg-slate-50 flex items-center justify-center text-slate-200 mb-6">
-                      <SearchX size={40} />
+            {/* Requirement 3: Empty State Handling */}
+            {hasNoSubscription ? (
+              <EmptySubscription onAction={() => setShowPlans(true)} />
+            ) : (
+              <>
+                {/* Quick Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Upcoming Billing */}
+                  <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+                      <TrendingUp size={80} />
                     </div>
-                    <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">No Invoices Found</h4>
-                    <p className="text-sm font-medium text-slate-400 mt-1">Your organization has no billing history yet.</p>
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+                        <Wallet size={22} strokeWidth={2.5} />
+                      </div>
+                      <Badge className="bg-emerald-50 text-emerald-600 border-none font-black text-[10px] uppercase">{mySub?.status || "Active"}</Badge>
+                    </div>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Upcoming Billing</p>
+                    <h3 className="text-3xl font-black text-slate-900 mb-4">{mySub ? formatCurrency(mySub.amount) : "IDR 0"}</h3>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                      <Calendar size={14} /> Due {mySub ? dayjs(mySub.next_billing_date).format("MMM DD, YYYY") : "-"}
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
+
+                  {/* Current Plan */}
+                  <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+                      <Crown size={80} />
+                    </div>
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                        <ShieldCheck size={22} strokeWidth={2.5} />
+                      </div>
+                    </div>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Tier</p>
+                    <h3 className="text-3xl font-black text-slate-900 mb-4">{mySub?.plan?.name || "None"}</h3>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                      Billed {mySub?.billing_cycle || "Monthly"}
+                    </div>
+                  </div>
+
+                  {/* Employee Capacity */}
+                  <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+                      <Zap size={80} />
+                    </div>
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
+                        <Zap size={22} strokeWidth={2.5} />
+                      </div>
+                    </div>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">License Capacity</p>
+                    <h3 className="text-3xl font-black text-slate-900 mb-4">
+                      {mySub?.plan?.max_employees === 0 ? "Unlimited" : `${mySub?.plan?.max_employees || 0} Seats`}
+                    </h3>
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-500">
+                      Enterprise Ready
+                    </div>
+                  </div>
+                </div>
+
+                {/* Billing History Section */}
+                <div className="bg-white rounded-[40px] shadow-sm border border-slate-100 flex flex-col min-h-[500px] overflow-hidden">
+                  <div className="p-8 border-b border-slate-50 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+                      <History size={24} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900 tracking-tight">Billing History</h3>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Previous transaction records</p>
+                    </div>
+                  </div>
+
+                  <div className="p-8 flex-1">
+                    {isInvLoading ? (
+                      <div className="flex flex-col items-center justify-center h-64 gap-4">
+                        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fetching Invoices...</p>
+                      </div>
+                    ) : invoices.length > 0 ? (
+                      <DataTable 
+                        data={invoices}
+                        columns={invoiceColumns}
+                        currentPage={currentPage}
+                        totalPages={pagination?.last_page || 1}
+                        onPageChange={setCurrentPage}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-80 text-center">
+                        <div className="w-20 h-20 rounded-[32px] bg-slate-50 flex items-center justify-center text-slate-200 mb-6">
+                          <SearchX size={40} />
+                        </div>
+                        <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">No Invoices Found</h4>
+                        <p className="text-sm font-medium text-slate-400 mt-1">Your organization has no billing history yet.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </>
         ) : (
           /* Pricing Grid (Visible only when Upgrade Subscription is clicked) */

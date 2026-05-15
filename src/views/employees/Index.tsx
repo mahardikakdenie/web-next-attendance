@@ -24,9 +24,11 @@ import { getRoleBadgeColor, getProfileImage } from "@/lib/utils";
 import CreateEmployeeModal from "@/components/employees/CreateEmployeeModal";
 import LifecycleModal from "@/components/employees/LifecycleModal";
 import QuotaModal from "@/components/employees/QuotaModal";
+import LeaveQuotaModal from "@/components/employees/LeaveQuotaModal";
 import PayrollProfileModal from "@/components/employees/PayrollProfileModal";
 import { useAuthStore, ROLES } from "@/store/auth.store";
 import { formatCurrency } from "@/components/finance/CreateExpenseModal";
+import { CalendarDays } from "lucide-react";
 
 export default function EmployeesView() {
   const [employees, setEmployees] = useState<UserData[]>([]);
@@ -34,6 +36,7 @@ export default function EmployeesView() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [lifecycleEmployee, setLifecycleEmployee] = useState<{id: number, name: string} | null>(null);
   const [quotaEmployee, setQuotaEmployee] = useState<{id: number, name: string, quota: number} | null>(null);
+  const [leaveQuotaEmployee, setLeaveQuotaEmployee] = useState<{id: number, name: string} | null>(null);
   const [payrollEmployee, setPayrollEmployee] = useState<{id: number, name: string} | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -160,6 +163,15 @@ export default function EmployeesView() {
           className="p-2 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
         >
           <CreditCard size={18} />
+        </button>
+      )}
+      {canEditQuota && (
+        <button
+          onClick={() => setLeaveQuotaEmployee({ id: emp.id, name: emp.name })}
+          title="Update Leave Quota"
+          className="p-2 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+        >
+          <CalendarDays size={18} />
         </button>
       )}
       <button
@@ -312,6 +324,16 @@ export default function EmployeesView() {
           onClose={() => setPayrollEmployee(null)}
           employeeId={payrollEmployee.id}
           employeeName={payrollEmployee.name}
+        />
+      )}
+
+      {leaveQuotaEmployee && (
+        <LeaveQuotaModal 
+          open={!!leaveQuotaEmployee}
+          onClose={() => setLeaveQuotaEmployee(null)}
+          onSuccess={() => getData(currentPage)}
+          employeeId={leaveQuotaEmployee.id}
+          employeeName={leaveQuotaEmployee.name}
         />
       )}
     </div>

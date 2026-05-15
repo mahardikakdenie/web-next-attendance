@@ -120,13 +120,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ loading: true });
 
       const res = (await getMeAPI()) as {data: AuthUser};
+      console.log("DEBUG: /me API Response ->", res.data); // Added for debugging login issues
       set({
         user: res.data,
         isAuthenticated: true,
         mustChangePassword: res.data.must_change_password,
         loading: false,
       });
-    } catch {
+    } catch (error) {
+      console.error("DEBUG: /me API Error ->", error);
       set({
         user: null,
         isAuthenticated: false,

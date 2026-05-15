@@ -135,6 +135,13 @@ export default function TopNavbar() {
       icon: Building2
     },
     { 
+      title: "Menu Management", 
+      description: "Configure dynamic navigation ecosystem and role permissions.",
+      path: "/admin/menus", 
+      roles: [ROLES.SUPERADMIN],
+      icon: LayoutGrid
+    },
+    { 
       title: "Platform Accounts", 
       description: "System-level administrator account management.",
       path: "/admin/accounts", 

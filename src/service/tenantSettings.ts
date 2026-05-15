@@ -22,6 +22,10 @@ export const getDataCurrentTenat = async () => {
   return secureRequest<APIResponse<TenantSettings>>("get", "/v1/tenant-setting");
 };
 
+export const getTenantById = async (id: number) => {
+  return secureRequest<APIResponse<any>>("get", `/v1/tenants/${id}`);
+};
+
 export const updateDataCurrentTenant = async (payload: UpdateTenantSettingPayload) => {
   return secureRequest("put", "/v1/tenant-setting", payload);
 };
