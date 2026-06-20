@@ -124,11 +124,27 @@ export interface BillingHealth {
 }
 
 export interface DynamicMenuItem {
-  key: string;
+  id: number;
+  parent_id: number | null;
   label: string;
   icon: string;
   path?: string;
+  sort_order: number;
+  is_system: boolean;
+  allowed_roles?: number[]; // RBAC 2.0: Role-based visibility
   children?: DynamicMenuItem[];
+}
+
+export interface RoleOverviewMenuNode {
+  label: string;
+  path?: string;
+  children?: RoleOverviewMenuNode[];
+}
+
+export interface RoleOverview {
+  role_name: string;
+  base_role: string;
+  menus: RoleOverviewMenuNode[];
 }
 
 export interface UserData {
@@ -302,6 +318,14 @@ export interface QuickInfo {
   pending_leaves: number;
   pending_overtimes: number;
   notifications_count: number;
+}
+
+export interface TenantSummary {
+  id: number;
+  name: string;
+  code: string;
+  is_active: boolean;
+  created_at: string;
 }
 
 export interface TenantApiData {

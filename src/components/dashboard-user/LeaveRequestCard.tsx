@@ -75,8 +75,8 @@ export function LeaveRequestCard() {
   };
 
   return (
-    <div className="w-full h-full rounded-[2rem] sm:rounded-4xl border border-neutral-200 bg-white p-5 sm:p-8 shadow-sm flex flex-col">
-      
+    <div id="tour-leave-request" className="w-full h-full rounded-[2rem] sm:rounded-4xl border border-neutral-200 bg-white p-5 sm:p-8 shadow-sm flex flex-col">
+
       {/* HEADER */}
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">

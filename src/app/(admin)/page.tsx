@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/store/auth.store";
+import { usePermission } from "@/components/auth/PermissionGuard";
 import { useEffect, useState } from "react";
 import { 
   Clock, 
@@ -33,6 +34,23 @@ export default function Page() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>("absen");
   const queryClient = useQueryClient();
+  const hasAnalyticsExec = usePermission("analytics.executive");
+  const hasSuperadminAcc = usePermission("superadmin.access");
+  const hasRbacAcc = usePermission("rbac.access");
+
+  const isManagement = hasAnalyticsExec || hasSuperadminAcc || hasRbacAcc || user?.is_owner === true;
+
+  // Listen for onboarding tab changes
+  useEffect(() => {
+    const handleTabChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ tab?: DashboardTab }>;
+      if (customEvent.detail?.tab) {
+        setActiveTab(customEvent.detail.tab);
+      }
+    };
+    window.addEventListener("onboarding-change-tab", handleTabChange);
+    return () => window.removeEventListener("onboarding-change-tab", handleTabChange);
+  }, []);
 
   const { data: projectsResp } = useQuery({
     queryKey: ["active-projects"],
@@ -63,12 +81,6 @@ export default function Page() {
     );
   }
 
-  const isManagement = 
-    user?.role?.name === ROLES.SUPERADMIN || 
-    user?.role?.name === ROLES.ADMIN ||
-    user?.role?.name === ROLES.HR ||
-    user?.role?.name === ROLES.FINANCE;
-
   const renderTabContent = () => {
     switch (activeTab) {
       case "absen":
@@ -82,7 +94,7 @@ export default function Page() {
                 <TodayStatusCard />
               </div>
             </div>
-            <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-6">
+            <div id="tour-attendance-log" className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-6">
               <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                 <Clock className="text-blue-600" size={20} />
                 Recent Attendance Logs
@@ -133,7 +145,7 @@ export default function Page() {
   return (
     <div className="w-full max-w-[1600px] mx-auto flex flex-col gap-8 pb-10">
       {/* Dynamic Tab Navigation */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-white/40 backdrop-blur-xl p-4 rounded-[32px] border border-white shadow-xl shadow-slate-200/50 sticky top-0 z-40">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-white/40 backdrop-blur-xl p-4 rounded-[32px] border border-white shadow-xl shadow-slate-200/50 sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
             <LayoutGrid size={24} />

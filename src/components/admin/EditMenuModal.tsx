@@ -1,21 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, LayoutGrid, Type, Shield, Loader2, Save, Hash, Box } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { X, LayoutGrid, Type, Loader2, Save, Hash, Box, KeyRound, Link as LinkIcon, ChevronDown } from "lucide-react";
 import Input from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { updateMenu } from "@/service/menu";
+import { updateMenu, createMenu } from "@/service/menu";
+import { getSystemRoles } from "@/service/roles";
+import { Role } from "@/types/api";
+import { getIcon } from "@/lib/iconMap";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/Switch";
+import { useQuery } from "@tanstack/react-query";
 
 interface MenuData {
   id: number | string;
   label: string;
   icon: string;
-  allowed_roles: string[];
+  allowed_roles?: number[];
+  
   sort_order: number;
   is_system: boolean;
   path?: string;
+  parent_id?: number | string | null;
 }
 
 interface EditMenuModalProps {
@@ -23,49 +29,48 @@ interface EditMenuModalProps {
   onClose: () => void;
   onSuccess: () => void;
   menu: MenuData | null;
+  availableMenus?: MenuData[];
 }
 
-const ROLE_OPTIONS = [
-  { label: "SUPERADMIN", value: "SUPERADMIN" },
-  { label: "ADMIN", value: "ADMIN" },
-  { label: "HR", value: "HR" },
-  { label: "FINANCE", value: "FINANCE" },
-  { label: "EMPLOYEE", value: "EMPLOYEE" },
-];
+const MenuIconPreview = ({ name, size, strokeWidth }: { name: string; size?: number; strokeWidth?: number }) => {
+  return React.createElement(getIcon(name), { size, strokeWidth });
+};
 
-export default function EditMenuModal({ open, onClose, onSuccess, menu }: EditMenuModalProps) {
+export default function EditMenuModal({ open, onClose, onSuccess, menu, availableMenus = [] }: EditMenuModalProps) {
+  const isNew = menu?.id === "new";
   const [formData, setFormData] = useState<MenuData>({
     id: "",
     label: "",
     icon: "",
     allowed_roles: [],
+    
     sort_order: 0,
     is_system: false,
-    path: ""
+    path: "",
+    parent_id: null
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch system roles for allowed_roles assignment
+  const { data: rolesResp } = useQuery({
+    queryKey: ["system-roles"],
+    queryFn: getSystemRoles,
+    enabled: open,
+  });
+  const roleOptions = useMemo(() => rolesResp?.data || [], [rolesResp]);
+
 
   useEffect(() => {
     if (open && menu) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         ...menu,
-        allowed_roles: menu.allowed_roles || []
+        allowed_roles: menu.allowed_roles || [],
+        
       });
     }
   }, [open, menu]);
-
-  const toggleRole = (role: string) => {
-    setFormData(prev => {
-      const roles = [...prev.allowed_roles];
-      const index = roles.indexOf(role);
-      if (index > -1) {
-        roles.splice(index, 1);
-      } else {
-        roles.push(role);
-      }
-      return { ...prev, allowed_roles: roles };
-    });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,20 +81,65 @@ export default function EditMenuModal({ open, onClose, onSuccess, menu }: EditMe
 
     setIsSubmitting(true);
     try {
-      await updateMenu(formData.id, {
+      let finalAllowedRoles = formData.allowed_roles || [];
+      if (formData.is_system) {
+        finalAllowedRoles = roleOptions
+          .filter((r: Role) => r.base_role === "SUPERADMIN")
+          .map((r: Role) => r.id);
+      }
+
+      const payload = {
         label: formData.label,
         icon: formData.icon,
-        allowed_roles: formData.allowed_roles,
         sort_order: Number(formData.sort_order),
         is_system: formData.is_system,
-        path: formData.path
-      });
-      toast.success("Menu configuration updated. Changes will reflect after refresh.");
+        path: formData.path || undefined,
+        allowed_roles: finalAllowedRoles,
+        parent_id: formData.parent_id ? Number(formData.parent_id) : null,
+      };
+
+      const getDescendantIds = (pId: number | string, allMenus: MenuData[]): (number | string)[] => {
+        const children = allMenus.filter(m => m.parent_id === pId);
+        let ids = children.map(c => c.id);
+        for (const child of children) {
+          ids = [...ids, ...getDescendantIds(child.id, allMenus)];
+        }
+        return ids;
+      };
+
+      if (isNew) {
+        await createMenu(payload);
+        toast.success("New menu created successfully.");
+      } else {
+        await updateMenu(formData.id, payload);
+        
+        // If the menu was a parent, propagate changes to all descendants
+        const wasParent = menu && !menu.parent_id;
+        if (wasParent) {
+          const descendantIds = getDescendantIds(formData.id, availableMenus);
+          for (const childId of descendantIds) {
+            const childMenu = availableMenus.find(m => m.id === childId);
+            if (childMenu) {
+              await updateMenu(childId, {
+                label: childMenu.label,
+                icon: childMenu.icon,
+                sort_order: Number(childMenu.sort_order),
+                is_system: payload.is_system,
+                path: childMenu.path || undefined,
+                allowed_roles: payload.allowed_roles,
+                parent_id: childMenu.parent_id ? Number(childMenu.parent_id) : null,
+              });
+            }
+          }
+        }
+        
+        toast.success("Menu configuration updated.");
+      }
       onSuccess();
       onClose();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update menu configuration.");
+      toast.error(isNew ? "Failed to create menu." : "Failed to update menu.");
     } finally {
       setIsSubmitting(false);
     }
@@ -99,9 +149,9 @@ export default function EditMenuModal({ open, onClose, onSuccess, menu }: EditMe
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-      <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" 
-        onClick={onClose} 
+      <div
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
+        onClick={onClose}
       />
       <div className="relative bg-white rounded-[2.5rem] w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-300">
         <form onSubmit={handleSubmit}>
@@ -109,20 +159,20 @@ export default function EditMenuModal({ open, onClose, onSuccess, menu }: EditMe
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg">
-                  <LayoutGrid size={24} strokeWidth={2.5} />
+                  <MenuIconPreview name={formData.icon} size={24} strokeWidth={2.5} />
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight">
-                    Edit Menu
+                    {isNew ? "Create New Menu" : "Edit Menu"}
                   </h2>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                    Configure dynamic access & branding
+                    {isNew ? "Add a new navigation element" : "Configure dynamic access & branding"}
                   </p>
                 </div>
               </div>
-              <button 
-                type="button" 
-                onClick={onClose} 
+              <button
+                type="button"
+                onClick={onClose}
                 className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400"
               >
                 <X size={24} />
@@ -130,17 +180,31 @@ export default function EditMenuModal({ open, onClose, onSuccess, menu }: EditMe
             </div>
 
             <div className="space-y-6 max-h-[60vh] overflow-y-auto px-1 custom-scrollbar">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Menu Label</label>
-                <div className="relative">
-                  <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <Input 
-                    required
-                    placeholder="e.g. Workforce Intelligence"
-                    value={formData.label}
-                    onChange={(e) => setFormData({...formData, label: e.target.value})}
-                    className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Menu Label</label>
+                  <div className="relative">
+                    <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Input
+                      required
+                      placeholder="e.g. Workforce Intelligence"
+                      value={formData.label}
+                      onChange={(e) => setFormData({...formData, label: e.target.value})}
+                      className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Route Path</label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Input
+                      placeholder="/admin/analytics"
+                      value={formData.path || ""}
+                      onChange={(e) => setFormData({...formData, path: e.target.value})}
+                      className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -149,20 +213,23 @@ export default function EditMenuModal({ open, onClose, onSuccess, menu }: EditMe
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Icon Name (Lucide)</label>
                   <div className="relative">
                     <Box className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <Input 
+                    <Input
                       required
                       placeholder="Users, Zap, etc."
                       value={formData.icon}
                       onChange={(e) => setFormData({...formData, icon: e.target.value})}
                       className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
                     />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400">
+                      <MenuIconPreview name={formData.icon} size={16} />
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Sort Order</label>
                   <div className="relative">
                     <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <Input 
+                    <Input
                       required
                       type="number"
                       placeholder="1"
@@ -174,60 +241,99 @@ export default function EditMenuModal({ open, onClose, onSuccess, menu }: EditMe
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
-                  <Shield size={14} /> Allowed Roles (Multi-Select)
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {ROLE_OPTIONS.map((role) => {
-                    const isActive = formData.allowed_roles.includes(role.value);
-                    return (
-                      <button
-                        key={role.value}
-                        type="button"
-                        onClick={() => toggleRole(role.value)}
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
-                          isActive 
-                            ? "bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm" 
-                            : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-                          isActive ? "bg-indigo-600 border-indigo-600" : "bg-white border-slate-200"
-                        }`}>
-                          {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white animate-in zoom-in-50" />}
-                        </div>
-                        <span className="text-xs font-black tracking-tight">{role.label}</span>
-                      </button>
-                    );
-                  })}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 col-span-1 md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
+                    <KeyRound size={14} /> Allowed Roles
+                  </label>
+                  <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl grid grid-cols-2 gap-3">
+                    {roleOptions.map((role: Role) => {
+                      const isSuperAdmin = role.base_role === "SUPERADMIN";
+                      const isDisabled = formData.is_system && !isSuperAdmin;
+                      const isChecked = formData.is_system && isSuperAdmin ? true : (formData.allowed_roles?.includes(role.id) || false);
+                      return (
+                        <label key={role.id} className={`flex items-center gap-2 ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 disabled:opacity-50"
+                            checked={isChecked}
+                            disabled={isDisabled}
+                            onChange={(e) => {
+                              const current = formData.allowed_roles || [];
+                              setFormData({
+                                ...formData,
+                                allowed_roles: e.target.checked
+                                  ? [...current, role.id]
+                                  : current.filter(id => id !== role.id)
+                              });
+                            }}
+                          />
+                          <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{role.name}</span>
+                        </label>
+                      );
+                    })}
+                    {roleOptions.length === 0 && <span className="text-xs text-slate-400">Loading roles...</span>}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
+                    <LayoutGrid size={14} /> Parent Group
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.parent_id || ""}
+                      onChange={(e) => setFormData({ ...formData, parent_id: e.target.value || null })}
+                      className="w-full h-14 px-4 pr-10 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-200 transition-all appearance-none"
+                    >
+                      <option value="">— Root Level —</option>
+                      {availableMenus
+                        .filter(m => m.id !== formData.id) // Prevent self-parenting
+                        .map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.label}
+                          </option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                  </div>
                 </div>
               </div>
 
-              <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-black text-slate-900">System Lock</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Prevents deletion & logic override</p>
+              <div className="flex flex-col gap-2">
+                <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-black text-slate-900">System Lock</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Prevents deletion & logic override</p>
+                  </div>
+                  <Switch
+                    checked={formData.is_system}
+                    onCheckedChange={(checked) => setFormData({...formData, is_system: checked})}
+                  />
                 </div>
-                <Switch 
-                  checked={formData.is_system}
-                  onCheckedChange={(checked) => setFormData({...formData, is_system: checked})}
-                />
+                {formData.is_system && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex gap-3 text-amber-800">
+                    <span className="text-lg">ℹ️</span>
+                    <p className="text-xs font-bold leading-relaxed">
+                      This is a System Menu. It is strictly reserved for Superadmin roles and cannot be assigned to regular tenant roles.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           <div className="p-8 bg-slate-50 flex gap-4 border-t border-slate-100">
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               variant="outline"
-              onClick={onClose} 
+              onClick={onClose}
               className="flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-all bg-white border border-slate-200"
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isSubmitting}
               className="flex-1 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
             >

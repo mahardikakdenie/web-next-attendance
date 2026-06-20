@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuthStore, ROLES } from "@/store/auth.store";
+import { useAuthStore } from "@/store/auth.store";
+import { usePermission } from "@/components/auth/PermissionGuard";
 import { useQuery } from "@tanstack/react-query";
 import { getMySubscription } from "@/service/subscription";
 import { Loader2, AlertTriangle, CreditCard, LogOut, Building, ShieldAlert } from "lucide-react";
@@ -13,14 +14,14 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
   const pathname = usePathname();
   const router = useRouter();
 
-  // Determine if the user is a superadmin (bypasses the guard)
-  const isSuperadmin = 
-    user?.tenant?.id === 1 || 
-    user?.role?.name === ROLES.SUPERADMIN ||
-    user?.base_role === "SUPERADMIN";
+  // Determine if the user bypasses subscription guard (permission-based)
+  const hasSubBypass = usePermission("subscription.bypass");
+  const hasSuperadminAcc = usePermission("superadmin.access");
+  const isSuperadmin = hasSubBypass || hasSuperadminAcc;
 
   // Strict Admin definition for suspension handling
-  const isTenantAdmin = user?.role?.name === ROLES.ADMIN || user?.is_owner;
+  const hasSettingsManage = usePermission("settings.manage");
+  const isTenantAdmin = hasSettingsManage || user?.is_owner;
   const isSuspended = user?.tenant?.is_suspended || user?.billing_health?.lock_website || false;
   const suspendedReason = user?.tenant?.is_suspended 
     ? (user?.tenant?.suspended_reason || "Access to this organization has been temporarily suspended by the platform administrator.")
@@ -30,14 +31,14 @@ export default function SubscriptionGuard({ children }: { children: React.ReactN
   const { data: subResp, isLoading: subLoading } = useQuery({
     queryKey: ["my-subscription", user?.id],
     queryFn: getMySubscription,
-    enabled: isAuthenticated && !isSuperadmin && !!user && !isSuspended, 
+    enabled: isAuthenticated && !isSuperadmin && !!user && !isSuspended,
     retry: 1
   });
 
   const [isBlocked, setIsBlocked] = useState(false);
 
   // Sync state during render to avoid cascading renders
-  const hasSubscription = subResp?.data && Object.keys(subResp.data).length > 0;
+  const hasSubscription = !!subResp?.data;
   const shouldBeBlocked = isAuthenticated && !isSuperadmin && !subLoading && !hasSubscription && !isSuspended;
 
   if (isBlocked !== shouldBeBlocked) {
