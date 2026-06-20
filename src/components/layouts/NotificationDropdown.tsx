@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { 
-  Bell, 
-  Wallet, 
-  CalendarDays, 
-  UserCog, 
-  Clock, 
-  Receipt, 
-  MessageSquare, 
-  Settings, 
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
+import {
+  Bell,
+  Wallet,
+  CalendarDays,
+  UserCog,
+  Clock,
+  Receipt,
+  MessageSquare,
+  Settings,
   CheckCircle2,
-  MoreHorizontal,
   Circle,
-  X
+  X,
 } from "lucide-react";
 import { useNotificationStore } from "@/store/notification.store";
 import { NotificationPayload } from "@/types/api";
@@ -24,31 +24,83 @@ import { Button } from "../ui/Button";
 
 dayjs.extend(relativeTime);
 
+type DropdownPosition = {
+  top: number;
+  right: number;
+};
+
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted] = useState(() => typeof window !== "undefined");
+  const [position, setPosition] = useState<DropdownPosition>({ top: 0, right: 0 });
   const { notifications, unreadCount, markRead, markAllRead } = useNotificationStore();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current || typeof window === "undefined") return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    setPosition({
+      top: rect.bottom + 12,
+      right: Math.max(16, window.innerWidth - rect.right),
+    });
+  }, []);
+
   useEffect(() => {
+    if (!isOpen) return;
+
+    updatePosition();
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      // Check if click was inside trigger button OR inside the portal content
+      if (
+        triggerRef.current?.contains(event.target as Node) ||
+        dropdownRef.current?.contains(event.target as Node)
+      ) {
+        return;
+      }
+      setIsOpen(false);
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         setIsOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
-  const getIcon = (type: NotificationPayload['type']) => {
+    const handleReposition = () => updatePosition();
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+    };
+  }, [isOpen, updatePosition]);
+
+  const getIcon = (type: NotificationPayload["type"]) => {
     switch (type) {
-      case 'payroll': return <Wallet className="text-emerald-500" size={16} />;
-      case 'leave': return <CalendarDays className="text-blue-500" size={16} />;
-      case 'profile': return <UserCog className="text-purple-500" size={16} />;
-      case 'overtime': return <Clock className="text-amber-500" size={16} />;
-      case 'expense': return <Receipt className="text-rose-500" size={16} />;
-      case 'support': return <MessageSquare className="text-indigo-500" size={16} />;
-      default: return <Settings className="text-slate-500" size={16} />;
+      case "payroll":
+        return <Wallet className="text-emerald-500" size={16} />;
+      case "leave":
+        return <CalendarDays className="text-blue-500" size={16} />;
+      case "profile":
+        return <UserCog className="text-purple-500" size={16} />;
+      case "overtime":
+        return <Clock className="text-amber-500" size={16} />;
+      case "expense":
+        return <Receipt className="text-rose-500" size={16} />;
+      case "support":
+        return <MessageSquare className="text-indigo-500" size={16} />;
+      default:
+        return <Settings className="text-slate-500" size={16} />;
     }
   };
 
@@ -59,49 +111,58 @@ export default function NotificationDropdown() {
     setIsOpen(false);
 
     switch (notif.type) {
-      case 'payroll': router.push('/payroll'); break;
-      case 'leave': router.push('/leaves'); break;
-      case 'profile': router.push('/request-profile-update'); break;
-      case 'overtime': router.push('/overtime'); break;
-      case 'expense': router.push('/finance/expenses'); break;
-      case 'support': router.push('/admin/support'); break;
-      default: router.push('/');
+      case "payroll":
+        router.push("/payroll");
+        break;
+      case "leave":
+        router.push("/leaves");
+        break;
+      case "profile":
+        router.push("/request-profile-update");
+        break;
+      case "overtime":
+        router.push("/overtime");
+        break;
+      case "expense":
+        router.push("/finance/expenses");
+        break;
+      case "support":
+        router.push("/admin/support");
+        break;
+      case "subscription":
+        router.push("/tenant-settings/billing");
+        break;
+      case "system":
+        router.push("/");
+        break;
+      default:
+        router.push("/");
     }
   };
 
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-2.5 rounded-xl transition-all ${
-          isOpen ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-800 hover:bg-slate-100/80"
-        }`}
-      >
-        <Bell size={18} strokeWidth={2.5} />
-        {unreadCount > 0 && (
-          <span className="absolute top-2 right-2 w-4 h-4 bg-rose-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 mt-3 w-80 md:w-96 bg-white rounded-[24px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          {/* Header */}
+  const dropdownContent = isOpen && mounted
+    ? createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed w-80 md:w-96 bg-white rounded-[24px] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] border border-slate-100 z-[4000] overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+          style={{ top: position.top, right: position.right }}
+        >
           <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
             <div>
               <h3 className="text-sm font-black text-slate-900 tracking-tight">Notifications</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{unreadCount} Unread Messages</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                {unreadCount} Unread Messages
+              </p>
             </div>
             <div className="flex items-center gap-2">
-              <button 
-                onClick={markAllRead}
+              <button
+                onClick={() => void markAllRead()}
                 className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
                 title="Mark all as read"
               >
                 <CheckCircle2 size={16} />
               </button>
-              <button 
+              <button
                 onClick={() => setIsOpen(false)}
                 className="p-2 text-slate-400 hover:text-slate-900 transition-colors"
               >
@@ -110,14 +171,13 @@ export default function NotificationDropdown() {
             </div>
           </div>
 
-          {/* List */}
           <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
             {notifications && notifications.length > 0 ? (
               <div className="divide-y divide-slate-50">
                 {notifications.map((notif) => (
                   <button
                     key={notif.id}
-                    onClick={() => handleNotificationClick(notif)}
+                    onClick={() => void handleNotificationClick(notif)}
                     className={`w-full flex items-start gap-4 p-4 text-left transition-all hover:bg-slate-50 group relative ${
                       !notif.is_read ? "bg-blue-50/20" : ""
                     }`}
@@ -140,7 +200,7 @@ export default function NotificationDropdown() {
                     </div>
                     {!notif.is_read && (
                       <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                         <Circle fill="currentColor" className="text-blue-500" size={6} />
+                        <Circle fill="currentColor" className="text-blue-500" size={6} />
                       </div>
                     )}
                   </button>
@@ -152,26 +212,47 @@ export default function NotificationDropdown() {
                   <Bell size={32} className="text-slate-200" />
                 </div>
                 <p className="text-sm font-bold text-slate-900">All caught up!</p>
-                <p className="text-xs text-slate-400 mt-1">No new notifications at the moment.</p>
+                <p className="text-xs text-slate-400 mt-1">No new notifications at moment.</p>
               </div>
             )}
           </div>
 
-          {/* Footer */}
           <div className="p-3 border-t border-slate-50 bg-slate-50/50">
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               className="w-full h-10 text-[10px] font-black uppercase tracking-widest rounded-xl bg-white shadow-sm border-slate-100"
               onClick={() => {
-                router.push('/'); // Or a dedicated notifications page if it exists
+                router.push("/");
                 setIsOpen(false);
               }}
             >
               View Activity History
             </Button>
           </div>
-        </div>
-      )}
-    </div>
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <>
+      <div className="relative inline-block">
+        <button
+          ref={triggerRef}
+          onClick={() => setIsOpen((prev) => !prev)}
+          className={`relative p-2.5 rounded-xl transition-all ${
+            isOpen ? "bg-slate-100 text-slate-800" : "text-slate-400 hover:text-slate-800 hover:bg-slate-100/80"
+          }`}
+        >
+          <Bell size={18} strokeWidth={2.5} />
+          {unreadCount > 0 && (
+            <span className="absolute top-2 right-2 w-4 h-4 bg-rose-500 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-white">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+      </div>
+      {dropdownContent}
+    </>
   );
 }

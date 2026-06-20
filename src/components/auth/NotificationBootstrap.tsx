@@ -48,8 +48,15 @@ export default function NotificationBootstrap() {
         case 'support':
           router.push('/admin/support');
           break;
+        case 'subscription':
+          router.push('/tenant-settings/billing');
+          break;
+        case 'system':
+          router.push('/');
+          break;
         default:
           router.push('/');
+          break;
       }
     };
 
