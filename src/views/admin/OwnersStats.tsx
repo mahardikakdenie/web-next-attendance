@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import { 
-  Users, 
-  Search, 
-  Building2, 
+import React, { useState, useEffect } from "react";
+import {
+  Users,
+  Search,
+  Building2,
   Calendar,
   Clock,
   Wallet,
@@ -15,12 +15,15 @@ import {
   Mail,
   MoreVertical,
   ShieldCheck,
-  SearchX
+  SearchX,
+  Filter,
+  X
 } from "lucide-react";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
 import { OwnerStats } from "@/types/api";
 import { getOwnersStats } from "@/service/support";
+import { getPlans } from "@/service/subscription";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import { Can } from "@/components/auth/PermissionGuard";
@@ -46,6 +49,9 @@ export default function OwnersStatsView() {
   const [limit, setLimit] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [planFilter, setPlanFilter] = useState<string>("all");
 
   const [selectedTenant, setSelectedTenant] = useState<OwnerStats | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -53,26 +59,43 @@ export default function OwnersStatsView() {
   const [selectedDetailId, setSelectedDetailId] = useState<number | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { data: plansResp } = useQuery({
+    queryKey: ["admin-plans-list"],
+    queryFn: () => getPlans(),
+  });
+  const plansList = plansResp?.data || [];
+
   const { data: resp, isLoading, isError } = useQuery({
-    queryKey: ["owners-stats", limit, currentPage],
+    queryKey: ["owners-stats", limit, currentPage, debouncedSearch, statusFilter, planFilter],
     queryFn: async () => {
       const offset = (currentPage - 1) * limit;
-      return await getOwnersStats(limit, offset);
+      return await getOwnersStats(
+        limit,
+        offset,
+        debouncedSearch || undefined,
+        statusFilter !== "all" ? statusFilter : undefined,
+        planFilter !== "all" ? planFilter : undefined
+      );
     },
   });
 
-  if (isError) {
-    toast.error("Failed to sync tenant monitoring data");
-  }
+  useEffect(() => {
+    if (isError) {
+      toast.error("Failed to sync tenant monitoring data");
+    }
+  }, [isError]);
 
   const data = resp?.data || [];
   const total = resp?.meta.pagination?.total || 0;
-
-  const filteredData = data.filter(item => 
-    item.tenant_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.tenant_code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const columns: Column<OwnerStats>[] = [
     { 
@@ -276,21 +299,60 @@ export default function OwnersStatsView() {
             
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-indigo-600 transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Search by company or owner..." 
+              <input
+                type="text"
+                placeholder="Search by company or owner..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 h-12 bg-slate-50 border-none rounded-2xl text-xs font-bold w-full sm:w-80 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all" 
+                className="pl-10 pr-4 h-12 bg-slate-50 border-none rounded-2xl text-xs font-bold w-full sm:w-80 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all"
               />
             </div>
           </div>
 
+          {/* Filters */}
+          <div className="px-8 pb-4 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-slate-400">
+              <Filter size={14} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Filters</span>
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="h-9 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-bold text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all cursor-pointer"
+            >
+              <option value="all">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Suspended">Suspended</option>
+            </select>
+
+            <select
+              value={planFilter}
+              onChange={(e) => { setPlanFilter(e.target.value); setCurrentPage(1); }}
+              className="h-9 px-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-bold text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all cursor-pointer"
+            >
+              <option value="all">All Plans</option>
+              {plansList.map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+
+            {(statusFilter !== "all" || planFilter !== "all") && (
+              <button
+                onClick={() => { setStatusFilter("all"); setPlanFilter("all"); setCurrentPage(1); }}
+                className="h-9 px-3 flex items-center gap-1.5 bg-rose-50 text-rose-500 rounded-xl text-[11px] font-bold hover:bg-rose-100 transition-all"
+              >
+                <X size={12} />
+                Clear
+              </button>
+            )}
+          </div>
+
           {/* Table Content */}
           <div className="flex-1 p-8 overflow-x-auto">
-            {filteredData.length > 0 ? (
-              <DataTable 
-                data={filteredData} 
+            {data.length > 0 ? (
+              <DataTable
+                data={data} 
                 columns={columns}
                 currentPage={currentPage}
                 totalPages={totalPages}

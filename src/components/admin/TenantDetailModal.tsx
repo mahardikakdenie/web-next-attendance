@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   X, 
   Building2, 
@@ -41,6 +41,18 @@ type TabType = "subscription" | "stats" | "employees";
 
 export default function TenantDetailModal({ tenantId, isOpen, onClose, onEdit }: TenantDetailModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("subscription");
+  const [empPage, setEmpPage] = useState(1);
+  const [empLimit, setEmpLimit] = useState(10);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isOpen, onClose]);
 
   const { data: detailsResp, isLoading, isError } = useQuery({
     queryKey: ["tenant-full-details", tenantId],
@@ -283,15 +295,29 @@ export default function TenantDetailModal({ tenantId, isOpen, onClose, onEdit }:
                  </div>
                )}
 
-               {activeTab === "employees" && (
-                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 min-h-[400px]">
-                    <DataTable 
-                      columns={employeeColumns}
-                      data={details.employees}
-                      isLoading={false}
-                    />
-                 </div>
-               )}
+               {activeTab === "employees" && (() => {
+                 const allEmployees = details.employees;
+                 const empTotalPages = Math.ceil(allEmployees.length / empLimit);
+                 const paginatedEmployees = allEmployees.slice((empPage - 1) * empLimit, empPage * empLimit);
+
+                 return (
+                   <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 min-h-[400px]">
+                      <DataTable
+                        columns={employeeColumns}
+                        data={paginatedEmployees}
+                        isLoading={false}
+                        currentPage={empPage}
+                        totalPages={empTotalPages}
+                        onPageChange={setEmpPage}
+                        limit={empLimit}
+                        onLimitChange={(newLimit) => {
+                          setEmpLimit(newLimit);
+                          setEmpPage(1);
+                        }}
+                      />
+                   </div>
+                 );
+               })()}
             </div>
 
             {/* Footer Actions */}

@@ -13,9 +13,10 @@ import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
+import SuspendTenantModal from "@/components/admin/SuspendTenantModal";
 import { updateTenant, UpdateTenantPayload } from "@/service/admin";
 import { getPlans } from "@/service/subscription";
-import { OwnerStats } from "@/types/api";
+import { OwnerStats, CustomApiError } from "@/types/api";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -29,6 +30,17 @@ interface EditTenantModalProps {
 export default function EditTenantModal({ tenant, isOpen, onClose, onSuccess }: EditTenantModalProps) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isOpen, onClose]);
 
   const { data: plansResp, isLoading: isPlansLoading } = useQuery({
     queryKey: ["admin-plans-list"],
@@ -80,8 +92,9 @@ export default function EditTenantModal({ tenant, isOpen, onClose, onSuccess }: 
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      console.error(err);
-      toast.error("Failed to update organization");
+      const apiErr = err as CustomApiError;
+      const msg = apiErr?.response?.data?.meta?.message || apiErr?.response?.data?.data || "Failed to update organization";
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -154,9 +167,17 @@ export default function EditTenantModal({ tenant, isOpen, onClose, onSuccess }: 
                        <p className="text-[11px] font-medium text-slate-400">Instantly block all organization members</p>
                     </div>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={formData.is_suspended}
-                    onCheckedChange={(val) => setFormData({ ...formData, is_suspended: val })}
+                    onCheckedChange={(val) => {
+                      if (val) {
+                        // Turning ON suspend → open confirmation modal
+                        setIsSuspendModalOpen(true);
+                      } else {
+                        // Turning OFF suspend → direct toggle
+                        setFormData({ ...formData, is_suspended: false, suspended_reason: "" });
+                      }
+                    }}
                   />
                </div>
 
@@ -202,6 +223,17 @@ export default function EditTenantModal({ tenant, isOpen, onClose, onSuccess }: 
 
         </form>
       </div>
+
+      <SuspendTenantModal
+        isOpen={isSuspendModalOpen}
+        onClose={() => setIsSuspendModalOpen(false)}
+        onConfirm={(reason) => {
+          setFormData({ ...formData, is_suspended: true, suspended_reason: reason });
+          setIsSuspendModalOpen(false);
+        }}
+        isSubmitting={false}
+        tenantName={tenant?.tenant_name || ""}
+      />
     </div>
   );
 }
