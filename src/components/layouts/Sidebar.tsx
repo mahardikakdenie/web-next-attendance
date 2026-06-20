@@ -96,7 +96,7 @@ export default function Sidebar() {
     const checkExpanded = (menus: DynamicMenuItem[]) => {
       menus.forEach((menu) => {
         if (menu.children && menu.children.some((child) => (child.path && pathname === child.path) || (child.children && checkIsParentActive(child, pathname)))) {
-          newExpanded[menu.key] = true;
+          newExpanded[String(menu.id)] = true;
           checkExpanded(menu.children);
         }
       });
@@ -131,24 +131,24 @@ export default function Sidebar() {
   const renderMenuItem = (menu: DynamicMenuItem, isChild = false) => {
     const Icon = getIcon(menu.icon);
     const hasChildren = menu.children && menu.children.length > 0;
-    const expanded = isMenuExpanded(menu.key);
+    const expanded = isMenuExpanded(String(menu.id));
     const active = hasChildren ? checkIsParentActive(menu, pathname) : isActive(menu.path);
     
     return (
-      <div key={menu.key} className="w-full">
+      <div key={String(menu.id)} className="w-full">
         <button
           type="button"
           onClick={() => {
             if (!open) {
               setOpen(true);
               if (hasChildren) {
-                setExpandedMenus((prev) => ({ ...prev, [menu.key]: true }));
+                setExpandedMenus((prev) => ({ ...prev, [String(menu.id)]: true }));
               } else if (menu.path) {
                 router.push(menu.path);
               }
             } else {
               if (hasChildren) {
-                toggleExpand(menu.key);
+                toggleExpand(String(menu.id));
               } else if (menu.path) {
                 router.push(menu.path);
               }
@@ -259,10 +259,10 @@ export default function Sidebar() {
       <nav className="flex w-full flex-row items-center justify-around gap-1 md:h-full md:flex-col md:justify-start md:gap-1.5 overflow-y-auto custom-scrollbar md:px-1">
         <div className="hidden md:flex flex-col w-full gap-2">
           {isMounted && filteredMenus.map((group) => {
-            const badge = getGroupBadge(group.key);
+            const badge = getGroupBadge(String(group.id));
 
             return (
-              <div key={group.key} className={`w-full transition-all duration-300 ${open ? "bg-slate-50/40 rounded-[28px] p-2 border border-slate-100/50 mb-2" : "mb-4"}`}>
+              <div key={String(group.id)} className={`w-full transition-all duration-300 ${open ? "bg-slate-50/40 rounded-[28px] p-2 border border-slate-100/50 mb-2" : "mb-4"}`}>
                 {/* Group Label */}
                 <div 
                   className={`transition-all duration-300 mb-2 overflow-hidden flex items-center justify-between gap-3 ${
@@ -304,7 +304,7 @@ export default function Sidebar() {
 
             return (
               <button
-                key={menu.key}
+                key={String(menu.id)}
                 type="button"
                 onClick={() => path && router.push(path)}
                 className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${

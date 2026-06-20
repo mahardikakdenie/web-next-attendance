@@ -1,10 +1,11 @@
 "use client";
 
 import { useAuthStore, ROLES, RoleName } from "@/store/auth.store";
+import { usePermission } from "@/components/auth/PermissionGuard";
 import Image from "next/image";
-import { 
-  ChevronDown, 
-  Building2, 
+import {
+  ChevronDown,
+  Building2,
   Search,
   Globe,
   Command,
@@ -20,7 +21,8 @@ import {
   Clock,
   Settings,
   UserCog,
-  ShieldAlert
+  ShieldAlert,
+  LifeBuoy
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import { getProfileImage } from "@/lib/utils";
@@ -32,10 +34,11 @@ import NotificationDropdown from "./NotificationDropdown";
 
 export default function TopNavbar() {
   const { user } = useAuthStore();
-  // Use base_role for RBAC matching as role names can be custom
+  const hasRbacAccess = usePermission("rbac.access");
+  const hasSuperadminAccess = usePermission("superadmin.access");
+  const isPlatformAdmin = hasRbacAccess || hasSuperadminAccess;
   const role = (user?.role?.base_role?.toLowerCase() || user?.base_role?.toLowerCase() || user?.role?.name?.toLowerCase()) as RoleName | undefined;
-  const isPlatformAdmin = role === ROLES.SUPERADMIN || role === ROLES.ADMIN;
-  
+
   const pathname = usePathname();
   const router = useRouter();
 
@@ -141,18 +144,25 @@ export default function TopNavbar() {
       roles: [ROLES.SUPERADMIN],
       icon: LayoutGrid
     },
-    { 
-      title: "Platform Accounts", 
+    {
+      title: "Platform Accounts",
       description: "System-level administrator account management.",
-      path: "/admin/accounts", 
+      path: "/admin/accounts",
       roles: [ROLES.SUPERADMIN],
       icon: ShieldCheck
+    },
+    {
+      title: "Helpdesk Support",
+      description: "Submit support tickets and view help history.",
+      path: "/support",
+      roles: [ROLES.USER, ROLES.SUPERADMIN, ROLES.ADMIN, ROLES.HR, ROLES.FINANCE],
+      icon: LifeBuoy
     },
   ], []);
 
   const filteredResults = useMemo(() => {
     if (!role) return [];
-    const base = quickLinks.filter(link => link.roles.includes(role));
+    const base = quickLinks; // Wait for dynamic rendering implementation or rely on component static definition
     if (!searchQuery) return base;
     
     const lowerQuery = searchQuery.toLowerCase();

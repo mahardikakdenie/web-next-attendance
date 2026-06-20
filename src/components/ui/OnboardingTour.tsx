@@ -41,13 +41,24 @@ export default function OnboardingTour() {
   // 2. "PATEN" Position Calculation - RUNS ONLY ONCE PER STEP
   const capturePosition = useCallback(() => {
     const step = steps[currentStep];
+
+    // --- TAB AUTO-SWITCHING LOGIC ---
+    if (pathname === "/") {
+      if (step.targetId === "tour-leave-request" || step.targetId === "tour-attendance-log") {
+        const targetTab = step.targetId === "tour-leave-request" ? "requests" : "absen";
+        window.dispatchEvent(new CustomEvent("onboarding-change-tab", { detail: { tab: targetTab } }));
+      } else if (step.targetId === "tour-hr-stats" || step.targetId === "tour-hr-heatmap") {
+        window.dispatchEvent(new CustomEvent("onboarding-change-tab", { detail: { tab: "analytics" } }));
+      }
+    }
+
     const element = document.getElementById(step.targetId);
-    
+
     if (element) {
       // Element found, proceed with scroll and capture
       element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
+        behavior: "smooth",
+        block: "center",
       });
 
       setTimeout(() => {
@@ -57,14 +68,14 @@ export default function OnboardingTour() {
             top: rect.top,
             left: rect.left,
             width: rect.width,
-            height: rect.height
+            height: rect.height,
           });
 
           const vh = window.innerHeight;
           const vw = window.innerWidth;
           const cardW = 340;
-          const cardH = 220; 
-          
+          const cardH = 220;
+
           let t = 0;
           let l = 0;
 
@@ -85,18 +96,24 @@ export default function OnboardingTour() {
       }, 700);
     } else {
       // SAFETY: Element not found on this page
-      console.warn(`Tour target #${step.targetId} not found. Skipping...`);
-      // Jika elemen tidak ada, tunda sejenak agar tidak memicu infinite render loop
-      const skipTimer = setTimeout(() => {
-        if (currentStep < steps.length - 1) {
-          nextStep();
+      console.warn(`Tour target #${step.targetId} not found. Retrying in 500ms...`);
+
+      const retryTimer = setTimeout(() => {
+        const retryElement = document.getElementById(step.targetId);
+        if (retryElement) {
+          capturePosition();
         } else {
-          dismissTour();
+          console.warn(`Tour target #${step.targetId} still not found. Skipping...`);
+          if (currentStep < steps.length - 1) {
+            nextStep();
+          } else {
+            dismissTour();
+          }
         }
-      }, 50);
-      return () => clearTimeout(skipTimer);
+      }, 500);
+      return () => clearTimeout(retryTimer);
     }
-  }, [currentStep, steps, nextStep, dismissTour]);
+  }, [currentStep, steps, nextStep, dismissTour, pathname]);
 
   useEffect(() => {
     if (!isActive) {
