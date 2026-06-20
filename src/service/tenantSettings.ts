@@ -1,7 +1,7 @@
 // src/service/tenantSettings.ts
 import { secureRequest } from "@/lib/axios";
 import { TenantSettings } from "@/store/auth.store";
-import { APIResponse, UpdateTenantSettingPayload } from "@/types/api";
+import { APIResponse, UpdateTenantSettingPayload, TenantSummary } from "@/types/api";
 
 //////////////////////////////////////////////////////////////
 // TYPES
@@ -23,7 +23,7 @@ export const getDataCurrentTenat = async () => {
 };
 
 export const getTenantById = async (id: number) => {
-  return secureRequest<APIResponse<any>>("get", `/v1/tenants/${id}`);
+  return secureRequest<APIResponse<TenantSummary>>("get", `/v1/tenants/${id}`);
 };
 
 export const updateDataCurrentTenant = async (payload: UpdateTenantSettingPayload) => {

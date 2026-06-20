@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { 
   Users, 
   ChevronRight, 
-  ChevronDown, 
   LayoutGrid, 
   Eye, 
   SearchX, 
@@ -12,17 +11,12 @@ import {
   Building2
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { RoleOverview } from "@/types/api";
 
 interface MenuNode {
   label: string;
   path?: string;
   children?: MenuNode[];
-}
-
-interface RoleOverview {
-  role_name: string;
-  base_role: string;
-  menus: MenuNode[];
 }
 
 interface RoleMenuMatrixProps {
@@ -66,7 +60,7 @@ export default function RoleMenuMatrix({ roles }: RoleMenuMatrixProps) {
           <SearchX size={40} />
         </div>
         <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">No Menu Data Available</h4>
-        <p className="text-sm font-medium text-slate-400 mt-2">We couldn't retrieve the menu matrix for your organization roles.</p>
+        <p className="text-sm font-medium text-slate-400 mt-2">We couldn&apos;t retrieve the menu matrix for your organization roles.</p>
       </div>
     );
   }

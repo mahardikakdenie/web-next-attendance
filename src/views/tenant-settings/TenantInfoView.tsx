@@ -1,21 +1,20 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getDataCurrentTenat, getTenantById } from "@/service/tenantSettings";
+import { getTenantById } from "@/service/tenantSettings";
 import { getMenusOverview } from "@/service/menu";
-import { useAuthStore, ROLES } from "@/store/auth.store";
-import { useRouter } from "next/navigation";
-import { 
-  Loader2, 
-  Settings2, 
-  Info, 
-  ShieldCheck, 
-  LayoutGrid, 
+import { useAuthStore } from "@/store/auth.store";
+import { usePermission } from "@/components/auth/PermissionGuard";
+import {
+  Loader2,
+  Info,
+  LayoutGrid,
   Zap,
   Building,
   Lock,
-  SearchX
+  SearchX,
+  AlertTriangle,
 } from "lucide-react";
 import TenantInfoCard from "@/components/tenant-settings/TenantInfoCard";
 import SubscriptionStatusCard from "@/components/tenant-settings/SubscriptionStatusCard";
@@ -25,40 +24,25 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 export default function TenantInfoView() {
   const { user, loading: authLoading } = useAuthStore();
-  const router = useRouter();
 
-  // Strict Admin definition
-  const role = (user?.role?.base_role?.toLowerCase() || user?.base_role?.toLowerCase() || user?.role?.name?.toLowerCase());
-  const isAdmin = role === ROLES.ADMIN || role === ROLES.SUPERADMIN || user?.is_owner;
+  const isAdmin = usePermission("settings.manage") || user?.is_owner;
 
-  // A. Setup Page & Security (Requirement A)
-  useEffect(() => {
-    if (!authLoading && user && !isAdmin) {
-      // Redirect or let the component render AccessDenied below
-    }
-  }, [user, authLoading, isAdmin]);
+  const tenantId = user?.tenant_id ? Number(user.tenant_id) : null;
 
-  // B. Integrasi Data (Requirement B)
   const { data: tenantResp, isLoading: isTenantLoading } = useQuery({
-    queryKey: ["tenant-details", user?.tenant_id],
-    queryFn: () => getTenantById(user?.tenant_id as number),
-    enabled: !!user?.tenant_id && isAdmin,
-  });
-
-  const { data: settingsResp, isLoading: isSettingsLoading } = useQuery({
-    queryKey: ["tenant-settings-info"],
-    queryFn: () => getDataCurrentTenat(),
-    enabled: isAdmin,
+    queryKey: ["tenant-details", tenantId],
+    queryFn: () => getTenantById(tenantId as number),
+    enabled: Boolean(tenantId && isAdmin),
   });
 
   const { data: menuOverviewResp, isLoading: isMenuLoading, error: menuError } = useQuery({
     queryKey: ["menus-overview"],
     queryFn: () => getMenusOverview(),
     enabled: isAdmin,
-    retry: 1
+    retry: 1,
   });
 
-  const isLoading = authLoading || isTenantLoading || isSettingsLoading || isMenuLoading;
+  const isLoading = authLoading || isTenantLoading;
 
   if (authLoading) {
     return (
@@ -90,7 +74,9 @@ export default function TenantInfoView() {
     );
   }
 
-  const isMenuForbidden = (menuError as any)?.response?.status === 403;
+  const menuErrorStatus = (menuError as { response?: { status?: number } } | null)?.response?.status;
+  const isMenuForbidden = menuErrorStatus === 403;
+  const hasMenuError = Boolean(menuError) && !isMenuForbidden;
 
   return (
     <div className="flex flex-col gap-8 md:gap-12 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 pt-4 md:pt-8 animate-in fade-in duration-700">
@@ -159,8 +145,18 @@ export default function TenantInfoView() {
                 Fitur transparansi menu ini memerlukan hak akses Owner atau Administrator Utama. Silakan hubungi Superadmin sistem jika Anda merasa ini adalah kesalahan.
              </p>
           </div>
+        ) : hasMenuError ? (
+          <div className="bg-red-50 rounded-[40px] border border-red-100 p-12 text-center flex flex-col items-center">
+             <div className="w-16 h-16 rounded-3xl bg-white flex items-center justify-center text-red-500 shadow-sm mb-6">
+                <AlertTriangle size={32} />
+             </div>
+             <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">Failed to Load Menu Matrix</h4>
+             <p className="text-sm font-medium text-slate-500 mt-2 max-w-md">
+                Data transparansi menu gagal dimuat. Silakan coba lagi beberapa saat lagi.
+             </p>
+          </div>
         ) : menuOverviewResp?.data ? (
-          <RoleMenuMatrix roles={menuOverviewResp.data} />
+          <RoleMenuMatrix roles={menuOverviewResp.data as unknown as import("@/types/api").RoleOverview[]} />
         ) : isMenuLoading ? (
           <Skeleton className="h-[600px] rounded-[40px]" />
         ) : (
