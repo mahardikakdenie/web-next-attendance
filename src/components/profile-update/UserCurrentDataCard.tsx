@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Card from "@/components/ui/Card";
 import { 
   User, 
@@ -41,12 +41,10 @@ export default function UserCurrentDataCard({ data, isLoading = false }: UserCur
   const [editingField, setEditingField] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Synchronize internal state with external props during render
-  const [prevData, setPrevData] = useState(data);
-  if (data !== prevData) {
-    setPrevData(data);
+  // Sync props to state when data changes
+  useEffect(() => {
     setEditedData(data || {});
-  }
+  }, [data]);
 
   const isDirty = useMemo(() => {
     return JSON.stringify(data) !== JSON.stringify(editedData);

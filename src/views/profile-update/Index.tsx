@@ -41,8 +41,7 @@ type TabId = "profile" | "requests" | "payroll" | "verification" | "security";
 export default function ProfileUpdateView() {
   const user = useAuthStore((state) => state.user);
   const loading = useAuthStore((state) => state.loading);
-  const fetchUser = useAuthStore((state) => state.fetchUser);
-  
+
   const queryClient = useQueryClient();
   const isAdmin = useMemo(() => 
     user?.role?.name === ROLES.SUPERADMIN || 
@@ -56,10 +55,6 @@ export default function ProfileUpdateView() {
   const [selectedRequest, setSelectedRequest] = useState<ProfileChangeRequest | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectInput, setShowRejectInput] = useState(false);
-
-  useEffect(() => {
-    fetchUser();
-  }, []); // Only fetch on mount to prevent infinite loops
 
   // Admin Queries
   const { data: adminRequestsResp, isLoading: isAdminRequestsLoading } = useQuery({
