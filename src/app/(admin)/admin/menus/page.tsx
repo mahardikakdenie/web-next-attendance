@@ -2,8 +2,8 @@ import MenuManagementView from "@/views/admin/MenuManagement";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Menu Management | Platform Superadmin",
-  description: "Configure dynamic navigation ecosystem and role-based access control.",
+  title: "Navigation Builder | Platform Superadmin",
+  description: "Configure dynamic navigation ecosystem layout, routing, and hierarchy.",
 };
 
 export default function MenuManagementPage() {

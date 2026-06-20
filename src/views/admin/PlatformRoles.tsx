@@ -17,7 +17,6 @@ import {
   ChevronDown,
   X,
   Loader2,
-  Sparkles,
   Search,
   SearchX,
   ArrowRightLeft,
@@ -27,7 +26,6 @@ import {
   MessageSquare,
   UserCog,
   BarChart3,
-  LayoutGrid,
   type LucideIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -46,13 +44,8 @@ import {
   saveSystemRoleHierarchy,
   getAllPermissions 
 } from "@/service/roles";
-import { 
-  getSuperadminMenus,
-  updateMenu
-} from "@/service/menu";
 import { toast } from "sonner";
 import { getRoleBadgeColor } from "@/lib/utils";
-import { getIcon } from "@/lib/iconMap";
 
 // --- ICON MAPPING FOR SYSTEM MODULES ---
 const MODULE_ICONS: Record<string, LucideIcon> = {
@@ -75,19 +68,13 @@ export default function PlatformRolesView() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [originalRoles, setOriginalRoles] = useState<Role[]>([]); 
   const [permissionModules, setPermissionModules] = useState<PermissionModule[]>([]);
-  const [menus, setMenus] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPermsLoading, setIsPermsLoading] = useState(true);
-  const [isMenusLoading, setIsMenusLoading] = useState(true);
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"permissions" | "hierarchy" | "menus">("permissions");
+  const [activeTab, setActiveTab] = useState<"permissions" | "hierarchy">("permissions");
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [roleSearch, setRoleSearch] = useState("");
-
-  // Menu specific state
-  const [selectedRoleMenuIds, setSelectedRoleMenuIds] = useState<number[]>([]);
-  const [originalRoleMenuIds, setOriginalRoleMenuIds] = useState<number[]>([]);
 
   // New Role Form State
   const [newRoleData, setNewRoleData] = useState({
@@ -102,20 +89,6 @@ export default function PlatformRolesView() {
   const [originalChildRoleIds, setOriginalChildRoleIds] = useState<number[]>([]);
 
   // --- Data Fetching ---
-  const fetchMenus = useCallback(async () => {
-    try {
-      setIsMenusLoading(true);
-      const resp = await getSuperadminMenus();
-      if (resp.data) {
-        setMenus(resp.data);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to sync menu architecture");
-    } finally {
-      setIsMenusLoading(false);
-    }
-  }, []);
 
   const fetchPermissions = useCallback(async () => {
     try {
@@ -128,8 +101,7 @@ export default function PlatformRolesView() {
         }));
         setPermissionModules(mappedModules);
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Failed to load permission catalog");
     } finally {
       setIsPermsLoading(false);
@@ -148,8 +120,7 @@ export default function PlatformRolesView() {
           setSelectedRoleId(resp.data[0].id);
         }
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Failed to load platform system roles");
     } finally {
       setIsLoading(false);
@@ -187,103 +158,15 @@ export default function PlatformRolesView() {
     return JSON.stringify([...childRoleIds].sort()) !== JSON.stringify([...originalChildRoleIds].sort());
   }, [childRoleIds, originalChildRoleIds]);
 
-  const isMenusDirty = useMemo(() => {
-    return JSON.stringify([...selectedRoleMenuIds].sort()) !== JSON.stringify([...originalRoleMenuIds].sort());
-  }, [selectedRoleMenuIds, originalRoleMenuIds]);
-
   const isCurrentTabDirty = 
-    activeTab === "permissions" ? isPermissionsDirty : 
-    activeTab === "hierarchy" ? isHierarchyDirty : 
-    isMenusDirty;
+    activeTab === "permissions" ? isPermissionsDirty : isHierarchyDirty;
 
-  // Sync state when role or tab changes
-  useEffect(() => {
-    if (activeTab === "hierarchy") {
-        setChildRoleIds([]); 
-        setOriginalChildRoleIds([]);
-    }
-    if (activeTab === "menus") {
-       fetchMenus();
-    }
-  }, [activeTab, fetchMenus]);
-
-  // Effect to sync menu selection when role or menus change
-  useEffect(() => {
-    if (activeTab === "menus" && selectedRole && menus.length > 0) {
-      const baseRole = selectedRole.base_role?.toUpperCase();
-      const allowedMenuIds = menus
-        .filter(m => m.allowed_roles?.includes(baseRole))
-        .map(m => m.id);
-      setSelectedRoleMenuIds(allowedMenuIds);
-      setOriginalRoleMenuIds([...allowedMenuIds]);
-    }
-  }, [selectedRole, menus, activeTab]);
-
-  // --- Handlers ---
-  const handleSaveMenus = useCallback(async () => {
-    if (!selectedRole) return;
-    const baseRole = selectedRole.base_role?.toUpperCase();
-    
-    setIsSaving(true);
-    try {
-      const toAdd = selectedRoleMenuIds.filter(id => !originalRoleMenuIds.includes(id));
-      const toRemove = originalRoleMenuIds.filter(id => !selectedRoleMenuIds.includes(id));
-      
-      const updatePromises = [];
-      
-      for (const id of toAdd) {
-        const menu = menus.find(m => m.id === id);
-        if (menu) {
-          const newRoles = Array.from(new Set([...(menu.allowed_roles || []), baseRole]));
-          updatePromises.push(updateMenu(id, { ...menu, allowed_roles: newRoles }));
-        }
-      }
-      
-      for (const id of toRemove) {
-        const menu = menus.find(m => m.id === id);
-        if (menu) {
-          const newRoles = (menu.allowed_roles || []).filter((r: string) => r !== baseRole);
-          updatePromises.push(updateMenu(id, { ...menu, allowed_roles: newRoles }));
-        }
-      }
-      
-      if (updatePromises.length > 0) {
-        await Promise.all(updatePromises);
-        toast.success("Menu architecture synced successfully");
-        await fetchMenus();
-      } else {
-        toast.info("No changes to push");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to propagate menu changes");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [selectedRole, selectedRoleMenuIds, originalRoleMenuIds, menus, fetchMenus]);
-
-  const toggleMenuSelection = (menuId: number) => {
-    setSelectedRoleMenuIds(prev => 
-      prev.includes(menuId) ? prev.filter(id => id !== menuId) : [...prev, menuId]
-    );
-  };
-
-  const handleCreateRole = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setIsSaving(true);
-      const resp = await createSystemRole({ ...newRoleData, permissions: [] });
-      if (resp.success) {
-        toast.success(`System role '${newRoleData.name}' created`);
-        setIsCreating(false);
-        setNewRoleData({ name: "", description: "", base_role: "EMPLOYEE", department: "" });
-        await fetchRoles();
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to create system role");
-    } finally {
-      setIsSaving(false);
+  // Tab change handler
+  const handleTabChange = (tab: "permissions" | "hierarchy") => {
+    setActiveTab(tab);
+    if (tab === "hierarchy") {
+      setChildRoleIds([]);
+      setOriginalChildRoleIds([]);
     }
   };
 
@@ -302,8 +185,7 @@ export default function PlatformRolesView() {
         toast.success("System role updated successfully");
         await fetchRoles();
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Failed to update system role");
     } finally {
       setIsSaving(false);
@@ -313,8 +195,6 @@ export default function PlatformRolesView() {
   const handleDiscardChanges = () => {
     if (activeTab === "permissions") {
       setRoles(JSON.parse(JSON.stringify(originalRoles)));
-    } else if (activeTab === "menus") {
-      setSelectedRoleMenuIds([...originalRoleMenuIds]);
     } else {
       setChildRoleIds([...originalChildRoleIds]);
     }
@@ -331,8 +211,7 @@ export default function PlatformRolesView() {
         setSelectedRoleId(null);
         await fetchRoles();
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Failed to delete role");
     } finally {
       setIsSaving(false);
@@ -344,10 +223,10 @@ export default function PlatformRolesView() {
     setRoles(prev => prev.map(role => {
       if (role.id === selectedRoleId) {
         const currentPerms = role.permissions?.map(p => p.id) || [];
-        const hasPermission = currentPerms.includes(permissionId);
+        const isAssigned = currentPerms.includes(permissionId);
         return {
           ...role,
-          permissions: hasPermission 
+          permissions: isAssigned 
             ? role.permissions?.filter(p => p.id !== permissionId)
             : [...(role.permissions || []), { id: permissionId, module: "", action: "" }]
         } as Role;
@@ -366,8 +245,7 @@ export default function PlatformRolesView() {
         setOriginalChildRoleIds([...childRoleIds]);
         await fetchRoles();
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Failed to save hierarchy");
     } finally {
       setIsSaving(false);
@@ -378,15 +256,35 @@ export default function PlatformRolesView() {
     setChildRoleIds(prev => prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]);
   };
 
+  const handleCreateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsSaving(true);
+      const payload = {
+        ...newRoleData,
+        permissions: []
+      };
+      const resp = await createSystemRole(payload);
+      if (resp.success) {
+        toast.success("New system role published");
+        setIsCreating(false);
+        setNewRoleData({ name: "", description: "", base_role: "EMPLOYEE", department: "" });
+        await fetchRoles();
+      }
+    } catch {
+      toast.error("Failed to create system role");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const onHandleChange = useCallback(() => {
     if (activeTab === "permissions") {
       handleUpdateRole();
-    } else if (activeTab === "menus") {
-      handleSaveMenus();
     } else {
       handleSaveHierarchy();
     }
-  }, [activeTab, handleUpdateRole, handleSaveHierarchy, handleSaveMenus]);
+  }, [activeTab, handleUpdateRole, handleSaveHierarchy]);
 
   // Keyboard shortcut Ctrl+S
   useEffect(() => {
@@ -420,13 +318,13 @@ export default function PlatformRolesView() {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 text-[11px] font-black tracking-[0.2em] uppercase text-indigo-400">
               <ShieldAlert size={16} className="fill-current" />
-              SYSTEM GOVERNANCE CORE
+              SECURITY & GOVERNANCE
             </div>
             <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-tight uppercase">
-              MASTER <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400">POLICIES</span>
+              ROLES & <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-blue-400">PERMISSIONS</span>
             </h1>
             <p className="text-slate-400 font-medium max-w-xl text-sm sm:text-base leading-relaxed">
-              Define foundational RBAC blueprints. Changes made here ripple across all organization tenants within the platform ecosystem.
+              Define foundational RBAC blueprints, assign module capabilities, and grant user role-based menu access. Changes ripple across all organization tenants.
             </p>
           </div>
           <Button 
@@ -536,9 +434,9 @@ export default function PlatformRolesView() {
                   </div>
                 </div>
 
-                <div className="flex p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/50 w-fit">
+                 <div className="flex p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200/50 w-fit">
                   <button
-                    onClick={() => setActiveTab("permissions")}
+                    onClick={() => handleTabChange("permissions")}
                     className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 relative ${
                       activeTab === "permissions" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-900"
                     }`}
@@ -547,22 +445,13 @@ export default function PlatformRolesView() {
                     {isPermissionsDirty && <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />}
                   </button>
                   <button
-                    onClick={() => setActiveTab("hierarchy")}
+                    onClick={() => handleTabChange("hierarchy")}
                     className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 relative ${
                       activeTab === "hierarchy" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
                     <GitBranch size={14} /> GLOBAL HIERARCHY
                     {isHierarchyDirty && <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("menus")}
-                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 relative ${
-                      activeTab === "menus" ? "bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    <LayoutGrid size={14} /> MENU ARCHITECTURE
-                    {isMenusDirty && <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />}
                   </button>
                 </div>
               </div>
@@ -594,7 +483,8 @@ export default function PlatformRolesView() {
                                 <p className="text-xs font-black text-slate-800 uppercase tracking-tight">{perm.id.split('.').pop()?.replace(/_/g, ' ')}</p>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase opacity-60 leading-relaxed mt-0.5">{perm.description || `Capability: ${perm.action} access`}</p>
                               </div>
-                              <Switch 
+                              <Switch
+                                disabled={isSaving}
                                 checked={selectedRole.permissions?.some(p => p.id === perm.id) || false}
                                 onCheckedChange={() => togglePermission(perm.id)}
                               />
@@ -604,7 +494,7 @@ export default function PlatformRolesView() {
                       </div>
                     ))}
                   </div>
-                ) : activeTab === "hierarchy" ? (
+                ) : (
                   <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
                     <div className="bg-slate-900 rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl">
                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-3xl -mr-32 -mt-32"></div>
@@ -613,7 +503,7 @@ export default function PlatformRolesView() {
                              <GitBranch size={32} className="text-indigo-400" />
                           </div>
                           <div>
-                             <h3 className="text-xl font-black tracking-tight uppercase tracking-widest">MASTER BLUEPRINT TREE</h3>
+                             <h3 className="text-xl font-black uppercase tracking-widest">MASTER BLUEPRINT TREE</h3>
                              <p className="text-slate-400 text-xs font-bold mt-1 uppercase opacity-60">GLOBAL INHERITANCE ARCHITECTURE</p>
                           </div>
                        </div>
@@ -676,91 +566,9 @@ export default function PlatformRolesView() {
                                   )}
                                 </button>
                              ))}
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
-                     <div className="bg-indigo-600 rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl">
-                       <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                       <div className="relative z-10 flex items-center gap-6">
-                          <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center border border-white/10">
-                             <LayoutGrid size={32} className="text-white" />
-                          </div>
-                          <div>
-                             <h3 className="text-xl font-black tracking-tight uppercase tracking-widest">NAVIGATION ARCHITECTURE</h3>
-                             <p className="text-indigo-100 text-xs font-bold mt-1 uppercase opacity-80">ASSIGN VISIBLE INTERFACES FOR THIS ROLE TYPE</p>
-                          </div>
-                       </div>
-                    </div>
-
-                    {isMenusLoading ? (
-                      <div className="flex flex-col items-center justify-center py-20 gap-4">
-                        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BUILDING SKELETAL STRUCTURE...</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                         <div className="flex items-center gap-2 ml-2 mb-6">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">HIERARCHICAL VISIBILITY</span>
-                         </div>
-                         
-                         <div className="grid grid-cols-1 gap-3">
-                           {(() => {
-                              const buildTree = (items: any[], parentId: number | null = null): any[] => {
-                                return items
-                                  .filter(item => item.parent_id === parentId)
-                                  .map(item => ({
-                                    ...item,
-                                    children: buildTree(items, item.id)
-                                  }))
-                                  .sort((a, b) => a.sort_order - b.sort_order);
-                              };
-                              
-                              const tree = buildTree(menus);
-                              
-                              const renderNode = (node: any, level = 0) => {
-                                const Icon = getIcon(node.icon);
-                                const isSelected = selectedRoleMenuIds.includes(node.id);
-                                return (
-                                  <div key={node.id} className="space-y-2">
-                                     <div 
-                                      onClick={() => toggleMenuSelection(node.id)}
-                                      className={`group flex items-center justify-between p-4 rounded-3xl border transition-all cursor-pointer ${
-                                        isSelected 
-                                          ? "bg-white border-indigo-200 shadow-md ring-1 ring-indigo-50" 
-                                          : "bg-slate-50/50 border-slate-100 hover:border-slate-200"
-                                      }`}
-                                      style={{ marginLeft: `${level * 24}px` }}
-                                     >
-                                        <div className="flex items-center gap-4">
-                                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                                             isSelected ? "bg-indigo-600 text-white" : "bg-white text-slate-400 border border-slate-100"
-                                           }`}>
-                                              <Icon size={20} />
-                                           </div>
-                                           <div>
-                                              <p className={`text-xs font-black uppercase tracking-tight ${isSelected ? "text-slate-900" : "text-slate-500"}`}>{node.label}</p>
-                                              <p className="text-[9px] font-mono text-slate-400 opacity-60">{node.path || "Group Header"}</p>
-                                           </div>
-                                        </div>
-                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                                          isSelected ? "bg-indigo-600 border-indigo-600" : "bg-white border-slate-200"
-                                        }`}>
-                                          {isSelected && <CheckCircle2 size={14} className="text-white" />}
-                                        </div>
-                                     </div>
-                                     {node.children && node.children.map((child: any) => renderNode(child, level + 1))}
-                                  </div>
-                                );
-                              };
-
-                              return tree.map(root => renderNode(root));
-                           })()}
-                         </div>
-                      </div>
-                    )}
+                           </div>
+                        </div>
+                     </div>
                   </div>
                 )}
               </div>
@@ -830,3 +638,4 @@ export default function PlatformRolesView() {
     </div>
   );
 }
+
