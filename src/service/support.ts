@@ -1,18 +1,26 @@
 import { secureRequest } from "@/lib/axios";
 import { APIResponse, OwnerStats } from "@/types/api";
-import { 
-  SupportMessage, 
-  TrialRequest, 
+import {
+  SupportMessage,
+  TrialRequest,
   ProvisioningTicket,
   CreateTrialPayload,
-  CreateSupportMessagePayload
+  CreateSupportMessagePayload,
+  SupportStatus,
+  TrialStatus
 } from "@/types/support";
 
 /**
  * Superadmin Analytics & Monitoring
  */
-export const getOwnersStats = (limit: number = 10, offset: number = 0) => {
-  return secureRequest<APIResponse<OwnerStats[]>>("get", "/v1/superadmin/owners-stats", { limit, offset });
+export const getOwnersStats = (limit: number = 10, offset: number = 0, search?: string, status?: string, plan?: string) => {
+  return secureRequest<APIResponse<OwnerStats[]>>("get", "/v1/superadmin/owners-stats", {
+    limit,
+    offset,
+    ...(search ? { search } : {}),
+    ...(status && status !== "all" ? { status } : {}),
+    ...(plan && plan !== "all" ? { plan } : {}),
+  });
 };
 
 /**
@@ -31,6 +39,25 @@ export const getSupportMessages = () => {
 
 export const updateMessageStatus = (id: string, status: SupportStatus) => {
   return secureRequest<APIResponse<SupportMessage>>("patch", `/v1/admin/support/inbox/${id}`, { status });
+};
+
+export interface SupportAgent {
+  id: number;
+  name: string;
+  email?: string;
+  is_active?: boolean;
+}
+
+export const getSupportAgents = () => {
+  return secureRequest<APIResponse<SupportAgent[]>>("get", "/v1/admin/support/agents");
+};
+
+export const assignSupportMessage = (id: string, agent_id: number) => {
+  return secureRequest<APIResponse<SupportMessage>>("patch", `/v1/admin/support/inbox/${id}/assign`, { agent_id });
+};
+
+export const assignSupportMessagesBulk = (ids: string[], agent_id: number) => {
+  return secureRequest<APIResponse<{ updated: number; failed: number }>>("patch", "/v1/admin/support/inbox/bulk-assign", { ids, agent_id });
 };
 
 /**
@@ -62,4 +89,11 @@ export const sendSupportMessage = (payload: CreateSupportMessagePayload) => {
   return secureRequest<APIResponse<SupportMessage>>("post", "/v1/support/message", payload);
 };
 
-import { SupportStatus, TrialStatus } from "@/types/support";
+export const getMySupportHistory = () => {
+  return secureRequest<APIResponse<SupportMessage[]>>("get", "/v1/support/history");
+};
+
+export const replyToSupportMessage = (id: string, message: string) => {
+  return secureRequest<APIResponse<SupportMessage>>("post", `/v1/support/tickets/${id}/reply`, { message });
+};
+

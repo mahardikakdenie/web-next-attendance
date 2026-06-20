@@ -15,6 +15,19 @@ export interface SupportMessage {
   category: "TECHNICAL" | "BILLING" | "FEATURE" | "OTHER";
   status: SupportStatus;
   created_at: string;
+  // FE-ready fields (backend rollout pending)
+  is_read?: boolean;
+  tenant?: {
+    name: string;
+  };
+  user?: {
+    name: string;
+    email: string;
+  }
+  assigned_to?: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 /**
