@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { Search, Command, X, ArrowRight } from "lucide-react";
 import { useAuthStore, RoleName } from "@/store/auth.store";
 import { quickLinks } from "@/config/search-links";
+import { useQuery } from "@tanstack/react-query";
+import { getMyMenus } from "@/service/menu";
+import { getIcon } from "@/lib/iconMap";
+import { DynamicMenuItem } from "@/types/api";
 
 export default function GlobalSearch() {
   const { user } = useAuthStore();
@@ -23,9 +27,78 @@ export default function GlobalSearch() {
     setIsMounted(true);
   }, []);
 
+  // Fetch dynamic menus
+  const { data: menuResp } = useQuery({
+    queryKey: ["my-menus"],
+    queryFn: getMyMenus,
+    enabled: isMounted && !!user,
+  });
+
+  const dynamicLinks = useMemo(() => {
+    if (!user || !menuResp?.data) return [];
+
+    const rawMenus = menuResp.data;
+
+    const isSuperadmin = 
+      user?.tenant_id === 1 || 
+      user?.role?.base_role === "SUPERADMIN" || 
+      user?.base_role === "SUPERADMIN";
+
+    const hasSettingsManage = user?.permissions?.includes("settings.manage") || user?.is_owner;
+    const isTenantAdmin = hasSettingsManage || user?.is_owner || user?.role?.base_role === "ADMIN";
+    
+    const isSuspended = user?.tenant?.is_suspended || user?.billing_health?.lock_website || false;
+    const subStatus = user?.subscription?.status;
+    const isBlocked = !isSuperadmin && (isSuspended || (subStatus !== undefined && subStatus !== "Active" && subStatus !== "Trial"));
+
+    let filtered = rawMenus;
+    if (isBlocked && isTenantAdmin) {
+      filtered = rawMenus.map(group => {
+        const allowedChildren = group.children?.filter(item => {
+          const path = item.path || "";
+          return path === "/tenant-settings/billing" || path.startsWith("/support");
+        }) || [];
+        
+        const groupPath = group.path || "";
+        const isGroupAllowed = groupPath === "/tenant-settings/billing" || groupPath.startsWith("/support");
+        
+        if (allowedChildren.length > 0 || isGroupAllowed) {
+          return {
+            ...group,
+            children: group.children ? allowedChildren : undefined
+          };
+        }
+        return null;
+      }).filter(Boolean) as DynamicMenuItem[];
+    }
+
+    const list: Array<{ title: string; description: string; path: string; icon: any }> = [];
+    const traverse = (arr: DynamicMenuItem[]) => {
+      for (const item of arr) {
+        if (item.path) {
+          const matchedStatic = quickLinks.find(link => link.path === item.path);
+          list.push({
+            title: item.label,
+            description: matchedStatic?.description || `Navigate to ${item.label}`,
+            path: item.path,
+            icon: getIcon(item.icon),
+          });
+        }
+        if (item.children && item.children.length > 0) {
+          traverse(item.children);
+        }
+      }
+    };
+    traverse(filtered);
+    return list;
+  }, [menuResp, user]);
+
   const filteredResults = useMemo(() => {
     if (!role) return [];
-    const base = quickLinks;
+    const base = dynamicLinks.length > 0 
+      ? dynamicLinks 
+      : quickLinks.filter(link => link.roles.includes(role));
+      
     if (!searchQuery) return base;
     
     const lowerQuery = searchQuery.toLowerCase();
@@ -33,7 +106,7 @@ export default function GlobalSearch() {
       link.title.toLowerCase().includes(lowerQuery) || 
       link.description.toLowerCase().includes(lowerQuery)
     );
-  }, [searchQuery, role]);
+  }, [searchQuery, role, dynamicLinks]);
 
   const handleRedirect = useCallback((path: string) => {
     router.push(path);
