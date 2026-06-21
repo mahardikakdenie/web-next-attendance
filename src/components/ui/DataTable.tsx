@@ -223,7 +223,7 @@ export function DataTable<T extends { id: string | number }>({
                     )}
                   </th>
                 ))}
-                {actions && <th className="px-6 py-5 text-right text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Actions</th>}
+                {actions && <th className="sticky right-0 z-20 px-6 py-5 text-right text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] bg-neutral-50 shadow-[-12px_0_15px_-4px_rgba(0,0,0,0.05)]">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-50">
@@ -256,7 +256,11 @@ export function DataTable<T extends { id: string | number }>({
                       </td>
                     ))}
                     {actions && (
-                      <td className="px-6 py-4 text-right">
+                      <td className={`sticky right-0 z-10 px-6 py-4 text-right transition-colors shadow-[-12px_0_15px_-4px_rgba(0,0,0,0.05)] ${
+                        selectedIds.includes(item.id)
+                          ? "bg-blue-50/95 group-hover:bg-blue-100/95"
+                          : "bg-white group-hover:bg-neutral-50"
+                      }`}>
                         {actions(item)}
                       </td>
                     )}

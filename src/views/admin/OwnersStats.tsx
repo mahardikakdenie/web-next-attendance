@@ -13,14 +13,16 @@ import {
   Loader2,
   TrendingUp,
   Mail,
-  MoreVertical,
+  Eye,
   ShieldCheck,
   SearchX,
   Filter,
-  X
+  X,
+  Edit
 } from "lucide-react";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { OwnerStats } from "@/types/api";
 import { getOwnersStats } from "@/service/support";
 import { getPlans } from "@/service/subscription";
@@ -29,7 +31,6 @@ import dayjs from "dayjs";
 import { Can } from "@/components/auth/PermissionGuard";
 import EditTenantModal from "@/components/admin/EditTenantModal";
 import TenantDetailModal from "@/components/admin/TenantDetailModal";
-import { Edit } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const StatTooltip = ({ children, label }: { children: React.ReactNode; label: string }) => (
@@ -365,26 +366,28 @@ export default function OwnersStatsView() {
                 isLoading={isLoading}
                 actions={(o) => (
                   <div className="flex items-center justify-end gap-2 transition-all">
-                    <button 
-                      onClick={() => {
-                        setSelectedTenant(o);
-                        setIsEditModalOpen(true);
-                      }}
-                      className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" 
-                      title="Edit Organization"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setSelectedDetailId(o.tenant_id);
-                        setIsDetailModalOpen(true);
-                      }}
-                      className="p-2 text-slate-400 hover:text-slate-900 transition-all rounded-xl hover:bg-slate-50"
-                      title="See Details"
-                    >
-                      <MoreVertical size={18} />
-                    </button>
+                    <Tooltip content="Edit Organization">
+                      <button 
+                        onClick={() => {
+                          setSelectedTenant(o);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" 
+                      >
+                        <Edit size={18} />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="See Details">
+                      <button 
+                        onClick={() => {
+                          setSelectedDetailId(o.tenant_id);
+                          setIsDetailModalOpen(true);
+                        }}
+                        className="p-2 text-slate-400 hover:text-slate-900 transition-all rounded-xl hover:bg-slate-50"
+                      >
+                        <Eye size={18} />
+                      </button>
+                    </Tooltip>
                   </div>
                 )}
               />
