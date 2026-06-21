@@ -6,6 +6,8 @@ const INTERNAL_SECRET = process.env.INTERNAL_SECRET ?? "";
 const SIGN_SECRET = process.env.SIGN_SECRET ?? "";
 const APP_URL = process.env.APP_URL ?? "";
 
+export const dynamic = "force-dynamic";
+
 type RouteContext = {
   params: Promise<{ path?: string[] }>;
 };
@@ -138,6 +140,11 @@ async function handler(
       headers["X-Signature"] = signature;
     }
 
+    const lastEventId = req.headers.get("last-event-id");
+    if (lastEventId) {
+      headers["Last-Event-ID"] = lastEventId;
+    }
+
     ////////////////////////////////////////////////////////////
     // 🔥 6. FORWARD REQUEST
     ////////////////////////////////////////////////////////////
@@ -156,7 +163,23 @@ async function handler(
     // Jika ini adalah stream, kita harus mengembalikan body sebagai stream langsung
     // agar tidak tertahan oleh buffering res.text()
     if (isStream && res.body) {
-      return new Response(res.body, {
+      // Manual stream pump to bypass Next.js internal buffering
+      const reader = res.body.getReader();
+      const stream = new ReadableStream({
+        async start(controller) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+          }
+          controller.close();
+        },
+        cancel() {
+          reader.cancel();
+        }
+      });
+
+      return new Response(stream, {
         status: res.status,
         headers: {
           "Content-Type": "text/event-stream",
@@ -166,8 +189,6 @@ async function handler(
         },
       });
     }
-
-    const data = await res.text();
 
     const responseHeaders: HeadersInit = {
       "Content-Type":
@@ -179,6 +200,26 @@ async function handler(
       responseHeaders["set-cookie"] = setCookie;
     }
 
+    const contentDisposition = res.headers.get("content-disposition");
+    if (contentDisposition) {
+      responseHeaders["content-disposition"] = contentDisposition;
+    }
+
+    const responseContentType = responseHeaders["Content-Type"].toLowerCase();
+    const isBinary = 
+      responseContentType.includes("application/pdf") || 
+      responseContentType.includes("application/octet-stream") || 
+      responseContentType.includes("image/");
+
+    if (isBinary) {
+      const data = await res.arrayBuffer();
+      return new Response(data, {
+        status: res.status,
+        headers: responseHeaders,
+      });
+    }
+
+    const data = await res.text();
     return new Response(data, {
       status: res.status,
       headers: responseHeaders,

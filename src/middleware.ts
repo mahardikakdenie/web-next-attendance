@@ -1,21 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function proxy(req: NextRequest) {
+export function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const forceLogin = url.searchParams.get("forceLogin") === "1";
-  
+
   // Combine all possible token names
-  const token = req.cookies.get("token")?.value || 
-                req.cookies.get("access_token")?.value ||
-                req.cookies.get("session")?.value;
-                
+  const token = req.cookies.get("token")?.value ||
+    req.cookies.get("access_token")?.value ||
+    req.cookies.get("session")?.value;
+
   const pathname = url.pathname;
 
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith('/forgot-password');
-  const isPublicAsset = pathname.startsWith('/_next') || 
-                        pathname.includes('.') || 
-                        pathname.startsWith('/api');
+  // Pages that do not require authentication
+  const isAuthPage = pathname.startsWith("/login") ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password');
+
+  const isPublicAsset = pathname.startsWith('/_next') ||
+    pathname.includes('.') ||
+    pathname.startsWith('/api');
 
   // Handle Force Login (Clear Cookies)
   if (isAuthPage && forceLogin) {
@@ -26,7 +30,7 @@ export function proxy(req: NextRequest) {
     return response;
   }
 
-  // 1. If authenticated and trying to access login -> redirect to home
+  // 1. If authenticated and trying to access login/reset-password -> redirect to home
   if (token && isAuthPage && !forceLogin) {
     url.pathname = "/";
     url.search = "";

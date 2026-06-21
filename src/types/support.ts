@@ -28,6 +28,7 @@ export interface SupportMessage {
     id: number;
     name: string;
   } | null;
+  attachment_url?: string;
 }
 
 /**

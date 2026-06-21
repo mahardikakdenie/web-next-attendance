@@ -56,7 +56,43 @@ export default function Sidebar() {
     enabled: isMounted && !!user,
   });
 
-  const filteredMenus = useMemo(() => menuResp?.data || [], [menuResp]);
+  const filteredMenus = useMemo(() => {
+    const rawMenus = menuResp?.data || [];
+    
+    const isSuperadmin = 
+      user?.tenant_id === 1 || 
+      user?.role?.base_role === "SUPERADMIN" || 
+      user?.base_role === "SUPERADMIN";
+
+    const hasSettingsManage = user?.permissions?.includes("settings.manage") || user?.is_owner;
+    const isTenantAdmin = hasSettingsManage || user?.is_owner || user?.role?.base_role === "ADMIN";
+    
+    const isSuspended = user?.tenant?.is_suspended || user?.billing_health?.lock_website || false;
+    const subStatus = user?.subscription?.status;
+    const isBlocked = !isSuperadmin && (isSuspended || (subStatus !== undefined && subStatus !== "Active" && subStatus !== "Trial"));
+
+    if (isBlocked && isTenantAdmin) {
+      return rawMenus.map(group => {
+        const allowedChildren = group.children?.filter(item => {
+          const path = item.path || "";
+          return path === "/tenant-settings/billing" || path.startsWith("/support");
+        }) || [];
+        
+        const groupPath = group.path || "";
+        const isGroupAllowed = groupPath === "/tenant-settings/billing" || groupPath.startsWith("/support");
+        
+        if (allowedChildren.length > 0 || isGroupAllowed) {
+          return {
+            ...group,
+            children: group.children ? allowedChildren : undefined
+          };
+        }
+        return null;
+      }).filter(Boolean) as DynamicMenuItem[];
+    }
+
+    return rawMenus;
+  }, [menuResp, user]);
 
   // Task 1.3: Auto-Refresh on SSE notification
   useEffect(() => {

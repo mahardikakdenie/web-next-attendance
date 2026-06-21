@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { SupportMessage, SupportStatus } from "@/types/support";
 import { usePermission } from "@/components/auth/PermissionGuard";
+import { verifyInvoice } from "@/service/subscription";
+import { toast } from "sonner";
 import dayjs from "dayjs";
 
 interface SupportMessageModalProps {
@@ -41,12 +43,15 @@ export default function SupportMessageModal({
 }: SupportMessageModalProps) {
   const [mode, setMode] = useState<"view" | "reply">(initialMode);
   const [replyText, setReplyText] = useState("");
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
   const isManager = usePermission("support.manage");
   const hasStatus = usePermission("support.status") || isManager;
   const hasReply  = usePermission("support.reply")  || isManager;
 
-  // State is reset via key remount from parent — no sync effect needed.
+  const invoiceIdMatch = message?.message?.match(/Invoice ID:\s*([^\s\n]+)/);
+  const invoiceId = invoiceIdMatch ? invoiceIdMatch[1] : null;
+  const isBillingTicket = message?.category === "BILLING";
 
   // Handle ESC key to close
   useEffect(() => {
@@ -59,6 +64,21 @@ export default function SupportMessageModal({
   }, [isOpen, onClose]);
 
   if (!isOpen || !message) return null;
+
+  const handleVerifyPayment = async () => {
+    if (!invoiceId) return;
+    try {
+      setIsVerifyingPayment(true);
+      await verifyInvoice(invoiceId);
+      toast.success("Payment verified successfully!");
+      await onUpdateStatus("RESOLVED");
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to verify payment");
+    } finally {
+      setIsVerifyingPayment(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!replyText.trim()) return;
@@ -85,6 +105,20 @@ export default function SupportMessageModal({
           className="flex-1 h-12 rounded-xl border-slate-200 text-slate-400"
         >
           No status permission
+        </Button>
+      );
+    }
+
+    const isBillingPending = isBillingTicket && invoiceId && (message.status === "PENDING" || message.status === "IN_PROGRESS");
+    if (isBillingPending) {
+      return (
+        <Button
+          onClick={handleVerifyPayment}
+          disabled={isVerifyingPayment || isUpdating}
+          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-12 shadow-sm font-black uppercase tracking-wider text-xs"
+        >
+          {isVerifyingPayment ? <Loader2 size={16} className="animate-spin mr-2" /> : <CheckCircle2 size={16} className="mr-2" />}
+          Verify & Approve Payment
         </Button>
       );
     }
@@ -245,6 +279,29 @@ export default function SupportMessageModal({
               {message.message}
             </div>
           </div>
+
+          {/* Attachment Content */}
+          {message.attachment_url && (
+            <div className="space-y-3">
+              <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Attachment / Payment Proof</h4>
+              <div className="p-4 rounded-[24px] bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-between">
+                <span className="text-sm font-medium text-slate-600 truncate max-w-[80%]">{message.attachment_url}</span>
+                <a
+                  href={message.attachment_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-black text-blue-600 hover:text-slate-950 transition-colors uppercase shrink-0"
+                >
+                  View Attachment
+                </a>
+              </div>
+              {/\.(jpg|jpeg|png|webp|gif)/i.test(message.attachment_url) && (
+                <div className="rounded-[24px] overflow-hidden border border-slate-200 max-h-60 flex justify-center bg-slate-50">
+                  <img src={message.attachment_url} alt="Attachment Preview" className="object-contain max-h-60" />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Reply Area (Collapsible) */}
           {mode === "reply" && (

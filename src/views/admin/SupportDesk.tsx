@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { 
   MessageSquare, 
   UserPlus, 
@@ -110,10 +111,10 @@ export default function SupportDeskView() {
 
     return messages.filter((m) => {
       const searchMatch = !search ||
-        m.subject.toLowerCase().includes(search) ||
-        m.message.toLowerCase().includes(search) ||
-        m.sender_name.toLowerCase().includes(search) ||
-        m.tenant_name.toLowerCase().includes(search);
+        (m.subject || "").toLowerCase().includes(search) ||
+        (m.message || "").toLowerCase().includes(search) ||
+        (m.sender_name || "").toLowerCase().includes(search) ||
+        (m.tenant_name || "").toLowerCase().includes(search);
 
       const categoryMatch = inboxCategoryFilter === "all" || m.category === inboxCategoryFilter;
       const statusMatch = inboxStatusFilter === "all" || m.status === inboxStatusFilter;
@@ -127,17 +128,21 @@ export default function SupportDeskView() {
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
-      if (activeTab === "inbox") {
+      
+      // Always fetch support messages if user has view permission, to populate unread badge accurately
+      if (hasView) {
         const resp = await getSupportMessages();
         setMessages((resp.data || []).map((m) => ({
           ...m,
           is_read: m.is_read ?? false,
           assigned_to: m.assigned_to ?? null,
         })));
-      } else if (activeTab === "trials") {
+      }
+
+      if (activeTab === "trials") {
         const resp = await getTrialRequests();
         setTrials(resp.data || []);
-      } else {
+      } else if (activeTab === "tickets") {
         const resp = await getProvisioningTickets();
         setTickets(resp.data || []);
       }
@@ -146,7 +151,7 @@ export default function SupportDeskView() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, hasView]);
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -162,9 +167,12 @@ export default function SupportDeskView() {
       if (resp.success) {
         toast.success(`Request approved! Ticket generated for activation.`);
         fetchData();
+      } else {
+        toast.error(resp.meta?.message || "Failed to approve trial");
       }
-    } catch {
-      toast.error("Failed to approve trial");
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+      toast.error(axiosError?.response?.data?.message || "Failed to approve trial");
     }
   };
 
@@ -175,9 +183,13 @@ export default function SupportDeskView() {
       if (resp.success) {
         toast.success(`Provisioning Executed: Credentials sent to ${ticket.admin_email}`);
         fetchData();
+      } else {
+        toast.error(resp.meta?.message || "Provisioning execution failed");
+        fetchData();
       }
-    } catch {
-      toast.error("Provisioning engine failed. Check logs.");
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+      toast.error(axiosError?.response?.data?.message || "Provisioning engine failed. Check logs.");
       fetchData(); // Refresh to show failure status/logs
     } finally {
       setExecutingTicketId(null);
@@ -377,7 +389,7 @@ export default function SupportDeskView() {
       };
       return (
         <Badge className={`${styles[m.status] || styles.CLOSED} border-none text-[9px] font-black uppercase tracking-widest`}>
-          {m.status.replace("_", " ")}
+          {(m.status || "CLOSED").replace("_", " ")}
         </Badge>
       );
     }},
@@ -418,31 +430,31 @@ export default function SupportDeskView() {
     { header: "Organization", accessor: (t) => (
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center text-white text-xs font-black shadow-lg">
-          {t.trial_request.company_name.charAt(0)}
+          {(t.trial_request?.company_name || "?").charAt(0)}
         </div>
         <div className="flex flex-col">
-          <span className="font-black text-slate-900 leading-tight">{t.trial_request.company_name}</span>
+          <span className="font-black text-slate-900 leading-tight">{t.trial_request?.company_name || "Unknown"}</span>
           <div className="flex items-center gap-1.5 mt-0.5">
             <Badge className="bg-blue-50 text-blue-600 border-none font-black text-[8px] uppercase px-1.5 py-0">
-              {t.trial_request.industry}
+              {t.trial_request?.industry || "Unknown"}
             </Badge>
-            <span className="text-[10px] font-bold text-slate-400">ID: {t.id.split('-')[0]}</span>
+            <span className="text-[10px] font-bold text-slate-400">ID: {t.id ? t.id.split('-')[0] : ""}</span>
           </div>
         </div>
       </div>
     )},
     { header: "Contact Details", accessor: (t) => (
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-bold text-slate-700">{t.trial_request.contact_name}</span>
-        <span className="text-[10px] font-medium text-slate-400">{t.trial_request.email}</span>
-        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter">{t.trial_request.phone_number}</span>
+        <span className="text-sm font-bold text-slate-700">{t.trial_request?.contact_name || "N/A"}</span>
+        <span className="text-[10px] font-medium text-slate-400">{t.trial_request?.email || "N/A"}</span>
+        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter">{t.trial_request?.phone_number || "N/A"}</span>
       </div>
     )},
     { header: "Staffing", accessor: (t) => (
       <div className="flex flex-col">
         <div className="flex items-center gap-1.5 text-slate-600">
           <Users size={14} className="text-slate-400" />
-          <span className="text-xs font-black">{t.trial_request.employee_count_range}</span>
+          <span className="text-xs font-black">{t.trial_request?.employee_count_range || "N/A"}</span>
         </div>
         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Licenses</span>
       </div>

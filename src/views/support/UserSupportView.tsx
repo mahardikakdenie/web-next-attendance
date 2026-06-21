@@ -15,11 +15,14 @@ import {
   HelpCircle,
   X,
   Building,
+  Upload,
+  AlertCircle
 } from "lucide-react";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
+import Modal from "@/components/ui/Modal";
 import {
   SupportMessage,
   SupportStatus,
@@ -29,6 +32,9 @@ import {
   getMySupportHistory,
   replyToSupportMessage,
 } from "@/service/support";
+import { getInvoices, uploadTransferProof } from "@/service/subscription";
+import { uploadMedia } from "@/service/media";
+import { Invoice } from "@/types/billing";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -90,6 +96,89 @@ export default function UserSupportView() {
   const [newMessage, setNewMessage] = useState("");
   const [replyText, setReplyText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Invoices & Proof Upload States
+  const [unpaidInvoices, setUnpaidInvoices] = useState<Invoice[]>([]);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const fetchUnpaidInvoices = useCallback(async () => {
+    try {
+      const resp = await getInvoices(1, 10);
+      if (resp.data) {
+        const unpaid = resp.data.filter(
+          (inv) => (inv.status || "").toLowerCase() === "unpaid" || (inv.status || "").toLowerCase() === "overdue"
+        );
+        setUnpaidInvoices(unpaid);
+      }
+    } catch (err) {
+      console.error("Failed to fetch invoices in support:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchUnpaidInvoices();
+  }, [fetchUnpaidInvoices]);
+
+  const handleOpenUploadModal = (inv: Invoice) => {
+    setSelectedInvoice(inv);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setIsUploadOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please upload an image file");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File size must be less than 5MB");
+        return;
+      }
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!selectedInvoice || !selectedFile) {
+      toast.error("Please select a file to upload");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const url = await uploadMedia(selectedFile);
+      await uploadTransferProof(selectedInvoice.id, url);
+      toast.success("Transfer proof uploaded successfully!");
+      void fetchUnpaidInvoices();
+      setIsUploadOpen(false);
+      setSelectedInvoice(null);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+    } catch (err: unknown) {
+      console.error(err);
+      const message = err instanceof Error ? err.message : "Failed to upload transfer proof";
+      toast.error(message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
 
   // Fetch History (Graceful Fallback to Dummy)
   const fetchHistory = useCallback(async () => {
@@ -296,6 +385,38 @@ export default function UserSupportView() {
             Koneksi database user history support belum aktif dari Backend (ISSUE BE-006 pending).
             Aplikasi menggunakan **Mock Fallback** agar seluruh fungsionalitas UI tetap dapat dicoba.
           </p>
+        </div>
+      )}
+
+      {/* Unpaid Invoices Banner */}
+      {unpaidInvoices.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-[32px] p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+              <AlertCircle size={20} />
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-bold text-amber-900 text-sm">Tagihan Belum Dibayar</h4>
+              <p className="text-xs text-amber-700 leading-relaxed font-medium">
+                Anda memiliki {unpaidInvoices.length} tagihan yang belum dibayar atau tertunggak. 
+                Segera lakukan pembayaran dan unggah bukti transfer untuk mengaktifkan kembali layanan penuh Anda.
+              </p>
+              <div className="flex flex-col gap-1.5 mt-3">
+                {unpaidInvoices.map((inv) => (
+                  <div key={inv.id} className="text-[11px] font-bold text-amber-800 flex items-center gap-2 flex-wrap">
+                    <span className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-950 font-black">{inv.invoice_number}</span>
+                    <span>- {formatCurrency(inv.amount)} (Jatuh Tempo: {dayjs(inv.due_date).format("DD MMM YYYY")})</span>
+                    <button
+                      onClick={() => handleOpenUploadModal(inv)}
+                      className="ml-2 bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1 rounded-lg font-black uppercase tracking-wider text-[9px] transition-all active:scale-95 shadow-sm shadow-indigo-600/10"
+                    >
+                      Upload Bukti
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -536,6 +657,113 @@ export default function UserSupportView() {
           </div>
         </div>
       )}
+      {/* Modal Upload Bukti Transfer */}
+      <Modal
+        isOpen={isUploadOpen}
+        onClose={() => !isUploading && setIsUploadOpen(false)}
+        title="Upload Bukti Pembayaran"
+        subtitle={`Invoice ${selectedInvoice?.invoice_number || ""}`}
+        icon={<Upload size={24} />}
+      >
+        <div className="space-y-6">
+          <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6">
+            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider mb-3">Informasi Rekening Transfer</h4>
+            <div className="space-y-2 text-sm text-slate-600 font-medium">
+              <div className="flex justify-between">
+                <span>Bank:</span>
+                <span className="font-black text-slate-900">Bank Mandiri</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Nomor Rekening:</span>
+                <span className="font-black text-indigo-600">123-456-7890</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Atas Nama:</span>
+                <span className="font-black text-slate-900">AttendancePro</span>
+              </div>
+              <div className="flex justify-between border-t border-slate-200/50 pt-2 mt-2">
+                <span>Total Tagihan:</span>
+                <span className="font-black text-emerald-600">{selectedInvoice ? formatCurrency(selectedInvoice.amount) : "-"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">
+              Bukti Transfer (Gambar)
+            </label>
+            
+            {!previewUrl ? (
+              <label className="flex flex-col items-center justify-center h-44 border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-3xl cursor-pointer bg-slate-50/50 hover:bg-indigo-50/10 transition-all group">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors mb-3">
+                    <Upload size={20} />
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 group-hover:text-indigo-600 transition-colors">
+                    Pilih file atau seret gambar ke sini
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1">PNG, JPG, JPEG (Max. 5MB)</p>
+                </div>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  disabled={isUploading}
+                />
+              </label>
+            ) : (
+              <div className="relative rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 p-2 flex flex-col items-center">
+                <img
+                  src={previewUrl}
+                  alt="Preview Bukti Transfer"
+                  className="max-h-48 object-contain rounded-2xl w-full"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setPreviewUrl(null);
+                  }}
+                  disabled={isUploading}
+                  className="absolute top-4 right-4 bg-slate-900/80 hover:bg-slate-950 text-white p-2 rounded-xl backdrop-blur-sm transition-colors active:scale-95 disabled:opacity-50"
+                >
+                  <X size={16} />
+                </button>
+                <div className="mt-2 text-xs font-bold text-slate-500 truncate w-full px-2 text-center">
+                  {selectedFile?.name}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-3">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isUploading}
+              onClick={() => setIsUploadOpen(false)}
+              className="flex-1 h-12 rounded-xl text-xs font-black uppercase tracking-wider bg-slate-50 hover:bg-slate-100"
+            >
+              Batal
+            </Button>
+            <Button
+              disabled={isUploading || !selectedFile}
+              onClick={handleUploadSubmit}
+              className="flex-1 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Mengunggah...
+                </>
+              ) : (
+                "Kirim Bukti"
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

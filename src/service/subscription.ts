@@ -33,6 +33,18 @@ export const getInvoices = (page: number = 1, limit: number = 10, status?: strin
   });
 };
 
+export const downloadInvoicePDF = (invoiceId: string) => {
+  return secureRequest<Blob>("get", `/v1/billing/invoices/${invoiceId}/pdf`, undefined, {
+    responseType: "blob",
+  });
+};
+
+export const uploadTransferProof = (invoiceId: string, proofUrl: string) => {
+  return secureRequest<APIResponse<null>>("post", `/v1/billing/invoices/${invoiceId}/proof`, {
+    transfer_proof_url: proofUrl,
+  });
+};
+
 /**
  * SUPERADMIN: Manage and Monitor Tenant Subscriptions
  */
@@ -65,6 +77,10 @@ export const suspendTenant = (id: number, reason: string) => {
 
 export const reactivateSubscription = (id: number) => {
   return secureRequest<APIResponse<null>>("post", `/v1/superadmin/subscriptions/${id}/reactivate`);
+};
+
+export const verifyInvoice = (invoiceId: string) => {
+  return secureRequest<APIResponse<null>>("post", `/v1/superadmin/billing/invoices/${invoiceId}/verify`);
 };
 
 /**
