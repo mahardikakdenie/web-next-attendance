@@ -4,6 +4,8 @@ import { useState } from "react";
 import { X, Loader2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import NativeSelect from "@/components/ui/NativeSelect";
+import Textarea from "@/components/ui/Textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createExpense, CreateExpensePayload } from "@/service/finance";
 import { toast } from "sonner";
@@ -52,8 +54,6 @@ export default function CreateExpenseModal({ open, onClose, onSuccess }: CreateE
 
   const isOverQuota = (newClaim.amount || 0) > (user?.expense_quota || 0);
 
-  
-
   const createMutation = useMutation({
     mutationFn: (payload: CreateExpensePayload) => createExpense(payload),
     onSuccess: () => {
@@ -69,7 +69,6 @@ export default function CreateExpenseModal({ open, onClose, onSuccess }: CreateE
         description: "",
       });
     },
-    // 3. Gunakan unknown lalu casting ke interface yang sudah dibuat, atau gunakan tipe AxiosError jika pakai Axios
     onError: (error: unknown) => {
       const err = error as ApiError;
       toast.error(err?.response?.data?.meta?.message || "Failed to submit expense claim");
@@ -129,69 +128,39 @@ export default function CreateExpenseModal({ open, onClose, onSuccess }: CreateE
 
           {/* Form Section */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Category
-              </label>
-              <select
-                value={newClaim.category}
-                // 4. Casting aman dengan tipe spesifik
-                onChange={(e) => setNewClaim({ ...newClaim, category: e.target.value as ExpenseCategory })}
-                className="w-full h-12 bg-white border border-slate-200 hover:border-slate-300 rounded-xl px-4 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none cursor-pointer"
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <NativeSelect
+              required
+              label="Category"
+              value={newClaim.category}
+              onChange={(e) => setNewClaim({ ...newClaim, category: e.target.value as ExpenseCategory })}
+              options={CATEGORIES.map(cat => ({ label: cat, value: cat }))}
+            />
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Amount (IDR)
-              </label>
-              <Input
-                type="number"
-                value={newClaim.amount || ""}
-                onChange={(e) => setNewClaim({ ...newClaim, amount: Number(e.target.value) })}
-                placeholder="e.g. 500000"
-                className={`h-12 bg-white border rounded-xl font-medium text-slate-900 transition-all ${
-                  isOverQuota 
-                    ? "border-rose-500 focus:border-rose-500 focus:ring-rose-500/20" 
-                    : "border-slate-200 hover:border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/20"
-                }`}
-              />
-              {isOverQuota && (
-                <p className="text-[11px] font-bold text-rose-500 ml-1 mt-1 animate-in slide-in-from-top-1">
-                  Warning: Amount exceeds your remaining monthly quota!
-                </p>
-              )}
-            </div>
+            <Input
+              required
+              type="number"
+              label="Amount (IDR)"
+              value={newClaim.amount || ""}
+              onChange={(e) => setNewClaim({ ...newClaim, amount: Number(e.target.value) })}
+              placeholder="e.g. 500000"
+              error={isOverQuota ? "Amount exceeds your remaining monthly quota!" : undefined}
+            />
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Date
-              </label>
-              <Input
-                type="date"
-                value={newClaim.date}
-                onChange={(e) => setNewClaim({ ...newClaim, date: e.target.value })}
-                className="h-12 bg-white border-slate-200 hover:border-slate-300 rounded-xl font-medium text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20 transition-all"
-              />
-            </div>
+            <Input
+              required
+              type="date"
+              label="Date"
+              value={newClaim.date}
+              onChange={(e) => setNewClaim({ ...newClaim, date: e.target.value })}
+            />
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Description
-              </label>
-              <textarea
-                value={newClaim.description}
-                onChange={(e) => setNewClaim({ ...newClaim, description: e.target.value })}
-                placeholder="Brief explanation of the expense..."
-                className="w-full min-h-[100px] resize-none bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-              />
-            </div>
+            <Textarea
+              required
+              label="Description"
+              value={newClaim.description}
+              onChange={(e) => setNewClaim({ ...newClaim, description: e.target.value })}
+              placeholder="Brief explanation of the expense..."
+            />
 
             <div className="flex gap-3 pt-2">
               <Button 

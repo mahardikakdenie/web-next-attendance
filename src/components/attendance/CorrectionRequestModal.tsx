@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Textarea from "@/components/ui/Textarea";
 import { toast } from "sonner";
 import { submitCorrection } from "@/service/attendance";
 import { AttendanceCorrectionPayload } from "@/types/api";
@@ -111,66 +112,46 @@ export default function CorrectionRequestModal({ open, onClose, onSuccess, initi
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Request Details</span>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Attendance Date</label>
-              <div className="relative">
-                <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  required
-                  type="date"
-                  max={dayjs().format("YYYY-MM-DD")}
-                  className="pl-12"
-                  value={formData.date}
-                  onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                />
-              </div>
-            </div>
+            <Input 
+              required
+              type="date"
+              label="Attendance Date"
+              max={dayjs().format("YYYY-MM-DD")}
+              leftIcon={<CalendarIcon className="w-4 h-4" />}
+              value={formData.date}
+              onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
+            />
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">New Clock In</label>
-                <div className="relative">
-                  <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <Input 
-                    required
-                    type="time"
-                    step="1"
-                    className="pl-12"
-                    value={formData.clock_in_time}
-                    onChange={e => setFormData(prev => ({ ...prev, clock_in_time: e.target.value }))}
-                  />
-                </div>
-              </div>
+              <Input 
+                required
+                type="time"
+                label="New Clock In"
+                step="1"
+                leftIcon={<Clock className="w-4 h-4" />}
+                value={formData.clock_in_time}
+                onChange={e => setFormData(prev => ({ ...prev, clock_in_time: e.target.value }))}
+              />
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">New Clock Out</label>
-                <div className="relative">
-                  <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <Input 
-                    required
-                    type="time"
-                    step="1"
-                    className="pl-12"
-                    value={formData.clock_out_time}
-                    onChange={e => setFormData(prev => ({ ...prev, clock_out_time: e.target.value }))}
-                  />
-                </div>
-              </div>
+              <Input 
+                required
+                type="time"
+                label="New Clock Out"
+                step="1"
+                leftIcon={<Clock className="w-4 h-4" />}
+                value={formData.clock_out_time}
+                onChange={e => setFormData(prev => ({ ...prev, clock_out_time: e.target.value }))}
+              />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Reason for Correction</label>
-              <div className="relative">
-                <MessageSquare className="absolute left-4 top-4 text-slate-400 w-4 h-4" />
-                <textarea 
-                  required
-                  className="w-full min-h-[120px] pl-12 pr-5 py-4 rounded-2xl text-[15px] font-medium transition-all duration-300 ease-out outline-none placeholder:text-neutral-400 bg-white border border-neutral-200 shadow-sm hover:border-neutral-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 focus:shadow-md text-neutral-900"
-                  placeholder="Explain why you need this correction (e.g., forgot to clock out, system error)..."
-                  value={formData.reason}
-                  onChange={e => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                />
-              </div>
-            </div>
+            <Textarea 
+              required
+              label="Reason for Correction"
+              leftIcon={<MessageSquare className="w-4 h-4" />}
+              placeholder="Explain why you need this correction (e.g., forgot to clock out, system error)..."
+              value={formData.reason}
+              onChange={e => setFormData(prev => ({ ...prev, reason: e.target.value }))}
+            />
           </div>
 
           {/* Action Footer */}
