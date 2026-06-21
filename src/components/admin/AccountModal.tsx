@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, User, Mail, Shield, Lock, Loader2, Save } from "lucide-react";
 import Input from "@/components/ui/Input";
+import NativeSelect from "@/components/ui/NativeSelect";
 import { Button } from "@/components/ui/Button";
 import { getSystemRoles } from "@/service/roles";
 import { createPlatformAccount, updatePlatformAccount } from "@/service/admin";
@@ -137,74 +138,49 @@ export default function AccountModal({ open, onClose, onSuccess, account }: Acco
             </div>
 
             <div className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <Input 
-                    required
-                    placeholder="e.g. John Doe"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
-                  />
-                </div>
-              </div>
+              <Input 
+                required
+                label="Full Name"
+                placeholder="e.g. John Doe"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                leftIcon={<User size={18} />}
+                variant="ghost"
+              />
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <Input 
-                    required
-                    type="email"
-                    placeholder="admin@attendance.pro"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
-                  />
-                </div>
-              </div>
+              <Input 
+                required
+                type="email"
+                label="Email Address"
+                placeholder="admin@attendance.pro"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                leftIcon={<Mail size={18} />}
+                variant="ghost"
+              />
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Platform Role</label>
-                <div className="relative">
-                  <Shield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <select 
-                    required
-                    value={formData.role_id}
-                    onChange={(e) => setFormData({...formData, role_id: e.target.value})}
-                    className="w-full pl-12 pr-4 h-14 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-slate-500/5 transition-all appearance-none"
-                    disabled={isLoading}
-                  >
-                    <option value="" disabled>Select a system role...</option>
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>{role.name.toUpperCase()}</option>
-                    ))}
-                  </select>
-                  {isLoading && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <Loader2 className="animate-spin text-slate-400" size={18} />
-                    </div>
-                  )}
-                </div>
-              </div>
+              <NativeSelect 
+                required
+                label="Platform Role"
+                value={formData.role_id}
+                onChange={(e) => setFormData({...formData, role_id: e.target.value})}
+                options={[
+                  { label: "Select a system role...", value: "" },
+                  ...roles.map((role) => ({ label: role.name.toUpperCase(), value: role.id }))
+                ]}
+                variant="ghost"
+                disabled={isLoading}
+              />
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
-                  Password {account ? "(Leave blank to keep current)" : "(Optional)"}
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <Input 
-                    type="password"
-                    placeholder={account ? "••••••••" : "Leave blank to auto-generate"}
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
-                  />
-                </div>
-              </div>
+              <Input 
+                type="password"
+                label={`Password ${account ? "(Leave blank to keep current)" : "(Optional)"}`}
+                placeholder={account ? "••••••••" : "Leave blank to auto-generate"}
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                leftIcon={<Lock size={18} />}
+                variant="ghost"
+              />
             </div>
           </div>
 

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import NativeSelect from "@/components/ui/NativeSelect";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getPlans, overrideSubscription } from "@/service/subscription";
@@ -106,58 +107,46 @@ export default function OverrideSubscriptionModal({ isOpen, onClose, subscriptio
         {/* Body */}
         <div className="p-8 space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Subscription Plan</label>
-              <select 
-                value={formData.plan_id}
-                onChange={(e) => setFormData(prev => ({ ...prev, plan_id: Number(e.target.value) }))}
-                className="w-full h-12 px-4 rounded-xl bg-slate-50 border-none text-xs font-bold focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none appearance-none"
-              >
-                <option value={0}>Select Plan</option>
-                {plans.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
+            <NativeSelect
+              label="Subscription Plan"
+              value={formData.plan_id}
+              onChange={(e) => setFormData(prev => ({ ...prev, plan_id: Number(e.target.value) }))}
+              options={[
+                { label: "Select Plan", value: 0 },
+                ...plans.map(p => ({ label: p.name, value: p.id }))
+              ]}
+              variant="ghost"
+              size="sm"
+            />
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Current Status</label>
-              <select 
-                value={formData.status}
-                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as SubscriptionStatus }))}
-                className="w-full h-12 px-4 rounded-xl bg-slate-50 border-none text-xs font-bold focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-              >
-                {(["Active", "Past Due", "Canceled", "Trial"] as const).map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
+            <NativeSelect
+              label="Current Status"
+              value={formData.status}
+              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as SubscriptionStatus }))}
+              options={(["Active", "Past Due", "Canceled", "Trial"] as const).map(s => ({ label: s, value: s }))}
+              variant="ghost"
+              size="sm"
+            />
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Amount (IDR)</label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  type="number"
-                  value={formData.amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                  className="pl-10 h-12 text-xs font-bold"
-                />
-              </div>
-            </div>
+            <Input
+              type="number"
+              label="Amount (IDR)"
+              value={formData.amount}
+              onChange={(e) => setFormData(prev => ({ ...prev, amount: Number(e.target.value) }))}
+              leftIcon={<DollarSign className="w-4 h-4" />}
+              variant="ghost"
+              size="sm"
+            />
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Next Billing Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  type="date"
-                  value={formData.next_billing_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, next_billing_date: e.target.value }))}
-                  className="pl-10 h-12 text-xs font-bold"
-                />
-              </div>
-            </div>
+            <Input
+              type="date"
+              label="Next Billing Date"
+              value={formData.next_billing_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, next_billing_date: e.target.value }))}
+              leftIcon={<Calendar className="w-4 h-4" />}
+              variant="ghost"
+              size="sm"
+            />
           </div>
 
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex gap-3">

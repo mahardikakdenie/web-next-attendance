@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { X, LayoutGrid, Type, Loader2, Save, Hash, Box, KeyRound, Link as LinkIcon, ChevronDown } from "lucide-react";
 import Input from "@/components/ui/Input";
+import NativeSelect from "@/components/ui/NativeSelect";
+import Checkbox from "@/components/ui/Checkbox";
 import { Button } from "@/components/ui/Button";
 import { updateMenu, createMenu } from "@/service/menu";
 import { getSystemRoles } from "@/service/roles";
@@ -181,64 +183,48 @@ export default function EditMenuModal({ open, onClose, onSuccess, menu, availabl
 
             <div className="space-y-6 max-h-[60vh] overflow-y-auto px-1 custom-scrollbar">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Menu Label</label>
-                  <div className="relative">
-                    <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <Input
-                      required
-                      placeholder="e.g. Workforce Intelligence"
-                      value={formData.label}
-                      onChange={(e) => setFormData({...formData, label: e.target.value})}
-                      className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Route Path</label>
-                  <div className="relative">
-                    <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <Input
-                      placeholder="/admin/analytics"
-                      value={formData.path || ""}
-                      onChange={(e) => setFormData({...formData, path: e.target.value})}
-                      className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
-                    />
-                  </div>
-                </div>
+                <Input
+                  required
+                  label="Menu Label"
+                  placeholder="e.g. Workforce Intelligence"
+                  value={formData.label}
+                  onChange={(e) => setFormData({...formData, label: e.target.value})}
+                  leftIcon={<Type size={18} />}
+                  variant="ghost"
+                />
+
+                <Input
+                  label="Route Path"
+                  placeholder="/admin/analytics"
+                  value={formData.path || ""}
+                  onChange={(e) => setFormData({...formData, path: e.target.value})}
+                  leftIcon={<LinkIcon size={18} />}
+                  variant="ghost"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Icon Name (Lucide)</label>
-                  <div className="relative">
-                    <Box className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <Input
-                      required
-                      placeholder="Users, Zap, etc."
-                      value={formData.icon}
-                      onChange={(e) => setFormData({...formData, icon: e.target.value})}
-                      className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400">
-                      <MenuIconPreview name={formData.icon} size={16} />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Sort Order</label>
-                  <div className="relative">
-                    <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <Input
-                      required
-                      type="number"
-                      placeholder="1"
-                      value={formData.sort_order}
-                      onChange={(e) => setFormData({...formData, sort_order: parseInt(e.target.value) || 0})}
-                      className="pl-12 h-14 bg-slate-50 border-slate-100 rounded-2xl font-bold"
-                    />
-                  </div>
-                </div>
+                <Input
+                  required
+                  label="Icon Name (Lucide)"
+                  placeholder="Users, Zap, etc."
+                  value={formData.icon}
+                  onChange={(e) => setFormData({...formData, icon: e.target.value})}
+                  leftIcon={<Box size={18} />}
+                  rightIcon={<MenuIconPreview name={formData.icon} size={16} />}
+                  variant="ghost"
+                />
+
+                <Input
+                  required
+                  type="number"
+                  label="Sort Order"
+                  placeholder="1"
+                  value={formData.sort_order}
+                  onChange={(e) => setFormData({...formData, sort_order: parseInt(e.target.value) || 0})}
+                  leftIcon={<Hash size={18} />}
+                  variant="ghost"
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -252,52 +238,39 @@ export default function EditMenuModal({ open, onClose, onSuccess, menu, availabl
                       const isDisabled = formData.is_system && !isSuperAdmin;
                       const isChecked = formData.is_system && isSuperAdmin ? true : (formData.allowed_roles?.includes(role.id) || false);
                       return (
-                        <label key={role.id} className={`flex items-center gap-2 ${isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 disabled:opacity-50"
-                            checked={isChecked}
-                            disabled={isDisabled}
-                            onChange={(e) => {
-                              const current = formData.allowed_roles || [];
-                              setFormData({
-                                ...formData,
-                                allowed_roles: e.target.checked
-                                  ? [...current, role.id]
-                                  : current.filter(id => id !== role.id)
-                              });
-                            }}
-                          />
-                          <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{role.name}</span>
-                        </label>
+                        <Checkbox
+                          key={role.id}
+                          label={role.name}
+                          checked={isChecked}
+                          disabled={isDisabled}
+                          onChange={(checked) => {
+                            const current = formData.allowed_roles || [];
+                            setFormData({
+                              ...formData,
+                              allowed_roles: checked
+                                ? [...current, role.id]
+                                : current.filter(id => id !== role.id)
+                            });
+                          }}
+                        />
                       );
                     })}
                     {roleOptions.length === 0 && <span className="text-xs text-slate-400">Loading roles...</span>}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
-                    <LayoutGrid size={14} /> Parent Group
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={formData.parent_id || ""}
-                      onChange={(e) => setFormData({ ...formData, parent_id: e.target.value || null })}
-                      className="w-full h-14 px-4 pr-10 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-200 transition-all appearance-none"
-                    >
-                      <option value="">— Root Level —</option>
-                      {availableMenus
-                        .filter(m => m.id !== formData.id) // Prevent self-parenting
-                        .map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.label}
-                          </option>
-                        ))}
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                  </div>
-                </div>
+                <NativeSelect
+                  label="Parent Group"
+                  variant="ghost"
+                  value={formData.parent_id || ""}
+                  onChange={(e) => setFormData({ ...formData, parent_id: e.target.value || null })}
+                  options={[
+                    { label: "— Root Level —", value: "" },
+                    ...availableMenus
+                      .filter(m => m.id !== formData.id)
+                      .map((m) => ({ label: m.label, value: m.id }))
+                  ]}
+                />
               </div>
 
               <div className="flex flex-col gap-2">

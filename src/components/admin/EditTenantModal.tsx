@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { Switch } from "@/components/ui/Switch";
+import Textarea from "@/components/ui/Textarea";
 import SuspendTenantModal from "@/components/admin/SuspendTenantModal";
 import { updateTenant, UpdateTenantPayload } from "@/service/admin";
 import { getPlans } from "@/service/subscription";
@@ -131,15 +132,13 @@ export default function EditTenantModal({ tenant, isOpen, onClose, onSuccess }: 
           <div className="p-8 space-y-8">
             {/* General Info */}
             <div className="space-y-4">
-               <div className="space-y-2">
-                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Organization Name</label>
-                 <Input 
-                  placeholder="Enter company name..."
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-               </div>
+               <Input 
+                required
+                label="Organization Name"
+                placeholder="Enter company name..."
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
 
               <div className="space-y-2">
                 <Select 
@@ -183,13 +182,12 @@ export default function EditTenantModal({ tenant, isOpen, onClose, onSuccess }: 
 
                {formData.is_suspended && (
                  <div className="animate-in slide-in-from-top-2 duration-300">
-                    <label className="text-[10px] font-black text-rose-500 uppercase tracking-widest ml-1 mb-2 block">Suspension Reason</label>
-                    <textarea 
+                    <Textarea 
                       required
+                      label="Suspension Reason"
                       value={formData.suspended_reason}
                       onChange={(e) => setFormData({ ...formData, suspended_reason: e.target.value })}
                       placeholder="Specify the policy violation or reason..."
-                      className="w-full p-5 bg-rose-50/20 border border-rose-100 rounded-3xl text-sm font-bold text-slate-900 outline-none focus:ring-4 focus:ring-rose-500/5 transition-all min-h-[100px] resize-none"
                     />
                  </div>
                )}

@@ -32,6 +32,9 @@ import { Button } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Switch";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
+import Input from "@/components/ui/Input";
+import NativeSelect from "@/components/ui/NativeSelect";
+import Textarea from "@/components/ui/Textarea";
 import { 
   PermissionModule
 } from "@/types/permissions";
@@ -341,16 +344,15 @@ export default function PlatformRolesView() {
         
         <div className="lg:col-span-4 space-y-4">
           <div className="bg-white rounded-[32px] border border-slate-100 p-4 shadow-sm">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-indigo-600 transition-colors" />
-              <input 
-                type="text" 
-                placeholder="SEARCH REGISTRY..." 
-                value={roleSearch}
-                onChange={e => setRoleSearch(e.target.value)}
-                className="w-full h-11 pl-10 pr-4 bg-slate-50 border-none rounded-2xl text-xs font-black focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none uppercase placeholder:text-slate-300"
-              />
-            </div>
+            <Input 
+              type="text" 
+              placeholder="SEARCH REGISTRY..." 
+              value={roleSearch}
+              onChange={e => setRoleSearch(e.target.value)}
+              leftIcon={<Search className="w-4 h-4" />}
+              variant="ghost"
+              size="sm"
+            />
           </div>
           
           <div className="space-y-3">
@@ -594,34 +596,52 @@ export default function PlatformRolesView() {
                   </div>
                   
                   <div className="space-y-6">
-                      <div className="space-y-2 text-left">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">CORE IDENTIFIER</label>
-                        <input required value={newRoleData.name} onChange={e => setNewRoleData(prev => ({ ...prev, name: e.target.value.toUpperCase() }))} type="text" placeholder="e.g. PLATFORM_MODERATOR" className="w-full h-14 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none uppercase" />
-                      </div>
+                  <div className="space-y-6">
+                      <Input
+                        required
+                        label="CORE IDENTIFIER"
+                        value={newRoleData.name}
+                        onChange={e => setNewRoleData(prev => ({ ...prev, name: e.target.value.toUpperCase() }))}
+                        type="text" 
+                        placeholder="e.g. PLATFORM_MODERATOR" 
+                        variant="ghost"
+                      />
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2 text-left relative">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">BASE ARCHITECTURE</label>
-                            <div className="relative">
-                              <select value={newRoleData.base_role} onChange={e => setNewRoleData(prev => ({ ...prev, base_role: e.target.value as Role["base_role"] }))} className="w-full h-14 bg-slate-50 border-none rounded-2xl px-6 appearance-none text-xs font-black pr-10 focus:ring-4 focus:ring-indigo-500/5 outline-none uppercase">
-                                  <option value="SUPERADMIN">SUPERADMIN</option>
-                                  <option value="ADMIN">ADMIN</option>
-                                  <option value="HR">HR</option>
-                                  <option value="EMPLOYEE">EMPLOYEE</option>
-                              </select>
-                              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                            </div>
-                        </div>
-                        <div className="space-y-2 text-left">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">DOMAIN SCOPE</label>
-                            <input required value={newRoleData.department} onChange={e => setNewRoleData(prev => ({ ...prev, department: e.target.value }))} type="text" placeholder="e.g. Governance" className="w-full h-14 bg-slate-50 border-none rounded-2xl px-6 text-xs font-black focus:ring-4 focus:ring-indigo-500/5 outline-none uppercase" />
-                        </div>
+                        <NativeSelect
+                          required
+                          label="BASE ARCHITECTURE"
+                          value={newRoleData.base_role}
+                          onChange={e => setNewRoleData(prev => ({ ...prev, base_role: e.target.value as Role["base_role"] }))}
+                          options={[
+                            { label: "SUPERADMIN", value: "SUPERADMIN" },
+                            { label: "ADMIN", value: "ADMIN" },
+                            { label: "HR", value: "HR" },
+                            { label: "EMPLOYEE", value: "EMPLOYEE" }
+                          ]}
+                          variant="ghost"
+                        />
+
+                        <Input
+                          required
+                          label="DOMAIN SCOPE"
+                          value={newRoleData.department}
+                          onChange={e => setNewRoleData(prev => ({ ...prev, department: e.target.value }))}
+                          type="text" 
+                          placeholder="e.g. Governance" 
+                          variant="ghost"
+                        />
                       </div>
 
-                      <div className="space-y-2 text-left">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">GOVERNANCE DESCRIPTION</label>
-                        <textarea value={newRoleData.description} onChange={e => setNewRoleData(prev => ({ ...prev, description: e.target.value }))} placeholder="EXPLAIN GLOBAL POLICY CAPABILITIES..." className="w-full h-24 bg-slate-50 border-none rounded-2xl p-6 text-xs font-black focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none resize-none uppercase" />
-                      </div>
+                      <Textarea
+                        label="GOVERNANCE DESCRIPTION"
+                        value={newRoleData.description}
+                        onChange={e => setNewRoleData(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="EXPLAIN GLOBAL POLICY CAPABILITIES..." 
+                        variant="ghost"
+                        rows={3}
+                      />
+                  </div>
                   </div>
                 </div>
                 <div className="p-8 bg-slate-50/50 flex gap-4">
