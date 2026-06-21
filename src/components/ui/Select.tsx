@@ -19,6 +19,8 @@ interface SelectProps {
   disabled?: boolean;
   searchable?: boolean;
   error?: string;
+  required?: boolean;
+  size?: "default" | "sm";
 }
 
 export default function Select({
@@ -31,6 +33,8 @@ export default function Select({
   disabled = false,
   searchable = false,
   error,
+  required = false,
+  size = "default",
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +63,7 @@ export default function Select({
       searchInputRef.current.focus();
     }
     if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSearchQuery("");
     }
   }, [isOpen, searchable]);
@@ -72,8 +77,9 @@ export default function Select({
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && (
-        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">
+        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1 text-left">
           {label}
+          {required && <span className="text-rose-500 ml-1 font-bold">*</span>}
         </label>
       )}
       
@@ -81,12 +87,14 @@ export default function Select({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full flex items-center justify-between px-5 h-12 bg-white border rounded-2xl text-[13px] font-black tracking-tight transition-all text-left outline-none ${
+        className={`w-full flex items-center justify-between px-5 bg-white border rounded-2xl text-[15px] font-medium transition-all text-left outline-none ${
+          size === "sm" ? "h-12" : "h-14"
+        } ${
           isOpen 
-            ? "ring-4 ring-blue-500/5 border-blue-500 shadow-sm" 
+            ? "ring-4 ring-blue-600/10 border-blue-600 shadow-sm" 
             : error 
-              ? "border-rose-200 bg-rose-50/30" 
-              : "border-slate-200 hover:border-slate-300 shadow-sm"
+              ? "border-rose-400 bg-rose-50/20 text-rose-500 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10" 
+              : "border-neutral-200 hover:border-neutral-300 hover:shadow-sm"
         } ${disabled ? "opacity-50 cursor-not-allowed bg-slate-50/50" : "cursor-pointer active:scale-[0.98]"}`}
       >
         <div className="flex items-center gap-3 overflow-hidden">
