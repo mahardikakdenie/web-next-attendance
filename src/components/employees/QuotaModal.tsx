@@ -98,24 +98,17 @@ export default function QuotaModal({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Monthly Limit (IDR)</label>
-                <div className="relative group">
-                  <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm group-focus-within:text-indigo-600 transition-colors">Rp</span>
-                  <Input 
-                    type="number"
-                    required
-                    value={quota}
-                    onChange={(e) => setQuota(e.target.value)}
-                    className="h-14 pl-12 pr-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-base font-black text-slate-900 focus:border-indigo-600 focus:bg-white transition-all outline-none"
-                    placeholder="5.000.000"
-                  />
-                </div>
-                <p className="text-[10px] font-bold text-slate-400 mt-1.5 ml-1 flex items-center gap-1.5">
-                  <AlertCircle size={12} className="text-indigo-500" />
-                  Currently: {formatCurrency(currentQuota)}
-                </p>
-              </div>
+              <Input 
+                type="number"
+                required
+                label="Monthly Limit (IDR)"
+                value={quota}
+                onChange={(e) => setQuota(e.target.value)}
+                leftIcon={<span className="font-bold text-sm">Rp</span>}
+                variant="ghost"
+                placeholder="5.000.000"
+                helperText={`Currently: ${formatCurrency(currentQuota)}`}
+              />
             </div>
           </div>
 

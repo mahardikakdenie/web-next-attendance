@@ -11,9 +11,18 @@ import {
   DollarSign
 } from "lucide-react";
 import Input from "@/components/ui/Input";
+import NativeSelect from "@/components/ui/NativeSelect";
 import { getPayrollProfile, updatePayrollProfile } from "@/service/payroll";
 import { toast } from "sonner";
 import { PayrollProfile } from "@/types/api";
+
+const ptkpOptions = [
+  { label: "TK/0 (Single)", value: "TK/0" },
+  { label: "K/0 (Married)", value: "K/0" },
+  { label: "K/1 (Married, 1 Child)", value: "K/1" },
+  { label: "K/2 (Married, 2 Children)", value: "K/2" },
+  { label: "K/3 (Married, 3 Children)", value: "K/3" },
+];
 
 interface PayrollProfileModalProps {
   open: boolean;
@@ -123,40 +132,32 @@ export default function PayrollProfileModal({
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Salary Configuration</h3>
                   </div>
                   
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Basic Salary (Monthly)</label>
-                    <Input 
-                      type="number"
-                      value={formData.basic_salary}
-                      onChange={(e) => setFormData({...formData, basic_salary: Number(e.target.value)})}
-                      className="h-12 bg-slate-50 border-slate-100 rounded-xl font-bold"
-                    />
-                  </div>
+                  <Input 
+                    type="number"
+                    label="Basic Salary (Monthly)"
+                    value={formData.basic_salary}
+                    onChange={(e) => setFormData({...formData, basic_salary: Number(e.target.value)})}
+                    variant="ghost"
+                    size="sm"
+                  />
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Fixed Allowance</label>
-                    <Input 
-                      type="number"
-                      value={formData.fixed_allowance}
-                      onChange={(e) => setFormData({...formData, fixed_allowance: Number(e.target.value)})}
-                      className="h-12 bg-slate-50 border-slate-100 rounded-xl font-bold"
-                    />
-                  </div>
+                  <Input 
+                    type="number"
+                    label="Fixed Allowance"
+                    value={formData.fixed_allowance}
+                    onChange={(e) => setFormData({...formData, fixed_allowance: Number(e.target.value)})}
+                    variant="ghost"
+                    size="sm"
+                  />
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">PTKP Status</label>
-                    <select 
-                      value={formData.ptkp_status}
-                      onChange={(e) => setFormData({...formData, ptkp_status: e.target.value})}
-                      className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
-                    >
-                      <option value="TK/0">TK/0 (Single)</option>
-                      <option value="K/0">K/0 (Married)</option>
-                      <option value="K/1">K/1 (Married, 1 Child)</option>
-                      <option value="K/2">K/2 (Married, 2 Children)</option>
-                      <option value="K/3">K/3 (Married, 3 Children)</option>
-                    </select>
-                  </div>
+                  <NativeSelect 
+                    label="PTKP Status"
+                    options={ptkpOptions}
+                    value={formData.ptkp_status}
+                    onChange={(e) => setFormData({...formData, ptkp_status: e.target.value})}
+                    variant="ghost"
+                    size="sm"
+                  />
                 </div>
 
                 {/* 2. BANK INFORMATION */}
@@ -166,35 +167,32 @@ export default function PayrollProfileModal({
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bank Information</h3>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bank Name</label>
-                    <Input 
-                      placeholder="e.g. BCA, Mandiri"
-                      value={formData.bank_name}
-                      onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
-                      className="h-12 bg-slate-50 border-slate-100 rounded-xl font-bold"
-                    />
-                  </div>
+                  <Input 
+                    label="Bank Name"
+                    placeholder="e.g. BCA, Mandiri"
+                    value={formData.bank_name}
+                    onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
+                    variant="ghost"
+                    size="sm"
+                  />
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Account Number</label>
-                    <Input 
-                      placeholder="e.g. 8830123456"
-                      value={formData.bank_account_number}
-                      onChange={(e) => setFormData({...formData, bank_account_number: e.target.value})}
-                      className="h-12 bg-slate-50 border-slate-100 rounded-xl font-bold"
-                    />
-                  </div>
+                  <Input 
+                    label="Account Number"
+                    placeholder="e.g. 8830123456"
+                    value={formData.bank_account_number}
+                    onChange={(e) => setFormData({...formData, bank_account_number: e.target.value})}
+                    variant="ghost"
+                    size="sm"
+                  />
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Account Holder Name</label>
-                    <Input 
-                      placeholder="As seen on bank book"
-                      value={formData.bank_account_holder}
-                      onChange={(e) => setFormData({...formData, bank_account_holder: e.target.value})}
-                      className="h-12 bg-slate-50 border-slate-100 rounded-xl font-bold"
-                    />
-                  </div>
+                  <Input 
+                    label="Account Holder Name"
+                    placeholder="As seen on bank book"
+                    value={formData.bank_account_holder}
+                    onChange={(e) => setFormData({...formData, bank_account_holder: e.target.value})}
+                    variant="ghost"
+                    size="sm"
+                  />
                 </div>
 
                 {/* 3. SOCIAL SECURITY & TAX */}
@@ -205,30 +203,27 @@ export default function PayrollProfileModal({
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">BPJS Health (KS)</label>
-                      <Input 
-                        value={formData.bpjs_health_number}
-                        onChange={(e) => setFormData({...formData, bpjs_health_number: e.target.value})}
-                        className="h-12 bg-slate-50 border-slate-100 rounded-xl font-bold"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">BPJS Employment (TK)</label>
-                      <Input 
-                        value={formData.bpjs_employment_number}
-                        onChange={(e) => setFormData({...formData, bpjs_employment_number: e.target.value})}
-                        className="h-12 bg-slate-50 border-slate-100 rounded-xl font-bold"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">NPWP Number</label>
-                      <Input 
-                        value={formData.npwp_number}
-                        onChange={(e) => setFormData({...formData, npwp_number: e.target.value})}
-                        className="h-12 bg-slate-50 border-slate-100 rounded-xl font-bold"
-                      />
-                    </div>
+                    <Input 
+                      label="BPJS Health (KS)"
+                      value={formData.bpjs_health_number}
+                      onChange={(e) => setFormData({...formData, bpjs_health_number: e.target.value})}
+                      variant="ghost"
+                      size="sm"
+                    />
+                    <Input 
+                      label="BPJS Employment (TK)"
+                      value={formData.bpjs_employment_number}
+                      onChange={(e) => setFormData({...formData, bpjs_employment_number: e.target.value})}
+                      variant="ghost"
+                      size="sm"
+                    />
+                    <Input 
+                      label="NPWP Number"
+                      value={formData.npwp_number}
+                      onChange={(e) => setFormData({...formData, npwp_number: e.target.value})}
+                      variant="ghost"
+                      size="sm"
+                    />
                   </div>
                 </div>
               </div>

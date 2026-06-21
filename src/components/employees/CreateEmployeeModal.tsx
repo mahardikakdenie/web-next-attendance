@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Textarea from "@/components/ui/Textarea";
 import { toast } from "sonner";
 import { getTenantRoles } from "@/service/roles";
 import { Role, CreateUserPayload } from "@/types/api";
@@ -277,48 +278,24 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Account Credentials</span>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Full Name</label>
-              <div className="relative">
-                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  required
-                  placeholder="e.g. John Doe" 
-                  className="pl-12"
-                  value={formData.name}
-                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-            </div>
+            <Input 
+              required
+              label="Full Name"
+              placeholder="e.g. John Doe" 
+              leftIcon={<Briefcase className="w-4 h-4" />}
+              value={formData.name}
+              onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            />
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  required
-                  type="email"
-                  placeholder="john@company.com" 
-                  className="pl-12"
-                  value={formData.email}
-                  onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {/* <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  type="password"
-                  placeholder="••••••••" 
-                  className="pl-12"
-                  value={formData.password}
-                  onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                />
-              </div>
-            </div> */}
+            <Input 
+              required
+              type="email"
+              label="Email Address"
+              placeholder="john@company.com" 
+              leftIcon={<Mail className="w-4 h-4" />}
+              value={formData.email}
+              onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
+            />
 
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Assign Role</label>
@@ -336,75 +313,53 @@ export default function CreateEmployeeModal({ open, onClose, onSuccess }: Props)
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Employment Details</span>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Employee ID</label>
-              <div className="relative">
-                <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  required
-                  placeholder="e.g. EMP-001" 
-                  className="pl-12"
-                  value={formData.employee_id}
-                  onChange={e => setFormData(prev => ({ ...prev, employee_id: e.target.value }))}
-                />
-              </div>
-            </div>
+            <Input 
+              required
+              label="Employee ID"
+              placeholder="e.g. EMP-001" 
+              leftIcon={<IdCard className="w-4 h-4" />}
+              value={formData.employee_id}
+              onChange={e => setFormData(prev => ({ ...prev, employee_id: e.target.value }))}
+            />
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Department</label>
-              <div className="relative">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  required
-                  placeholder="e.g. Engineering" 
-                  className="pl-12"
-                  value={formData.department}
-                  onChange={e => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                />
-              </div>
-            </div>
+            <Input 
+              required
+              label="Department"
+              placeholder="e.g. Engineering" 
+              leftIcon={<Building2 className="w-4 h-4" />}
+              value={formData.department}
+              onChange={e => setFormData(prev => ({ ...prev, department: e.target.value }))}
+            />
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Base Salary</label>
-              <div className="relative">
-                <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  required
-                  type="number"
-                  placeholder="0" 
-                  className="pl-12 font-mono"
-                  value={formData.base_salary}
-                  onChange={e => setFormData(prev => ({ ...prev, base_salary: Number(e.target.value) }))}
-                />
-              </div>
-            </div>
+            <Input 
+              required
+              type="number"
+              label="Base Salary"
+              placeholder="0" 
+              leftIcon={<Wallet className="w-4 h-4" />}
+              className="font-mono"
+              value={formData.base_salary}
+              onChange={e => setFormData(prev => ({ ...prev, base_salary: Number(e.target.value) }))}
+            />
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <Input 
-                  required
-                  placeholder="e.g. +62 812..." 
-                  className="pl-12"
-                  value={formData.phone_number}
-                  onChange={e => setFormData(prev => ({ ...prev, phone_number: e.target.value }))}
-                />
-              </div>
-            </div>
+            <Input 
+              required
+              label="Phone Number"
+              placeholder="e.g. +62 812..." 
+              leftIcon={<Phone className="w-4 h-4" />}
+              value={formData.phone_number}
+              onChange={e => setFormData(prev => ({ ...prev, phone_number: e.target.value }))}
+            />
 
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">Home Address</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-6 text-slate-400 w-4 h-4" />
-                <textarea 
-                  required
-                  className="w-full min-h-[100px] pl-12 pr-5 py-4 rounded-2xl text-[15px] font-medium transition-all duration-300 ease-out outline-none placeholder:text-neutral-400 bg-white border border-neutral-200 shadow-sm hover:border-neutral-300 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:shadow-md text-neutral-900"
-                  placeholder="Full street address..."
-                  value={formData.address}
-                  onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                />
-              </div>
+            <div className="md:col-span-2">
+              <Textarea 
+                required
+                label="Home Address"
+                placeholder="Full street address..."
+                leftIcon={<MapPin className="w-4 h-4" />}
+                value={formData.address}
+                onChange={e => setFormData(prev => ({ ...prev, address: e.target.value }))}
+              />
             </div>
           </div>
 

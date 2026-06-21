@@ -105,41 +105,29 @@ export default function LeaveQuotaModal({
 
               <div className="grid grid-cols-1 gap-6">
                 {/* Annual Leave */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
-                    <Calendar size={12} /> Annual Cuti Quota (Days)
-                  </label>
-                  <div className="relative group">
-                    <Input 
-                      type="number"
-                      required
-                      value={annualQuota}
-                      onChange={(e) => setAnnualQuota(e.target.value)}
-                      className="h-14 px-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-base font-black text-slate-900 focus:border-rose-600 focus:bg-white transition-all outline-none"
-                      placeholder="12"
-                    />
-                  </div>
-                </div>
+                <Input 
+                  type="number"
+                  required
+                  label="Annual Cuti Quota (Days)"
+                  value={annualQuota}
+                  onChange={(e) => setAnnualQuota(e.target.value)}
+                  leftIcon={<Calendar size={16} />}
+                  variant="ghost"
+                  placeholder="12"
+                />
 
                 {/* Special Leave */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2 text-indigo-500">
-                    <Sparkles size={12} /> Special Cuti Quota (Days)
-                  </label>
-                  <div className="relative group">
-                    <Input 
-                      type="number"
-                      required
-                      value={specialQuota}
-                      onChange={(e) => setSpecialQuota(e.target.value)}
-                      className="h-14 px-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-base font-black text-slate-900 focus:border-indigo-600 focus:bg-white transition-all outline-none"
-                      placeholder="0"
-                    />
-                  </div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight ml-1 italic">
-                    * Special quota for pilgrimage, marriage, etc.
-                  </p>
-                </div>
+                <Input 
+                  type="number"
+                  required
+                  label="Special Cuti Quota (Days)"
+                  value={specialQuota}
+                  onChange={(e) => setSpecialQuota(e.target.value)}
+                  leftIcon={<Sparkles size={16} />}
+                  variant="ghost"
+                  placeholder="0"
+                  helperText="* Special quota for pilgrimage, marriage, etc."
+                />
               </div>
             </div>
           </div>
