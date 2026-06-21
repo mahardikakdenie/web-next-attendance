@@ -1,57 +1,54 @@
 import { forwardRef } from "react";
 import clsx from "clsx";
+import { ChevronDown } from "lucide-react";
 
-type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
+type Option = {
+  label: string;
+  value: string | number;
+};
+
+type Props = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "size"> & {
+  options: Option[];
   variant?: "default" | "ghost" | "flush";
   size?: "default" | "sm";
   label?: string;
   error?: string;
   helperText?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
   required?: boolean;
+  placeholder?: string;
 };
 
-const Input = forwardRef<HTMLInputElement, Props>(
+const NativeSelect = forwardRef<HTMLSelectElement, Props>(
   (
     {
       className,
+      options,
       variant = "default",
       size = "default",
       label,
       error,
       helperText,
-      leftIcon,
-      rightIcon,
       required,
+      placeholder,
       id,
       ...props
     },
     ref
   ) => {
-    const inputId = id || (label ? `input-${label.toLowerCase().replace(/\s+/g, "-")}` : undefined);
+    const selectId = id || (label ? `select-${label.toLowerCase().replace(/\s+/g, "-")}` : undefined);
 
-    const inputElement = (
+    const selectElement = (
       <div className="relative flex items-center w-full">
-        {leftIcon && (
-          <div className="absolute left-4 text-slate-400 pointer-events-none select-none flex items-center justify-center">
-            {leftIcon}
-          </div>
-        )}
-        <input
+        <select
           ref={ref}
-          id={inputId}
+          id={selectId}
           {...props}
           className={clsx(
-            "w-full px-5 rounded-2xl text-[15px] font-medium transition-all duration-300 ease-out outline-none placeholder:text-neutral-400 placeholder:font-normal disabled:opacity-50 disabled:cursor-not-allowed",
+            "w-full px-5 pr-12 rounded-2xl text-[15px] font-medium transition-all duration-300 ease-out outline-none appearance-none disabled:opacity-50 disabled:cursor-not-allowed",
             {
               // Height sizes
               "h-14": size === "default",
               "h-12": size === "sm",
-
-              // Left/Right padding for icons
-              "pl-12": !!leftIcon,
-              "pr-12": !!rightIcon,
 
               // Variants
               "bg-white border border-neutral-200 shadow-sm hover:border-neutral-300 hover:shadow focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 focus:shadow-md text-neutral-900":
@@ -67,12 +64,21 @@ const Input = forwardRef<HTMLInputElement, Props>(
             },
             className
           )}
-        />
-        {rightIcon && (
-          <div className="absolute right-4 text-slate-400 flex items-center justify-center">
-            {rightIcon}
-          </div>
-        )}
+        >
+          {placeholder && (
+            <option value="" disabled hidden>
+              {placeholder}
+            </option>
+          )}
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="absolute right-4 text-slate-400 pointer-events-none select-none flex items-center justify-center">
+          <ChevronDown size={18} />
+        </div>
       </div>
     );
 
@@ -81,7 +87,7 @@ const Input = forwardRef<HTMLInputElement, Props>(
         <div className="w-full flex flex-col items-start">
           {label && (
             <label
-              htmlFor={inputId}
+              htmlFor={selectId}
               className={clsx(
                 "block text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-1 text-left",
                 error ? "text-rose-500" : "text-slate-400"
@@ -91,7 +97,7 @@ const Input = forwardRef<HTMLInputElement, Props>(
               {required && <span className="text-rose-500 ml-1 font-bold">*</span>}
             </label>
           )}
-          {inputElement}
+          {selectElement}
           {error && (
             <p className="mt-1.5 ml-1 text-[10px] font-bold text-rose-500 text-left animate-in slide-in-from-top-1">
               {error}
@@ -106,11 +112,10 @@ const Input = forwardRef<HTMLInputElement, Props>(
       );
     }
 
-    return inputElement;
+    return selectElement;
   }
 );
 
-Input.displayName = "Input";
+NativeSelect.displayName = "NativeSelect";
 
-export default Input;
-
+export default NativeSelect;
