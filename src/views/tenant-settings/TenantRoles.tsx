@@ -35,6 +35,9 @@ import { Button } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Switch";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
+import Input from "@/components/ui/Input";
+import NativeSelect from "@/components/ui/NativeSelect";
+import Textarea from "@/components/ui/Textarea";
 import { 
   PermissionModule
 } from "@/types/permissions";
@@ -356,16 +359,15 @@ export default function TenantRolesView() {
         {/* LEFT SIDE: ROLE LIST */}
         <div className="lg:col-span-4 space-y-4">
           <div className="bg-white rounded-[32px] border border-slate-100 p-4 shadow-sm">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 group-focus-within:text-blue-600 transition-colors" />
-              <input 
-                type="text" 
-                placeholder="SEARCH ROLES..." 
-                value={roleSearch}
-                onChange={e => setRoleSearch(e.target.value)}
-                className="w-full h-11 pl-10 pr-4 bg-slate-50 border-none rounded-2xl text-xs font-black focus:ring-4 focus:ring-blue-500/5 transition-all outline-none uppercase placeholder:text-slate-300"
-              />
-            </div>
+            <Input 
+              type="text" 
+              placeholder="SEARCH ROLES..." 
+              value={roleSearch}
+              onChange={e => setRoleSearch(e.target.value)}
+              leftIcon={<Search className="w-4 h-4" />}
+              variant="ghost"
+              size="sm"
+            />
           </div>
           
           <div className="space-y-3">
@@ -660,56 +662,51 @@ export default function TenantRolesView() {
                   </div>
                   
                   <div className="space-y-6">
-                      <div className="space-y-2 text-left">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">ROLE DESIGNATION</label>
-                        <input 
-                          required
-                          value={newRoleData.name}
-                          onChange={e => setNewRoleData(prev => ({ ...prev, name: e.target.value.toUpperCase() }))}
-                          type="text" 
-                          placeholder="E.G. SENIOR HR SPECIALIST" 
-                          className="w-full h-14 bg-slate-50 border-none rounded-2xl px-6 text-sm font-black focus:ring-4 focus:ring-blue-500/5 transition-all outline-none uppercase placeholder:text-slate-300" 
-                        />
-                      </div>
+                  <div className="space-y-6">
+                      <Input
+                        required
+                        label="ROLE DESIGNATION"
+                        value={newRoleData.name}
+                        onChange={e => setNewRoleData(prev => ({ ...prev, name: e.target.value.toUpperCase() }))}
+                        type="text" 
+                        placeholder="E.G. SENIOR HR SPECIALIST" 
+                        variant="ghost"
+                      />
 
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2 text-left relative">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">BASE ARCHITECTURE</label>
-                            <div className="relative">
-                              <select 
-                                value={newRoleData.base_role}
-                                onChange={e => setNewRoleData(prev => ({ ...prev, base_role: e.target.value as Role["base_role"] }))}
-                                className="w-full h-14 bg-slate-50 border-none rounded-2xl px-6 appearance-none text-xs font-black pr-10 focus:ring-4 focus:ring-blue-500/5 outline-none uppercase"
-                              >
-                                  <option value="HR">HR</option>
-                                  <option value="FINANCE">FINANCE</option>
-                                  <option value="EMPLOYEE">EMPLOYEE</option>
-                              </select>
-                              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-                            </div>
-                        </div>
-                        <div className="space-y-2 text-left">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">DOMAIN SCOPE</label>
-                            <input 
-                              required
-                              value={newRoleData.department}
-                              onChange={e => setNewRoleData(prev => ({ ...prev, department: e.target.value.toUpperCase() }))}
-                              type="text" 
-                              placeholder="E.G. HUMAN RESOURCES" 
-                              className="w-full h-14 bg-slate-50 border-none rounded-2xl px-6 text-xs font-black focus:ring-4 focus:ring-blue-500/5 transition-all outline-none uppercase placeholder:text-slate-300" 
-                            />
-                        </div>
-                      </div>
+                        <NativeSelect
+                          required
+                          label="BASE ARCHITECTURE"
+                          value={newRoleData.base_role}
+                          onChange={e => setNewRoleData(prev => ({ ...prev, base_role: e.target.value as Role["base_role"] }))}
+                          options={[
+                            { label: "HR", value: "HR" },
+                            { label: "FINANCE", value: "FINANCE" },
+                            { label: "EMPLOYEE", value: "EMPLOYEE" }
+                          ]}
+                          variant="ghost"
+                        />
 
-                      <div className="space-y-2 text-left">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">GOVERNANCE SUMMARY</label>
-                        <textarea 
-                          value={newRoleData.description}
-                          onChange={e => setNewRoleData(prev => ({ ...prev, description: e.target.value.toUpperCase() }))}
-                          placeholder="EXPLAIN THE PURPOSE OF THIS ROLE..." 
-                          className="w-full h-24 bg-slate-50 border-none rounded-2xl p-6 text-xs font-black focus:ring-4 focus:ring-blue-500/5 transition-all outline-none resize-none uppercase placeholder:text-slate-300" 
+                        <Input
+                          required
+                          label="DOMAIN SCOPE"
+                          value={newRoleData.department}
+                          onChange={e => setNewRoleData(prev => ({ ...prev, department: e.target.value.toUpperCase() }))}
+                          type="text" 
+                          placeholder="E.G. HUMAN RESOURCES" 
+                          variant="ghost"
                         />
                       </div>
+
+                      <Textarea
+                        label="GOVERNANCE SUMMARY"
+                        value={newRoleData.description}
+                        onChange={e => setNewRoleData(prev => ({ ...prev, description: e.target.value.toUpperCase() }))}
+                        placeholder="EXPLAIN THE PURPOSE OF THIS ROLE..." 
+                        variant="ghost"
+                        rows={3}
+                      />
+                  </div>
                   </div>
                 </div>
                 <div className="p-8 bg-slate-50/50 flex gap-4">
