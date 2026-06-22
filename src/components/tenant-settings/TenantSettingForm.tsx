@@ -18,6 +18,7 @@ import {
   Link as LinkIcon,
   Loader2,
   HelpCircle,
+  Building,
 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import { Switch } from "@/components/ui/Switch";
@@ -46,6 +47,8 @@ export interface TenantSettingsData {
   clockOutEndTime: string;
   requireSelfie: boolean;
   allowMultipleCheck: boolean;
+  bpjsHealthMaxBasis: number | string;
+  bpjsJpMaxBasis: number | string;
   created_at: string;
   updated_at: string;
   tenant: {
@@ -74,6 +77,8 @@ interface TenantApiData {
   clock_out_end_time: string;
   require_selfie: boolean;
   allow_multiple_check: boolean;
+  bpjs_health_max_basis?: number;
+  bpjs_jp_max_basis?: number;
   created_at: string;
   updated_at: string;
   tenant?: {
@@ -116,6 +121,8 @@ const INITIAL_DATA: TenantSettingsData = {
   clockOutEndTime: "23:00",
   requireSelfie: true,
   allowMultipleCheck: false,
+  bpjsHealthMaxBasis: 12000000,
+  bpjsJpMaxBasis: 10042300,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
   tenant: {
@@ -149,6 +156,8 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
       clockOutEndTime: ts.clock_out_end_time,
       requireSelfie: ts.require_selfie,
       allowMultipleCheck: ts.allow_multiple_check,
+      bpjsHealthMaxBasis: ts.bpjs_health_max_basis ?? 12000000,
+      bpjsJpMaxBasis: ts.bpjs_jp_max_basis ?? 10042300,
       created_at: ts.created_at,
       updated_at: ts.updated_at,
       tenant: {
@@ -305,6 +314,8 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
             clockOutEndTime: apiData.clock_out_end_time,
             requireSelfie: apiData.require_selfie,
             allowMultipleCheck: apiData.allow_multiple_check,
+            bpjsHealthMaxBasis: apiData.bpjs_health_max_basis ?? 12000000,
+            bpjsJpMaxBasis: apiData.bpjs_jp_max_basis ?? 10042300,
             created_at: apiData.created_at,
             updated_at: apiData.updated_at,
             tenant: {
@@ -351,6 +362,8 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
         office_longitude: Number(formData.officeLongitude),
         require_location: Boolean(formData.requireLocation),
         require_selfie: Boolean(formData.requireSelfie),
+        bpjs_health_max_basis: Number(formData.bpjsHealthMaxBasis),
+        bpjs_jp_max_basis: Number(formData.bpjsJpMaxBasis),
         tenant_id: Number(formData.tenantId),
         updated_at: new Date().toISOString()
       };
@@ -730,7 +743,41 @@ export default function TenantSettingForm({ user }: { user: UserData | null }) {
                   </div>
                </div>
             </div>
+          </div>
 
+          <div className="bg-white rounded-[28px] border border-neutral-200/60 p-7 shadow-sm transition-all hover:shadow-md flex flex-col">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
+                <Building size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-neutral-900 uppercase tracking-tight">BPJS & PAYROLL</h2>
+                <p className="text-[10px] font-bold text-neutral-400 mt-0.5 uppercase tracking-widest">CALCULATION BASIS</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="group flex flex-col gap-2 rounded-2xl border border-neutral-100 bg-neutral-50/50 p-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
+                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 group-focus-within:text-indigo-500">BPJS Health Max Basis (IDR)</label>
+                <Input
+                  type="number"
+                  value={formData.bpjsHealthMaxBasis}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('bpjsHealthMaxBasis', parseFloat(e.target.value) || 0)}
+                  className="bg-transparent border-none px-0 h-8 text-xl font-black text-neutral-800 w-full focus:ring-0 shadow-none"
+                />
+              </div>
+              <div className="group flex flex-col gap-2 rounded-2xl border border-neutral-100 bg-neutral-50/50 p-4 transition-all focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-300">
+                <label className="text-[10px] font-black uppercase tracking-widest text-neutral-400 group-focus-within:text-indigo-500">BPJS JP Max Basis (IDR)</label>
+                <Input
+                  type="number"
+                  value={formData.bpjsJpMaxBasis}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('bpjsJpMaxBasis', parseFloat(e.target.value) || 0)}
+                  className="bg-transparent border-none px-0 h-8 text-xl font-black text-neutral-800 w-full focus:ring-0 shadow-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[28px] border border-neutral-200/60 p-7 shadow-sm transition-all hover:shadow-md flex flex-col">
             <div className="flex items-center gap-4 mb-6 pt-2 border-t border-slate-100">
               <div className="h-12 w-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 shadow-inner">
                 <ShieldCheck size={24} strokeWidth={2.5} />

@@ -33,6 +33,8 @@ export default function OrganizationSettingsForm({ user }: OrganizationSettingsF
     allow_remote: settings?.allow_remote || false,
     clock_in_start_time: settings?.clock_in_start_time || "08:00",
     clock_in_end_time: settings?.clock_in_end_time || "17:00",
+    bpjs_health_max_basis: settings?.bpjs_health_max_basis || 12000000,
+    bpjs_jp_max_basis: settings?.bpjs_jp_max_basis || 10042300,
   });
 
   const mutation = useMutation({
@@ -113,6 +115,35 @@ export default function OrganizationSettingsForm({ user }: OrganizationSettingsF
                 type="time"
                 value={formData.clock_in_end_time}
                 onChange={(e) => setFormData({ ...formData, clock_in_end_time: e.target.value })}
+                className="h-12 rounded-2xl bg-slate-50 border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* BPJS & Payroll Configuration */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Building size={16} />
+            <h4 className="text-[11px] font-black uppercase tracking-widest">BPJS & Payroll Config</h4>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-700 uppercase tracking-tight">BPJS Kesehatan Max Basis (IDR)</label>
+              <Input 
+                type="number"
+                value={formData.bpjs_health_max_basis}
+                onChange={(e) => setFormData({ ...formData, bpjs_health_max_basis: parseFloat(e.target.value) || 0 })}
+                className="h-12 rounded-2xl bg-slate-50 border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-700 uppercase tracking-tight">BPJS Ketenagakerjaan JP Max Basis (IDR)</label>
+              <Input 
+                type="number"
+                value={formData.bpjs_jp_max_basis}
+                onChange={(e) => setFormData({ ...formData, bpjs_jp_max_basis: parseFloat(e.target.value) || 0 })}
                 className="h-12 rounded-2xl bg-slate-50 border-none ring-1 ring-slate-200 focus:ring-2 focus:ring-indigo-500 transition-all"
               />
             </div>

@@ -24,6 +24,11 @@ const ptkpOptions = [
   { label: "K/3 (Married, 3 Children)", value: "K/3" },
 ];
 
+const allowanceTypeOptions = [
+  { label: "Tetap (Bulanan)", value: "fixed" },
+  { label: "Tidak Tetap (Harian)", value: "variable" },
+];
+
 interface PayrollProfileModalProps {
   open: boolean;
   onClose: () => void;
@@ -46,7 +51,11 @@ export default function PayrollProfileModal({
     npwp_number: "",
     ptkp_status: "TK/0",
     basic_salary: 0,
-    fixed_allowance: 0
+    fixed_allowance: 0,
+    daily_meal_allowance: 0,
+    daily_transport_allowance: 0,
+    meal_allowance_type: "variable",
+    transport_allowance_type: "variable"
   });
   
   const [isLoading, setIsLoading] = useState(true);
@@ -226,6 +235,55 @@ export default function PayrollProfileModal({
                     />
                   </div>
                 </div>
+
+                {/* 4. MEAL & TRANSPORT ALLOWANCES */}
+                <div className="space-y-4 md:col-span-2">
+                  <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+                    <DollarSign size={16} className="text-blue-600" />
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meal & Transport Allowances</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Input 
+                        type="number"
+                        label="Meal Allowance"
+                        value={formData.daily_meal_allowance || 0}
+                        onChange={(e) => setFormData({...formData, daily_meal_allowance: Number(e.target.value)})}
+                        variant="ghost"
+                        size="sm"
+                      />
+                      <NativeSelect 
+                        label="Meal Allowance Type"
+                        options={allowanceTypeOptions}
+                        value={formData.meal_allowance_type || "variable"}
+                        onChange={(e) => setFormData({...formData, meal_allowance_type: e.target.value})}
+                        variant="ghost"
+                        size="sm"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Input 
+                        type="number"
+                        label="Transport Allowance"
+                        value={formData.daily_transport_allowance || 0}
+                        onChange={(e) => setFormData({...formData, daily_transport_allowance: Number(e.target.value)})}
+                        variant="ghost"
+                        size="sm"
+                      />
+                      <NativeSelect 
+                        label="Transport Allowance Type"
+                        options={allowanceTypeOptions}
+                        value={formData.transport_allowance_type || "variable"}
+                        onChange={(e) => setFormData({...formData, transport_allowance_type: e.target.value})}
+                        variant="ghost"
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
           </div>

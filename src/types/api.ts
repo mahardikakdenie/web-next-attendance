@@ -79,6 +79,8 @@ export interface UserTenantSettings {
   late_after_minute: number;
   require_selfie: boolean;
   allow_multiple_check: boolean;
+  bpjs_health_max_basis?: number;
+  bpjs_jp_max_basis?: number;
   created_at: string;
   updated_at: string;
   tenant?: UserTenantNested;
@@ -371,6 +373,8 @@ export interface UpdateTenantSettingPayload {
   require_location: boolean;
   require_selfie: boolean;
   tenant_id: number;
+  bpjs_health_max_basis?: number;
+  bpjs_jp_max_basis?: number;
   updated_at: string;
 }
 
@@ -564,6 +568,10 @@ export interface PayrollCalculatePayload {
   basic_salary?: number;
   fixed_allowance?: number;
   variable_allowance?: number;
+  daily_meal_allowance?: number;
+  daily_transport_allowance?: number;
+  meal_allowance_type?: string;
+  transport_allowance_type?: string;
   custom_variable_allowances?: CustomAllowance[];
   bonus?: number;
   incentives?: number;
@@ -642,6 +650,10 @@ export interface PayrollProfile {
   ptkp_status: string;
   basic_salary: number;
   fixed_allowance: number;
+  daily_meal_allowance?: number;
+  daily_transport_allowance?: number;
+  meal_allowance_type?: string;
+  transport_allowance_type?: string;
 }
 
 export interface PayrollEarnings {
@@ -722,6 +734,8 @@ export interface SavePayrollPayload {
   incentives: number;
   daily_meal_allowance: number;
   daily_transport_allowance: number;
+  meal_allowance_type?: string;
+  transport_allowance_type?: string;
   attendance_days: number;
   working_days_in_month: number;
   overtime_hours: number;

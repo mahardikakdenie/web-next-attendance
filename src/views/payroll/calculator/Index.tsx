@@ -255,7 +255,7 @@ export default function SalaryCalculatorView({ isStateless = false }: { isStatel
         <div className="xl:col-span-5 space-y-6">
           
           {/* Staff Focus Card */}
-          <section className="bg-white/80 backdrop-blur-xl rounded-[40px] p-8 border border-slate-100/80 shadow-xl shadow-slate-200/20 space-y-6 relative overflow-hidden">
+          <section className="bg-white/80 backdrop-blur-xl rounded-[40px] p-8 border border-slate-100/80 shadow-xl shadow-slate-200/20 space-y-6 relative z-50 overflow-visible">
             <div className="flex items-center justify-between">
                <div className="space-y-0.5">
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
