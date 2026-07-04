@@ -40,8 +40,9 @@ type FaceAnalysisResult =
     };
 
 function createDetectionOptions() {
-  return new faceapi.SsdMobilenetv1Options({
-    minConfidence: MIN_DETECTION_SCORE,
+  return new faceapi.TinyFaceDetectorOptions({
+    inputSize: 320,
+    scoreThreshold: MIN_DETECTION_SCORE,
   });
 }
 
@@ -74,8 +75,8 @@ function analyzeImageQuality(img: HTMLImageElement, box: faceapi.Box) {
   );
 
   const canvas = document.createElement("canvas");
-  canvas.width = Math.min(cropWidth, 220);
-  canvas.height = Math.min(cropHeight, 220);
+  canvas.width = Math.min(cropWidth, 100);
+  canvas.height = Math.min(cropHeight, 100);
 
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) {
@@ -153,8 +154,15 @@ function getPoseRatios(landmarks: faceapi.FaceLandmarks68) {
 export async function loadFaceModels() {
   if (isLoaded) return;
 
-  await faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
-  await faceapi.nets.faceLandmark68Net.loadFromUri("/models");
+  try {
+    await faceapi.tf.setBackend('webgl');
+    await faceapi.tf.ready();
+  } catch (error) {
+    console.warn("WebGL not available, falling back to CPU", error);
+  }
+
+  await faceapi.nets.tinyFaceDetector.loadFromUri("/models");
+  await faceapi.nets.faceLandmark68TinyNet.loadFromUri("/models");
   await faceapi.nets.faceRecognitionNet.loadFromUri("/models");
 
   isLoaded = true;
@@ -163,7 +171,7 @@ export async function loadFaceModels() {
 export async function analyzeFace(img: HTMLImageElement): Promise<FaceAnalysisResult> {
   const detections = await faceapi
     .detectAllFaces(img, createDetectionOptions())
-    .withFaceLandmarks()
+    .withFaceLandmarks(true)
     .withFaceDescriptors();
 
   if (detections.length === 0) {
