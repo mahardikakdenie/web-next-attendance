@@ -35,6 +35,7 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
   }, []);
 
   const handleCapture = async (image: string) => {
+    setIsCameraOpen(false);
     setIsValidating(true);
     try {
       // Create HTMLImageElement to analyze
@@ -54,7 +55,6 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
       }
 
       setPreviewImage(image);
-      setIsCameraOpen(false);
       toast.success("Wajah terdeteksi! Foto siap diunggah.");
     } catch (error) {
       console.error("Face analysis error:", error);
@@ -184,7 +184,6 @@ export default function ProfileImageUpdate({ currentImage }: ProfileImageUpdateP
 
       <CameraModal
         open={isCameraOpen}
-        loading={isValidating}
         onClose={() => setIsCameraOpen(false)}
         onCapture={handleCapture}
       />

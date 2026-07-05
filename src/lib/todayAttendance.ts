@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { UserData, UserAttendance } from "@/types/api";
 
-export type AttendanceType = "clock_in" | "clock_out" | null;
+export type AttendanceType = string | null;
 
 export type AttendanceItem = {
   type: AttendanceType;

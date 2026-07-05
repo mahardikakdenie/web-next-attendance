@@ -16,7 +16,7 @@ import AnalyticsTab from "./components/tabs/AnalyticsTab";
 
 export default function AdminWorkspaceView() {
   const [mounted, setMounted] = useState(false);
-  
+
   const { activeTab, setActiveTab } = useDashboardTab();
   const { user, loading, isManagement } = useDashboardPermissions();
   const { projects } = useActiveProjects(mounted);
@@ -40,11 +40,7 @@ export default function AdminWorkspaceView() {
         return <TimesheetTab projects={projects} />;
       case "requests":
         return <RequestsTab />;
-      case "actions":
-        return <ActionsTab />;
       case "analytics":
-        return <AnalyticsTab isManagement={isManagement} user={user} />;
-      default:
         return <AnalyticsTab isManagement={isManagement} user={user} />;
     }
   };

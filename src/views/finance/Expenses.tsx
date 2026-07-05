@@ -27,9 +27,8 @@ import {
   updateUserQuota
 } from "@/service/finance";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Input from "@/components/ui/Input";
-import CreateExpenseModal from "@/components/finance/CreateExpenseModal";
 import { getDataUserslist } from "@/service/users";
+import Input from "@/components/ui/Input";
 
 export default function ExpensesView() {
   const { user } = useAuthStore();
@@ -41,7 +40,6 @@ export default function ExpensesView() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isQuotaModalOpen, setIsQuotaModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ id: number; name: string; quota: number } | null>(null);
 
@@ -235,20 +233,8 @@ export default function ExpensesView() {
             <Filter size={18} />
             <span className="font-bold text-sm">Filter Status</span>
           </Button>
-          <Button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-600/20 px-5 rounded-2xl"
-          >
-            <Plus size={18} strokeWidth={3} />
-            <span className="font-bold text-sm">New Claim</span>
-          </Button>
         </div>
       </div>
-
-      <CreateExpenseModal 
-        open={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

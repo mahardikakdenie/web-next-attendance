@@ -6,12 +6,11 @@ import { Camera, RefreshCw, AlertCircle, X, Sparkles } from "lucide-react";
 
 interface Props {
   open: boolean;
-  loading?: boolean;
   onClose: () => void;
   onCapture: (image: string) => void;
 }
 
-export default function CameraModal({ open, loading = false, onClose, onCapture }: Props) {
+export default function CameraModal({ open, onClose, onCapture }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -19,6 +18,7 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
 
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
 
   useEffect(() => {
     if (!open || startedRef.current) return;
@@ -61,7 +61,7 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
   }, [open]);
 
   const handleCapture = () => {
-    if (loading || !isCameraReady || cameraError) return;
+    if (capturing || !isCameraReady || cameraError) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -69,6 +69,8 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    setCapturing(true);
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -88,7 +90,7 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
       {/* Background Overlay */}
       <div 
         className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-500"
-        onClick={loading ? undefined : onClose}
+        onClick={capturing ? undefined : onClose}
       />
 
       {/* Modal Container */}
@@ -109,7 +111,7 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
               </p>
             </div>
           </div>
-          {!loading && (
+          {!capturing && (
             <button
               type="button"
               onClick={onClose}
@@ -150,10 +152,7 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
                   <div className="absolute inset-0 pointer-events-none z-10">
                     <div className="absolute inset-0 bg-slate-950/20" />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className={`relative h-72 w-72 sm:h-80 sm:w-80 rounded-full border-2 border-white/30 shadow-[0_0_0_999px_rgba(15,23,42,${loading ? '0.8' : '0.6'})] overflow-hidden transition-all duration-500`}>
-                        {loading && (
-                          <div className="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
-                        )}
+                      <div className="relative h-72 w-72 sm:h-80 sm:w-80 rounded-full border-2 border-white/30 shadow-[0_0_0_999px_rgba(15,23,42,0.6)] overflow-hidden transition-all duration-500">
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent blur-sm animate-scan" />
                       </div>
                     </div>
@@ -168,21 +167,12 @@ export default function CameraModal({ open, loading = false, onClose, onCapture 
         <div className="p-8 pt-4 space-y-4">
           <button
             type="button"
-            disabled={loading || !isCameraReady || !!cameraError}
+            disabled={capturing || !isCameraReady || !!cameraError}
             onClick={handleCapture}
             className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-3xl bg-slate-900 py-5 text-sm font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-blue-600 hover:shadow-xl active:scale-[0.98] disabled:opacity-20"
           >
-            {loading ? (
-              <>
-                <RefreshCw size={20} className="animate-spin" />
-                <span>Processing Identity...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={18} className="text-blue-400" />
-                <span>Verify & Clock Now</span>
-              </>
-            )}
+            <Sparkles size={18} className="text-blue-400" />
+            <span>Verify & Clock Now</span>
           </button>
         </div>
       </div>

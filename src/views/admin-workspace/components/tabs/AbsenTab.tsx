@@ -6,7 +6,7 @@ import { RecentAttendance } from "@/components/dashboard-user/RecentAttendance";
 export default function AbsenTab() {
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <div className="lg:col-span-7">
           <ClockCard />
         </div>

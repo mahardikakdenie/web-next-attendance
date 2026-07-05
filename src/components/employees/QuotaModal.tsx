@@ -11,7 +11,7 @@ import {
 import Input from "@/components/ui/Input";
 import { updateUserQuota } from "@/service/finance";
 import { toast } from "sonner";
-import { formatCurrency } from "../finance/CreateExpenseModal";
+import { formatCurrency } from "@/lib/utils";
 
 interface QuotaModalProps {
   open: boolean;

@@ -13,7 +13,8 @@ export default function ClockCard() {
 		now, mounted, attendance, openCamera, setOpenCamera, loading,
 		location, isOffToday, isOnLeave, isOfficeClosed, todayEvent,
 		shiftInfo, hasProfileImage, handleClockClick, handleCapture,
-		canClockIn, canClockOut, selectedAction, setStatus, user, tenantSettings
+		availableActions, selectedAction, setStatus, user, tenantSettings,
+		isProcessingFace
 	} = useClockCardLogic();
 
 	const getEventIcon = (type: string) => {
@@ -55,6 +56,14 @@ export default function ClockCard() {
 
 				<div className='p-6 sm:p-8 flex flex-col items-center gap-6 relative'>
 					<div className='absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none'></div>
+
+					{/* Background Processing Indicator */}
+					{isProcessingFace && (
+						<div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300 z-10">
+							<Loader2 size={14} className="animate-spin text-blue-500" />
+							<span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Memverifikasi wajah...</span>
+						</div>
+					)}
 
 					{/* Status Pill */}
 					<div className='flex gap-2 z-10'>
@@ -132,40 +141,39 @@ export default function ClockCard() {
 							</div>
 						</div>
 					) : (
-						<div className='w-full max-w-sm grid grid-cols-2 gap-3 pt-2'>
-							<button
-								onClick={() => handleClockClick('clock_in')}
-								disabled={loading || !canClockIn}
-								className={`h-14 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 ${!canClockIn ? 'bg-slate-50 text-slate-300' : 'bg-slate-900 text-white shadow-lg hover:-translate-y-0.5 active:scale-95'}`}>
-								{loading && selectedAction === 'clock_in' ? (
-									<Loader2 className='animate-spin' size={18} />
-								) : (
-									<ArrowRight size={18} strokeWidth={3} />
-								)}
-								<span className='text-[10px] font-black uppercase tracking-widest'>
-									Clock In
-								</span>
-							</button>
-							<button
-								onClick={() => handleClockClick('clock_out')}
-								disabled={loading || !canClockOut}
-								className={`h-14 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 border-2 ${!canClockOut ? 'bg-slate-50 border border-slate-100 text-slate-300' : 'bg-white border-slate-200 text-slate-900 shadow-md hover:border-orange-500 hover:text-orange-600 hover:-translate-y-0.5 active:scale-95'}`}>
-								{loading && selectedAction === 'clock_out' ? (
-									<Loader2
-										className='animate-spin text-orange-500'
-										size={18}
-									/>
-								) : (
-									<ArrowRightCircle
-										size={18}
-										strokeWidth={3}
-										className='rotate-180'
-									/>
-								)}
-								<span className='text-[10px] font-black uppercase tracking-widest'>
-									Clock Out
-								</span>
-							</button>
+						<div className={`w-full max-w-sm gap-3 pt-2 ${availableActions.length > 1 ? 'grid grid-cols-2' : 'flex flex-col'}`}>
+							{availableActions.length === 0 ? (
+								<div className="w-full text-center p-4 bg-slate-50 border border-slate-100/80 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+									Semua sesi absensi hari ini selesai
+								</div>
+							) : (
+								availableActions.map((action, idx) => {
+									const isOut = action.action_type === 'clock_out' || action.action_type.includes('end');
+									return (
+										<button
+											key={idx}
+											onClick={() => handleClockClick(action.action_type)}
+											disabled={loading}
+											className={`h-14 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 w-full ${
+												isOut
+													? 'bg-white border border-slate-200 text-slate-900 shadow-md hover:border-orange-500 hover:text-orange-600 hover:-translate-y-0.5 active:scale-95'
+													: 'bg-slate-900 text-white shadow-lg hover:-translate-y-0.5 active:scale-95'
+											}`}
+										>
+											{loading && selectedAction === action.action_type ? (
+												<Loader2 className={`animate-spin ${isOut ? 'text-orange-500' : ''}`} size={18} />
+											) : isOut ? (
+												<ArrowRightCircle size={18} strokeWidth={3} className="rotate-180" />
+											) : (
+												<ArrowRight size={18} strokeWidth={3} />
+											)}
+											<span className="text-[10px] font-black uppercase tracking-widest">
+												{action.name}
+											</span>
+										</button>
+									);
+								})
+							)}
 						</div>
 					)}
 				</div>
@@ -227,7 +235,6 @@ export default function ClockCard() {
 
 			<CameraModal
 				open={openCamera}
-				loading={loading}
 				onClose={() => {
 					setOpenCamera(false);
 					setStatus('idle');

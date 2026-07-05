@@ -61,3 +61,14 @@ export const formatDuration = (hours: number): string => {
   const h = Math.round(hours * 10) / 10;
   return `${h % 1 === 0 ? Math.round(h) : h}h`;
 };
+
+/**
+ * Formats a number as IDR currency.
+ */
+export const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(amount);
+};

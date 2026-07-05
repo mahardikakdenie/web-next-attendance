@@ -79,6 +79,7 @@ export interface UserTenantSettings {
   late_after_minute: number;
   require_selfie: boolean;
   allow_multiple_check: boolean;
+  attendance_sessions_config?: any[];
   bpjs_health_max_basis?: number;
   bpjs_jp_max_basis?: number;
   created_at: string;
@@ -228,12 +229,20 @@ export interface UsersListResponse {
  * ATTENDANCE
  */
 
+export interface AttendanceSession {
+  id: string;
+  clock_in_time: string;
+  clock_out_time?: string;
+  status: string;
+}
+
 export interface AttendanceToday {
   clock_in_time?: string;
   clock_out_time?: string;
   status: "On Time" | "Late" | "Absent" | "No Record" | "On Leave";
   duration: string;
   date: string;
+  sessions?: AttendanceSession[];
 }
 
 export interface AttendanceHistory {
@@ -258,7 +267,7 @@ export interface AttendanceRecord {
 }
 
 export interface ClockPayload {
-  action: "clock_in" | "clock_out";
+  action: string;
   latitude: number;
   longitude: number;
   media_url: string;
@@ -751,8 +760,9 @@ export interface SavePayrollPayload {
 export interface AttendanceCorrectionPayload {
   attendance_id?: string;
   date: string;
-  clock_in_time: string;
-  clock_out_time: string;
+  type: 'clock_in' | 'clock_out' | 'both';
+  clock_in_time?: string;
+  clock_out_time?: string;
   reason: string;
 }
 
@@ -761,8 +771,9 @@ export interface AttendanceCorrectionData {
   attendance_id?: string;
   user_id: number;
   date: string;
-  clock_in_time: string;
-  clock_out_time: string;
+  type: 'clock_in' | 'clock_out' | 'both';
+  clock_in_time?: string;
+  clock_out_time?: string;
   reason: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   admin_notes?: string;

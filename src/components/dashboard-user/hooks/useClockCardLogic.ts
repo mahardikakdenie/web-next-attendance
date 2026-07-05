@@ -25,12 +25,25 @@ type Coordinates = {
 	longitude: number;
 };
 
+export type SessionActionType = 'clock_in' | 'clock_out' | 'break_start' | 'break_end' | 'overtime_start' | 'overtime_end' | 'custom';
+
+export interface AttendanceSessionConfig {
+	id: string;
+	name: string;
+	action_type: SessionActionType;
+	sequence: number;
+	time_start?: string;
+	time_end?: string;
+	is_flexible: boolean;
+}
+
 interface TenantSettingsData {
 	allowMultipleCheck: boolean;
 	clockInStart?: string;
 	clockInEnd?: string;
 	clockOutStart?: string;
 	clockOutEnd?: string;
+	sessionsConfig?: AttendanceSessionConfig[];
 }
 
 const dataUrlToFile = async (dataUrl: string) => {
@@ -52,9 +65,10 @@ export function useClockCardLogic() {
 	const [openCamera, setOpenCamera] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [, setStatus] = useState<'idle' | 'camera' | 'processing'>('idle');
+	const [isProcessingFace, setIsProcessingFace] = useState(false);
 	const [coords, setCoords] = useState<Coordinates>({ latitude: 0, longitude: 0 });
 	const [location, setLocation] = useState<string>('Mencari lokasi...');
-	const [selectedAction, setSelectedAction] = useState<'clock_in' | 'clock_out' | null>(null);
+	const [selectedAction, setSelectedAction] = useState<SessionActionType | null>(null);
 	const [isOffToday, setIsOffToday] = useState(false);
 	const [isOnLeave, setIsOnLeave] = useState(false);
 	const [isOfficeClosed, setIsOfficeClosed] = useState(false);
@@ -104,6 +118,7 @@ export function useClockCardLogic() {
 					clockInEnd: settings.clock_in_end_time,
 					clockOutStart: settings.clock_out_start_time,
 					clockOutEnd: settings.clock_out_end_time,
+					sessionsConfig: settings.attendance_sessions_config || [],
 				});
 			}
 
@@ -190,7 +205,7 @@ export function useClockCardLogic() {
 		);
 	}, []);
 
-	const handleDirectClock = async (type: 'clock_in' | 'clock_out') => {
+	const handleDirectClock = async (type: SessionActionType) => {
 		try {
 			setLoading(true);
 			await clockAttendance({ action: type, latitude: coords.latitude, longitude: coords.longitude, media_url: '' });
@@ -208,7 +223,7 @@ export function useClockCardLogic() {
 			});
 
 			setTimeout(() => queryClient.invalidateQueries({ queryKey: ['today-attendance'] }), 1500);
-			toast.success(`${type === 'clock_in' ? 'Clock In' : 'Clock Out'} berhasil`);
+			toast.success(`${type === 'clock_in' ? 'Clock In' : type === 'clock_out' ? 'Clock Out' : type} berhasil`);
 		} catch (error) {
 			console.log(error);
 			const apiErr = error as CustomApiError;
@@ -219,7 +234,7 @@ export function useClockCardLogic() {
 		}
 	};
 
-	const handleClockClick = (type: 'clock_in' | 'clock_out') => {
+	const handleClockClick = (type: SessionActionType) => {
 		if (!hasProfileImage) return toast.error('Silakan upload foto profil terlebih dahulu untuk dapat melakukan absensi.');
 		if (isOffToday || isOnLeave || isOfficeClosed) return toast.error('Anda tidak memiliki jadwal kerja hari ini.');
 		setSelectedAction(type);
@@ -233,10 +248,23 @@ export function useClockCardLogic() {
 	};
 
 	const handleCapture = async (img: string) => {
+		const capturedAction = selectedAction!;
+		const capturedCoords = { ...coords };
+		const capturedLocation = location;
+
+		setOpenCamera(false);
+		setStatus('idle');
+
+		setIsProcessingFace(true);
+
+		const toastId = toast.loading('Memproses verifikasi wajah...', {
+			description: 'Mohon tunggu, proses ini hanya beberapa detik.',
+			duration: Infinity,
+		});
+
 		try {
-			setLoading(true);
-			setStatus('processing');
 			await loadFaceModels();
+
 			const selfieImg = new window.Image();
 			selfieImg.src = img;
 			const profileImg = new window.Image();
@@ -245,53 +273,110 @@ export function useClockCardLogic() {
 				new Promise((r) => (selfieImg.onload = r)),
 				new Promise((r) => (profileImg.onload = r)),
 			]);
-			
+
 			const selfieAnalysis = await analyzeFace(selfieImg);
-			if (!selfieAnalysis.ok) return toast.error(getFaceAnalysisErrorMessage(selfieAnalysis.error));
+			if (!selfieAnalysis.ok) {
+				toast.error(getFaceAnalysisErrorMessage(selfieAnalysis.error), { id: toastId });
+				return;
+			}
 
 			const profileAnalysis = await analyzeFace(profileImg);
-			if (!profileAnalysis.ok) return toast.error('Foto profil tidak valid.');
-			if (!compareFace(selfieAnalysis.metrics.descriptor, profileAnalysis.metrics.descriptor).isMatch) return toast.error('Wajah tidak cocok.');
+			if (!profileAnalysis.ok) {
+				toast.error('Foto profil tidak valid. Silakan update foto profil Anda.', { id: toastId });
+				return;
+			}
 
+			if (!compareFace(selfieAnalysis.metrics.descriptor, profileAnalysis.metrics.descriptor).isMatch) {
+				toast.error('Wajah tidak cocok dengan foto profil.', { id: toastId });
+				return;
+			}
+
+			toast.loading('Mengunggah foto...', { id: toastId, description: undefined });
 			const file = await dataUrlToFile(img);
 			const mediaUrl = await uploadMedia(file);
-			await clockAttendance({ action: selectedAction!, latitude: coords.latitude, longitude: coords.longitude, media_url: mediaUrl });
-			
+
+			toast.loading('Mencatat absensi...', { id: toastId, description: undefined });
+			await clockAttendance({ action: capturedAction, latitude: capturedCoords.latitude, longitude: capturedCoords.longitude, media_url: mediaUrl });
+
 			const nowTime = dayjs().format('HH:mm');
-			setAttendance((prev) => [{ type: selectedAction, image: mediaUrl, time: dayjs().format('HH:mm:ss'), location }, ...prev]);
-			setOpenCamera(false);
+			setAttendance((prev) => [{ type: capturedAction, image: mediaUrl, time: dayjs().format('HH:mm:ss'), location: capturedLocation }, ...prev]);
 			triggerRefresh();
 
 			queryClient.setQueryData(['today-attendance'], (oldData: any) => {
 				if (!oldData) return oldData;
 				return {
 					...oldData,
-					clock_in_time: selectedAction === 'clock_in' ? nowTime : oldData.clock_in_time,
-					clock_out_time: selectedAction === 'clock_out' ? nowTime : oldData.clock_out_time,
+					clock_in_time: capturedAction === 'clock_in' ? nowTime : oldData.clock_in_time,
+					clock_out_time: capturedAction === 'clock_out' ? nowTime : oldData.clock_out_time,
 				};
 			});
 
 			setTimeout(() => queryClient.invalidateQueries({ queryKey: ['today-attendance'] }), 1500);
-			toast.success('Absensi berhasil');
+
+			toast.success('Absensi berhasil! ✅', {
+				id: toastId,
+				description: `${capturedAction === 'clock_in' ? 'Clock In' : capturedAction === 'clock_out' ? 'Clock Out' : capturedAction} tercatat pada ${nowTime}`,
+			});
 		} catch (error) {
 			console.log(error);
 			const apiErr = error as CustomApiError;
 			const detailedMessage = typeof apiErr.response?.data?.data === 'string' ? apiErr.response.data.data : null;
-			toast.error(detailedMessage || apiErr.response?.data?.meta?.message || 'Terjadi kesalahan.');
+			toast.error(detailedMessage || apiErr.response?.data?.meta?.message || 'Terjadi kesalahan saat memproses absensi.', { id: toastId });
 		} finally {
-			setLoading(false);
-			setStatus('idle');
+			setIsProcessingFace(false);
 		}
 	};
 
-	const latestLog = attendance.length > 0 ? attendance[0] : null;
-	const canClockIn = (tenantSettings.allowMultipleCheck ? !latestLog || latestLog.type === 'clock_out' : !attendance.some((a) => a.type === 'clock_in')) && !isOffToday && !isOnLeave && !isOfficeClosed;
-	const canClockOut = (tenantSettings.allowMultipleCheck ? latestLog && latestLog.type === 'clock_in' : attendance.some((a) => a.type === 'clock_in') && !attendance.some((a) => a.type === 'clock_out')) && !isOffToday && !isOnLeave && !isOfficeClosed;
+	const getAvailableActions = () => {
+		if (isOffToday || isOnLeave || isOfficeClosed) return [];
+
+		const latestLog = attendance.length > 0 ? attendance[0] : null;
+
+		// 1. Jika skema dinamis dikonfigurasi di backend
+		if (tenantSettings.sessionsConfig && tenantSettings.sessionsConfig.length > 0) {
+			const completedTypes = attendance.map(a => a.type);
+			const nextSession = tenantSettings.sessionsConfig.find(s => !completedTypes.includes(s.action_type));
+			
+			if (nextSession) {
+				if (!nextSession.is_flexible && nextSession.time_start && nextSession.time_end) {
+					const nowTime = now ? now.format('HH:mm') : dayjs().format('HH:mm');
+					if (nowTime >= nextSession.time_start && nowTime <= nextSession.time_end) {
+						return [nextSession];
+					}
+					return [];
+				}
+				return [nextSession];
+			}
+			return [];
+		}
+
+		// 2. Fallback Mode Bebas (Toggle in/out berkali-kali)
+		if (tenantSettings.allowMultipleCheck) {
+			const sessionCount = attendance.filter((a) => a.type === 'clock_in').length;
+			if (!latestLog || latestLog.type === 'clock_out') {
+				return [{ action_type: 'clock_in' as SessionActionType, name: sessionCount > 0 ? `Clock In (Sesi ${sessionCount + 1})` : 'Clock In' }];
+			} else {
+				return [{ action_type: 'clock_out' as SessionActionType, name: sessionCount > 0 ? `Clock Out (Sesi ${sessionCount})` : 'Clock Out' }];
+			}
+		}
+
+		// 3. Fallback Mode Standard (Sekali In, Sekali Out)
+		const hasClockIn = attendance.some((a) => a.type === 'clock_in');
+		const hasClockOut = attendance.some((a) => a.type === 'clock_out');
+
+		if (!hasClockIn) return [{ action_type: 'clock_in' as SessionActionType, name: 'Clock In' }];
+		if (hasClockIn && !hasClockOut) return [{ action_type: 'clock_out' as SessionActionType, name: 'Clock Out' }];
+
+		return [];
+	};
+
+	const availableActions = getAvailableActions();
 
 	return {
 		now, mounted, attendance, openCamera, setOpenCamera, loading,
 		location, isOffToday, isOnLeave, isOfficeClosed, todayEvent,
 		shiftInfo, hasProfileImage, handleClockClick, handleCapture,
-		canClockIn, canClockOut, selectedAction, setStatus, user, tenantSettings
+		availableActions, selectedAction, setStatus, user, tenantSettings,
+		isProcessingFace
 	};
 }

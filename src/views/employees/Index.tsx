@@ -20,14 +20,13 @@ import { useEffect, useState, useCallback } from "react";
 import { getDataUserslist } from "@/service/users";
 import { DataTable, Column } from "@/components/ui/DataTable";
 import { MetaResponse, UserData } from "@/types/api";
-import { getRoleBadgeColor, getProfileImage } from "@/lib/utils";
+import { getRoleBadgeColor, getProfileImage, formatCurrency } from "@/lib/utils";
 import CreateEmployeeModal from "@/components/employees/CreateEmployeeModal";
 import LifecycleModal from "@/components/employees/LifecycleModal";
 import QuotaModal from "@/components/employees/QuotaModal";
 import LeaveQuotaModal from "@/components/employees/LeaveQuotaModal";
 import PayrollProfileModal from "@/components/employees/PayrollProfileModal";
 import { useAuthStore, ROLES } from "@/store/auth.store";
-import { formatCurrency } from "@/components/finance/CreateExpenseModal";
 import { CalendarDays } from "lucide-react";
 
 export default function EmployeesView() {

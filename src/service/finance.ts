@@ -18,6 +18,25 @@ export interface ExpenseSummaryStats {
   };
 }
 
+/**
+ * @route POST /api/v1/finance/expenses
+ * @description Endpoint ini digunakan untuk mensubmit atau membuat pengajuan expense claim baru oleh user.
+ * 
+ * @payload (Request Body JSON)
+ * - category (string): [Required] Kategori pengeluaran (misal: "Travel", "Meals", "Transport").
+ * - amount (number): [Required] Jumlah nominal pengeluaran.
+ * - date (string): [Required] Tanggal pengeluaran dengan format YYYY-MM-DD.
+ * - description (string): [Required] Deskripsi atau catatan detail pengeluaran.
+ * - receipt (File | string): [Optional] URL/Base64 gambar struck atau object File untuk upload multipart.
+ * 
+ * @sideEffects
+ * 1. Validasi Kuota: Backend akan menolak (HTTP 500) jika total amount klaim ini melebihi sisa kuota bulanan user.
+ * 2. Database Insert: Data disimpan ke database dengan status awal "Pending".
+ * 3. Activity Logging: Mencatat aktivitas pengajuan ke tabel RecentActivity.
+ * 
+ * @returns {Promise<APIResponse<ExpenseClaim>>} Mengembalikan object data claim jika berhasil (HTTP 201).
+ * @throws {Error} Mengembalikan error JSON jika kuota tidak cukup atau payload tidak valid.
+ */
 export interface CreateExpensePayload {
   category: string;
   amount: number;

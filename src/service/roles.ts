@@ -59,3 +59,7 @@ export const saveRoleHierarchy = (parent_id: number, child_role_ids: number[]) =
     child_role_ids: child_role_ids 
   });
 };
+
+export const syncPermissionsCache = () => {
+  return secureRequest<APIResponse<null>>("post", "/v1/superadmin/permissions/sync");
+};
