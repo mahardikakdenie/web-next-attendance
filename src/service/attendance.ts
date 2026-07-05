@@ -82,3 +82,12 @@ export const approveCorrection = async (id: string, payload: ApprovalPayload) =>
 export const rejectCorrection = async (id: string, payload: ApprovalPayload) => {
   return secureRequest<APIResponse<AttendanceCorrectionData>>("post", `/v1/attendance/corrections/${id}/reject`, payload);
 };
+
+/**
+ * Mengakhiri sesi absensi hari ini (mengunci status absensi menjadi 'done').
+ * Sesuai untuk skenario allow_multiple_check: true.
+ */
+export const endAttendanceSession = async () => {
+  return secureRequest<APIResponse<null>>("post", "/v1/attendance/end-session", {});
+};
+

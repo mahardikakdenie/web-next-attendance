@@ -11,21 +11,21 @@ import {
 	getTodayAttendanceItems,
 	type AttendanceItem,
 } from '@/lib/todayAttendance';
-import { clockAttendance, getTodayAttendance } from '@/service/attendance';
+import { clockAttendance, getTodayAttendance, endAttendanceSession } from '@/service/attendance';
 import { uploadMedia } from '@/service/media';
 import { getCalendarEvents, CalendarEvent } from '@/service/calendar';
 import { useAuthStore } from '@/store/auth.store';
 import { useRefresh } from '@/lib/RefreshContext';
 import { getProfileImage } from '@/lib/utils';
 import { CustomApiError } from '@/types/api';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 
 type Coordinates = {
 	latitude: number;
 	longitude: number;
 };
 
-export type SessionActionType = 'clock_in' | 'clock_out' | 'break_start' | 'break_end' | 'overtime_start' | 'overtime_end' | 'custom';
+export type SessionActionType = 'clock_in' | 'clock_out' | 'break_start' | 'break_end' | 'overtime_start' | 'overtime_end' | 'end_session' | 'custom';
 
 export interface AttendanceSessionConfig {
 	id: string;
@@ -44,6 +44,10 @@ interface TenantSettingsData {
 	clockOutStart?: string;
 	clockOutEnd?: string;
 	sessionsConfig?: AttendanceSessionConfig[];
+	requireSelfie?: boolean;
+	requireLocation?: boolean;
+	allowRemote?: boolean;
+	maxRadiusMeter?: number;
 }
 
 const dataUrlToFile = async (dataUrl: string) => {
@@ -66,6 +70,8 @@ export function useClockCardLogic() {
 	const [loading, setLoading] = useState(false);
 	const [, setStatus] = useState<'idle' | 'camera' | 'processing'>('idle');
 	const [isProcessingFace, setIsProcessingFace] = useState(false);
+	const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
+	const [isEndingSession, setIsEndingSession] = useState(false);
 	const [coords, setCoords] = useState<Coordinates>({ latitude: 0, longitude: 0 });
 	const [location, setLocation] = useState<string>('Mencari lokasi...');
 	const [selectedAction, setSelectedAction] = useState<SessionActionType | null>(null);
@@ -75,6 +81,15 @@ export function useClockCardLogic() {
 	const [todayEvent, setTodayEvent] = useState<CalendarEvent | null>(null);
 	const [shiftInfo, setShiftInfo] = useState<string>('Memuat jadwal...');
 	const [tenantSettings, setTenantSettings] = useState<TenantSettingsData>({ allowMultipleCheck: false });
+
+	const { data: todayData } = useQuery({
+		queryKey: ['today-attendance'],
+		queryFn: async () => {
+			const res = await getTodayAttendance();
+			return res.data;
+		},
+		staleTime: 60000,
+	});
 
 	const hasProfileImage = !!getProfileImage(user?.media_url);
 
@@ -105,8 +120,15 @@ export function useClockCardLogic() {
 		if (!user) return;
 		try {
 			setLoading(true);
-			const [todayResp, eventsResp] = await Promise.all([
-				getTodayAttendance(true),
+			const [todayDataInit, eventsResp] = await Promise.all([
+				queryClient.fetchQuery({
+					queryKey: ['today-attendance'],
+					queryFn: async () => {
+						const res = await getTodayAttendance();
+						return res.data;
+					},
+					staleTime: 60000
+				}),
 				getCalendarEvents(dayjs().year())
 			]);
 
@@ -119,10 +141,14 @@ export function useClockCardLogic() {
 					clockOutStart: settings.clock_out_start_time,
 					clockOutEnd: settings.clock_out_end_time,
 					sessionsConfig: settings.attendance_sessions_config || [],
+					requireSelfie: Boolean(settings.require_selfie),
+					requireLocation: Boolean(settings.require_location),
+					allowRemote: Boolean(settings.allow_remote),
+					maxRadiusMeter: settings.max_radius_meter,
 				});
 			}
 
-			if (todayResp.data?.status === 'On Leave') {
+			if (todayDataInit?.status === 'On Leave') {
 				setIsOnLeave(true);
 				setShiftInfo('Sedang Cuti');
 				return;
@@ -225,10 +251,10 @@ export function useClockCardLogic() {
 							clock_out_time: "",
 							status: "on time"
 						});
-					} else if (type === 'clock_out') {
+					} else if (type === 'clock_out' || type === 'end_session') {
 						if (updatedSessions.length > 0 && !updatedSessions[updatedSessions.length - 1].clock_out_time) {
 							updatedSessions[updatedSessions.length - 1].clock_out_time = nowTime;
-						} else {
+						} else if (type === 'clock_out') {
 							updatedSessions.push({
 								id: `temp-${Date.now()}`,
 								clock_in_time: "",
@@ -339,10 +365,10 @@ export function useClockCardLogic() {
 							clock_out_time: "",
 							status: "on time"
 						});
-					} else if (capturedAction === 'clock_out') {
+					} else if (capturedAction === 'clock_out' || capturedAction === 'end_session') {
 						if (updatedSessions.length > 0 && !updatedSessions[updatedSessions.length - 1].clock_out_time) {
 							updatedSessions[updatedSessions.length - 1].clock_out_time = nowTime;
-						} else {
+						} else if (capturedAction === 'clock_out') {
 							updatedSessions.push({
 								id: `temp-${Date.now()}`,
 								clock_in_time: "",
@@ -377,10 +403,34 @@ export function useClockCardLogic() {
 		}
 	};
 
+	const confirmEndSession = async () => {
+		setIsEndingSession(true);
+		try {
+			await endAttendanceSession();
+			toast.success("Sesi absensi Anda hari ini telah ditutup.");
+			
+			// Refresh data agar status yang baru (terkunci) termuat dari backend
+			queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
+			triggerRefresh();
+			
+			// Tutup modal
+			setShowEndSessionConfirm(false);
+		} catch (error: any) {
+			console.log(error);
+			const apiErr = error as CustomApiError;
+			const errMsg = typeof apiErr.response?.data?.data === 'string' 
+				? apiErr.response.data.data 
+				: (apiErr.response?.data?.meta?.message || "Gagal mengakhiri sesi.");
+			toast.error(errMsg);
+		} finally {
+			setIsEndingSession(false);
+		}
+	};
+
 	const getAvailableActions = () => {
 		if (isOffToday || isOnLeave || isOfficeClosed) return [];
 
-		const latestLog = attendance.length > 0 ? attendance[0] : null;
+		const isLocked = todayData?.status?.toLowerCase() === 'done' || todayData?.status?.toLowerCase() === 'completed';
 
 		// 1. Jika skema dinamis dikonfigurasi di backend
 		if (tenantSettings.sessionsConfig && tenantSettings.sessionsConfig.length > 0) {
@@ -402,16 +452,25 @@ export function useClockCardLogic() {
 
 		// 2. Fallback Mode Bebas (Toggle in/out berkali-kali)
 		if (tenantSettings.allowMultipleCheck) {
+			const hasEndedSession = attendance.some((a) => a.type === 'end_session');
+			const allSessionsDone = todayData?.sessions && todayData.sessions.length > 0 && todayData.sessions.every((s: any) => s?.status?.toLowerCase() === 'done' || s?.clock_out_time);
+			
+			// Jika user sudah melakukan end_session, maka tidak ada tombol lagi yang ditampilkan
+			if (hasEndedSession || isLocked || allSessionsDone) return [];
+
 			const inCount = attendance.filter((a) => a.type === 'clock_in').length;
 			const outCount = attendance.filter((a) => a.type === 'clock_out').length;
 			
 			return [
 				{ action_type: 'clock_in' as SessionActionType, name: `Clock In ${inCount > 0 ? `(Sesi ${inCount + 1})` : ''}`.trim() },
-				{ action_type: 'clock_out' as SessionActionType, name: `Clock Out ${outCount > 0 || inCount > 0 ? `(Sesi ${outCount + 1})` : ''}`.trim() }
+				{ action_type: 'clock_out' as SessionActionType, name: `Clock Out ${outCount > 0 || inCount > 0 ? `(Sesi ${outCount + 1})` : ''}`.trim() },
+				{ action_type: 'end_session' as SessionActionType, name: 'End Session' }
 			];
 		}
 
 		// 3. Fallback Mode Standard (Sekali In, Sekali Out)
+		if (isLocked) return [];
+
 		const hasClockIn = attendance.some((a) => a.type === 'clock_in');
 		const hasClockOut = attendance.some((a) => a.type === 'clock_out');
 
@@ -423,11 +482,19 @@ export function useClockCardLogic() {
 
 	const availableActions = getAvailableActions();
 
+	const isMultipleAttendanceDone = tenantSettings.allowMultipleCheck && 
+		todayData?.sessions && 
+		todayData.sessions.length > 0 && 
+		todayData.sessions.every((s: any) => s?.status?.toLowerCase() === 'done' || s?.clock_out_time);
+
 	return {
 		now, mounted, attendance, openCamera, setOpenCamera, loading,
 		location, isOffToday, isOnLeave, isOfficeClosed, todayEvent,
 		shiftInfo, hasProfileImage, handleClockClick, handleCapture,
 		availableActions, selectedAction, setStatus, user, tenantSettings,
-		isProcessingFace
+		isProcessingFace,
+		showEndSessionConfirm, setShowEndSessionConfirm,
+		isEndingSession, confirmEndSession,
+		todayData, isMultipleAttendanceDone
 	};
 }

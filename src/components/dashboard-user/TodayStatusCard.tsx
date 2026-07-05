@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogIn, LogOut, Timer, Activity, ListOrdered } from "lucide-react";
+import { LogIn, LogOut, Timer, Activity, ListOrdered, ChevronDown } from "lucide-react";
 import { getTodayAttendance } from "@/service/attendance";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -11,16 +11,18 @@ import { getTodayAttendanceSummary } from "@/lib/todayAttendance";
 
 const getBadgeClassName = (status: string) => {
   const s = status?.toLowerCase();
-  if (s === "on time") return "bg-emerald-50 text-emerald-600 border border-emerald-100/50";
+  if (s === "on time" || s === "working" || s === "sedang bekerja") return "bg-emerald-50 text-emerald-600 border border-emerald-100/50";
   if (s === "late") return "bg-amber-50 text-amber-600 border border-amber-100/50";
   if (s === "absent") return "bg-rose-50 text-rose-600 border border-rose-100/50";
   if (s === "on leave") return "bg-blue-50 text-blue-600 border border-blue-100/50";
+  if (s === "selesai" || s === "done" || s === "completed") return "bg-indigo-50 text-indigo-600 border border-indigo-100/50";
   return "bg-neutral-50 text-neutral-500 border border-neutral-200/50";
 };
 
 export default function TodayStatusCard() {
   const [now, setNow] = useState<dayjs.Dayjs | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [expandedSessions, setExpandedSessions] = useState<number[]>([]);
   
   const { user } = useAuthStore();
   const allowMultipleCheck = user?.tenant_setting?.allow_multiple_check || false;
@@ -36,46 +38,6 @@ export default function TodayStatusCard() {
 
   const data = responseData;
   const summary = getTodayAttendanceSummary(user);
-
-  useEffect(() => {
-    setMounted(true);
-    setNow(dayjs());
-    
-    // Interval untuk menghitung durasi live (update setiap 1 menit)
-    const timer = setInterval(() => {
-      setNow(dayjs());
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Logika Kalkulasi Manual
-  const calculateDuration = () => {
-    return data?.duration;
-  };
-
-  // Mapping aman (Robust Extraction)
-  const clockInTime = data?.clock_in_time || (data as any)?.clock_in || (data as any)?.clockInTime;
-  const clockOutTime = data?.clock_out_time || (data as any)?.clock_out || (data as any)?.clockOutTime;
-
-  const durationText = calculateDuration();
-  const status = data?.status || "No Record";
-  const isWorking = clockInTime && !clockOutTime;
-
-  if (isLoading || !mounted || !now) {
-    return (
-      <div className="w-full max-w-sm rounded-3xl border border-neutral-100 bg-white p-6 space-y-5 shadow-sm">
-        <div className="flex justify-between items-center mb-2">
-          <Skeleton className="h-5 w-32 rounded-md" />
-          <Skeleton className="h-6 w-20 rounded-full" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Skeleton className="h-30 rounded-2xl" />
-          <Skeleton className="h-30 rounded-2xl" />
-        </div>
-        <Skeleton className="h-18 rounded-2xl mt-4" />
-      </div>
-    );
-  }
 
   // Pengelompokan sesi secara manual dari summary.items untuk mempertahankan riwayat lengkap
   let baseSessions: any[] = [];
@@ -125,14 +87,93 @@ export default function TodayStatusCard() {
      sessions = apiSessions;
   }
 
+  useEffect(() => {
+    setMounted(true);
+    setNow(dayjs());
+    
+    // Interval untuk menghitung durasi live (update setiap 1 menit)
+    const timer = setInterval(() => {
+      setNow(dayjs());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (sessions.length > 0 && expandedSessions.length === 0) {
+      // Buka sesi terakhir secara default
+      setExpandedSessions([sessions.length - 1]);
+    }
+  }, [sessions.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleSession = (index: number) => {
+    setExpandedSessions(prev => 
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
+
+  // Logika Kalkulasi Manual
+  const calculateDuration = () => {
+    return data?.duration;
+  };
+
+  // Mapping aman (Robust Extraction)
+  const clockInTime = data?.clock_in_time || (data as any)?.clock_in || (data as any)?.clockInTime;
+  const clockOutTime = data?.clock_out_time || (data as any)?.clock_out || (data as any)?.clockOutTime;
+
+  const durationText = calculateDuration();
+  const isWorking = clockInTime && !clockOutTime;
+
+  // Menentukan Dynamic Overall Status
+  let overallStatus = "Belum bekerja";
+  
+  if (allowMultipleCheck) {
+    if (sessions.length === 0) {
+      overallStatus = "Belum bekerja";
+    } else {
+      const allDone = sessions.every((s: any) => s.clock_out_time);
+      const isLocked = data?.status?.toLowerCase() === "done" || data?.status?.toLowerCase() === "completed";
+      
+      if (isLocked) {
+        overallStatus = "Selesai";
+      } else if (allDone) {
+        overallStatus = "Selesai";
+      } else {
+        const currentActiveSession = sessions.find((s: any) => !s.clock_out_time);
+        overallStatus = currentActiveSession?.status || "Sedang Bekerja";
+      }
+    }
+  } else {
+    if (!clockInTime) overallStatus = "Belum bekerja";
+    else if (clockInTime && !clockOutTime) overallStatus = data?.status || "Sedang Bekerja";
+    else overallStatus = "Selesai";
+  }
+
+  const displayStatus = overallStatus;
+
+  if (isLoading || !mounted || !now) {
+    return (
+      <div className="w-full max-w-sm rounded-3xl border border-neutral-100 bg-white p-6 space-y-5 shadow-sm">
+        <div className="flex justify-between items-center mb-2">
+          <Skeleton className="h-5 w-32 rounded-md" />
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-30 rounded-2xl" />
+          <Skeleton className="h-30 rounded-2xl" />
+        </div>
+        <Skeleton className="h-18 rounded-2xl mt-4" />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-sm rounded-3xl border border-neutral-100 bg-white p-6 flex flex-col shadow-sm transition-all duration-300 hover:shadow-md">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-base font-semibold text-neutral-800 tracking-tight">Today&apos;s Summary</h2>
-        <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider shadow-sm ${getBadgeClassName(status)}`}>
+        <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider shadow-sm ${getBadgeClassName(displayStatus)}`}>
           <div className="h-1.5 w-1.5 rounded-full bg-current" />
-          {status}
+          {displayStatus}
         </div>
       </div>
 
@@ -194,47 +235,66 @@ export default function TodayStatusCard() {
           </div>
         </div>
       ) : (
-        /* Tampilan Multiple Session */
-        <div className="flex flex-col gap-3 grow max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-          {sessions.map((session: any, index: number) => (
-            <div key={session.id || index} className="flex flex-col rounded-2xl border border-slate-100 overflow-hidden shadow-xs">
-              <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ListOrdered size={14} className="text-slate-500" />
-                  <span className="text-xs font-bold text-slate-700">Sesi {index + 1}</span>
-                </div>
-                {session.status && (
-                  <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getBadgeClassName(session.status)}`}>
-                    {session.status}
-                  </div>
-                )}
-              </div>
-              <div className="grid grid-cols-2 divide-x divide-slate-100 bg-white">
-                <div className="p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                      <LogIn size={12} strokeWidth={2.5} />
+        /* Tampilan Multiple Session dengan Accordion */
+        <div className="flex flex-col gap-3 grow max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
+          {sessions.map((session: any, index: number) => {
+            const isExpanded = expandedSessions.includes(index);
+            
+            return (
+              <div key={session.id || index} className="flex flex-col rounded-2xl border border-slate-200 overflow-hidden shadow-xs transition-all duration-300 bg-white">
+                <button 
+                  onClick={() => toggleSession(index)}
+                  className="w-full bg-slate-50/50 hover:bg-slate-50 px-4 py-3 flex items-center justify-between border-b border-slate-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-indigo-50 flex items-center justify-center border border-indigo-100/50">
+                      <ListOrdered size={12} className="text-indigo-500" />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">In</span>
+                    <span className="text-xs font-black text-slate-700 tracking-wide">SESI {index + 1}</span>
                   </div>
-                  <p className="text-lg font-bold text-slate-900 leading-none">
-                    {session.clock_in_time ? session.clock_in_time.substring(0, 5) : "--:--"}
-                  </p>
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg ${session.clock_out_time ? 'bg-orange-50 text-orange-500' : 'bg-slate-50 text-slate-400'}`}>
-                      <LogOut size={12} strokeWidth={2.5} />
+                  <div className="flex items-center gap-3">
+                    {session.status && (
+                      <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getBadgeClassName(session.status)}`}>
+                        {session.status}
+                      </div>
+                    )}
+                    <div className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                      <ChevronDown size={16} strokeWidth={2.5} />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Out</span>
                   </div>
-                  <p className={`text-lg font-bold leading-none ${session.clock_out_time ? 'text-slate-900' : 'text-slate-300'}`}>
-                    {session.clock_out_time ? session.clock_out_time.substring(0, 5) : "--:--"}
-                  </p>
+                </button>
+                
+                <div 
+                  className={`grid grid-cols-2 divide-x divide-slate-100 bg-white transition-all duration-300 origin-top overflow-hidden ${
+                    isExpanded ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="p-4 hover:bg-slate-50/30 transition-colors">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100/50 shadow-sm">
+                        <LogIn size={14} strokeWidth={2.5} />
+                      </div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">In</span>
+                    </div>
+                    <p className="text-xl font-black text-slate-900 leading-none tabular-nums tracking-tighter ml-1">
+                      {session.clock_in_time ? session.clock_in_time.substring(0, 5) : "--:--"}
+                    </p>
+                  </div>
+                  <div className="p-4 hover:bg-slate-50/30 transition-colors">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`flex h-7 w-7 items-center justify-center rounded-xl border shadow-sm ${session.clock_out_time ? 'bg-orange-50 text-orange-500 border-orange-100/50' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                        <LogOut size={14} strokeWidth={2.5} />
+                      </div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Out</span>
+                    </div>
+                    <p className={`text-xl font-black leading-none tabular-nums tracking-tighter ml-1 ${session.clock_out_time ? 'text-slate-900' : 'text-slate-300'}`}>
+                      {session.clock_out_time ? session.clock_out_time.substring(0, 5) : "--:--"}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {sessions.length === 0 && (
             <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
               <Activity className="text-slate-300 mb-2" size={24} />

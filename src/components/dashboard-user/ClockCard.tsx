@@ -1,21 +1,39 @@
 'use client';
 
-import { Clock, MapPin, ShieldCheck, Loader2, History, ArrowRightCircle, ArrowRight, Info, Users, PartyPopper, UserCheck, AlertCircle } from 'lucide-react';
+import { Clock, MapPin, ShieldCheck, Loader2, History, ArrowRightCircle, ArrowRight, Info, Users, PartyPopper, UserCheck, AlertCircle, Camera, Globe, Building, OctagonAlert } from 'lucide-react';
 import CameraModal from '../attendance/CameraModal';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { EMPTY_IMAGE } from '@/lib/todayAttendance';
 import { useClockCardLogic } from './hooks/useClockCardLogic';
+import { useQuery } from '@tanstack/react-query';
+import { getTodayAttendance } from '@/service/attendance';
 
 export default function ClockCard() {
 	const router = useRouter();
+
+	const { data: todayData } = useQuery({
+		queryKey: ['today-attendance'],
+		queryFn: async () => {
+			const res = await getTodayAttendance();
+			return res.data;
+		},
+	});
+
 	const {
 		now, mounted, attendance, openCamera, setOpenCamera, loading,
 		location, isOffToday, isOnLeave, isOfficeClosed, todayEvent,
 		shiftInfo, hasProfileImage, handleClockClick, handleCapture,
 		availableActions, selectedAction, setStatus, user, tenantSettings,
-		isProcessingFace
+		isProcessingFace,
+		showEndSessionConfirm, setShowEndSessionConfirm,
+		isEndingSession, confirmEndSession
 	} = useClockCardLogic();
+
+	const isMultipleAttendanceDone = tenantSettings.allowMultipleCheck &&
+		todayData?.sessions &&
+		todayData.sessions.length > 0 &&
+		todayData.sessions.every((s: any) => s?.status?.toLowerCase() === 'done');
 
 	const getEventIcon = (type: string) => {
 		switch (type) {
@@ -30,7 +48,7 @@ export default function ClockCard() {
 	return (
 		<>
 			<div id="tour-clock-card" className='w-full mx-auto rounded-[32px] bg-white border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden flex flex-col group/card'>
-				
+
 				{/* Info Banner for INFORMATION category events */}
 				{!isOfficeClosed && todayEvent && todayEvent.category === 'INFORMATION' && (todayEvent.is_all_users || (user && todayEvent.user_ids?.includes(user.id))) && (
 					<div className="bg-blue-50 border-b border-blue-100 px-6 py-3 flex items-center gap-3 animate-in slide-in-from-top duration-500">
@@ -120,6 +138,33 @@ export default function ClockCard() {
 						</div>
 					</div>
 
+					{/* Tenant Setting Rules */}
+					<div className="w-full max-w-sm flex flex-wrap justify-center gap-2 mt-1 mb-2">
+						{tenantSettings.requireSelfie && (
+							<div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-600 shadow-[0_2px_10px_-4px_rgba(99,102,241,0.2)]">
+								<Camera size={12} strokeWidth={2.5} />
+								<span className="text-[9px] font-black uppercase tracking-wider">Selfie Wajib</span>
+							</div>
+						)}
+						{tenantSettings.requireLocation && (
+							<div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600 shadow-[0_2px_10px_-4px_rgba(16,185,129,0.2)]">
+								<MapPin size={12} strokeWidth={2.5} />
+								<span className="text-[9px] font-black uppercase tracking-wider">GPS Aktif</span>
+							</div>
+						)}
+						{tenantSettings.allowRemote ? (
+							<div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-100 rounded-lg text-blue-600 shadow-[0_2px_10px_-4px_rgba(59,130,246,0.2)]">
+								<Globe size={12} strokeWidth={2.5} />
+								<span className="text-[9px] font-black uppercase tracking-wider">Bebas Lokasi</span>
+							</div>
+						) : (
+							<div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-slate-600">
+								<Building size={12} strokeWidth={2.5} />
+								<span className="text-[9px] font-black uppercase tracking-wider">Radius {tenantSettings.maxRadiusMeter || 0}m</span>
+							</div>
+						)}
+					</div>
+
 					{/* Action Buttons */}
 					{!hasProfileImage ? (
 						<div className="w-full max-w-sm mt-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -131,7 +176,7 @@ export default function ClockCard() {
 									<h4 className="text-sm font-black text-rose-900 uppercase tracking-tight">Profil Belum Lengkap</h4>
 									<p className="text-[11px] font-bold text-rose-600/70 mt-1 leading-relaxed">Anda wajib mengupload foto profil sebelum dapat melakukan absensi mandiri.</p>
 								</div>
-								<button 
+								<button
 									onClick={() => router.push('/request-profile-update')}
 									className="w-full h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-200 transition-all flex items-center justify-center gap-2"
 								>
@@ -144,24 +189,39 @@ export default function ClockCard() {
 						<div className={`w-full max-w-sm gap-3 pt-2 ${availableActions.length > 1 ? 'grid grid-cols-2' : 'flex flex-col'}`}>
 							{availableActions.length === 0 ? (
 								<div className="w-full text-center p-4 bg-slate-50 border border-slate-100/80 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
-									Semua sesi absensi hari ini selesai
+									{isMultipleAttendanceDone ? (
+										"Session Sudah berakhir, tidak ada lagi shift menunggu periode berikutnya yaitu besok."
+									) : (
+										"Semua sesi absensi hari ini selesai"
+									)}
 								</div>
 							) : (
 								availableActions.map((action, idx) => {
-									const isOut = action.action_type === 'clock_out' || action.action_type.includes('end');
+									const isEndSession = action.action_type === 'end_session';
+									const isOut = action.action_type === 'clock_out' || (action.action_type.includes('end') && !isEndSession);
+
 									return (
 										<button
 											key={idx}
-											onClick={() => handleClockClick(action.action_type)}
-											disabled={loading}
-											className={`h-14 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 w-full ${
-												isOut
+											onClick={() => {
+												if (action.action_type === 'end_session') {
+													setShowEndSessionConfirm(true);
+												} else {
+													handleClockClick(action.action_type);
+												}
+											}}
+											disabled={loading || isEndingSession}
+											className={`h-14 rounded-2xl flex items-center justify-center gap-2 transition-all duration-300 w-full ${isEndSession
+												? 'col-span-2 bg-rose-50 border border-rose-100 text-rose-600 shadow-md hover:bg-rose-600 hover:text-white hover:-translate-y-0.5 active:scale-95'
+												: isOut
 													? 'bg-white border border-slate-200 text-slate-900 shadow-md hover:border-orange-500 hover:text-orange-600 hover:-translate-y-0.5 active:scale-95'
 													: 'bg-slate-900 text-white shadow-lg hover:-translate-y-0.5 active:scale-95'
-											}`}
+												}`}
 										>
 											{loading && selectedAction === action.action_type ? (
-												<Loader2 className={`animate-spin ${isOut ? 'text-orange-500' : ''}`} size={18} />
+												<Loader2 className={`animate-spin ${isOut ? 'text-orange-500' : isEndSession ? 'text-current' : ''}`} size={18} />
+											) : isEndSession ? (
+												<OctagonAlert size={18} strokeWidth={2.5} />
 											) : isOut ? (
 												<ArrowRightCircle size={18} strokeWidth={3} className="rotate-180" />
 											) : (
@@ -232,6 +292,49 @@ export default function ClockCard() {
 					</div>
 				</div>
 			</div>
+
+			{showEndSessionConfirm && (
+				<div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100] animate-in fade-in duration-200">
+					<div className="bg-white p-6 md:p-8 rounded-[32px] max-w-sm w-full shadow-2xl mx-4 animate-in zoom-in-95 duration-200 border border-slate-100 relative overflow-hidden">
+						{/* Background Decorative element */}
+						<div className='absolute top-0 right-0 w-32 h-32 bg-rose-50/50 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none'></div>
+
+						<div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center mb-5 text-rose-500 border border-rose-100 shadow-sm relative z-10">
+							<OctagonAlert size={28} strokeWidth={2.5} />
+						</div>
+
+						<h3 className="text-xl font-black text-slate-900 mb-2 tracking-tight relative z-10">Akhiri Sesi Kerja?</h3>
+
+						<p className="text-xs font-bold text-slate-500 mb-8 leading-relaxed relative z-10">
+							Aksi ini akan mengunci sesi kerja Anda hari ini. Anda tidak akan dapat melakukan absensi lagi sampai besok.
+						</p>
+
+						<div className="flex gap-3 relative z-10">
+							<button
+								onClick={() => setShowEndSessionConfirm(false)}
+								disabled={isEndingSession}
+								className="flex-1 py-3.5 px-4 border-2 border-slate-100 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:border-slate-200 transition-all active:scale-95 disabled:opacity-50"
+							>
+								Batal
+							</button>
+							<button
+								onClick={confirmEndSession}
+								disabled={isEndingSession}
+								className="flex-1 py-3.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-rose-200 transition-all active:scale-95 disabled:opacity-50 flex justify-center items-center gap-2"
+							>
+								{isEndingSession ? (
+									<>
+										<Loader2 size={16} className="animate-spin" />
+										<span className="sr-only">Loading</span>
+									</>
+								) : (
+									"Ya, Akhiri"
+								)}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			<CameraModal
 				open={openCamera}
