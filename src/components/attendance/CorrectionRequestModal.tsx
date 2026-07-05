@@ -36,6 +36,7 @@ export default function CorrectionRequestModal({ open, onClose, onSuccess, initi
   const [formData, setFormData] = useState<AttendanceCorrectionPayload>({
     attendance_id: initialData?.attendance_id || "",
     date: initialData?.date || dayjs().format("YYYY-MM-DD"),
+    type: "both",
     clock_in_time: initialData?.clock_in_time || "08:00:00",
     clock_out_time: initialData?.clock_out_time || "17:00:00",
     reason: "",
@@ -61,6 +62,7 @@ export default function CorrectionRequestModal({ open, onClose, onSuccess, initi
         setFormData({
           attendance_id: "",
           date: dayjs().format("YYYY-MM-DD"),
+          type: "both",
           clock_in_time: "08:00:00",
           clock_out_time: "17:00:00",
           reason: "",

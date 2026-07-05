@@ -41,8 +41,8 @@ export default function CorrectionsView() {
     }),
   });
 
-  const data = correctionsResp?.data?.data || [];
-  const total = correctionsResp?.data?.meta?.total || 0;
+  const data = correctionsResp?.data || [];
+  const total = correctionsResp?.meta?.pagination?.total || correctionsResp?.meta?.total || 0;
 
   const handleAction = (correction: AttendanceCorrectionData, mode: 'APPROVE' | 'REJECT') => {
     setSelectedCorrection(correction);
@@ -73,12 +73,26 @@ export default function CorrectionsView() {
     },
     {
       header: "Date",
-      accessor: (item) => (
-        <div className="flex flex-col">
-          <span className="text-sm font-bold text-neutral-700">{item.date}</span>
-          <span className="text-[10px] text-neutral-400 font-bold uppercase">Correction Date</span>
-        </div>
-      ),
+      accessor: (item) => {
+        const typeLabels = {
+          clock_in: { label: "Clock In Only", color: "bg-emerald-50 text-emerald-600 border-emerald-100" },
+          clock_out: { label: "Clock Out Only", color: "bg-orange-50 text-orange-600 border-orange-100" },
+          both: { label: "Clock In & Out", color: "bg-blue-50 text-blue-600 border-blue-100" }
+        };
+        const typeConfig = typeLabels[item.type] || typeLabels.both;
+
+        return (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-neutral-700">{item.date}</span>
+              <span className="text-[10px] text-neutral-400 font-bold uppercase">Correction Date</span>
+            </div>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-lg border text-[9px] font-black uppercase tracking-wider w-fit ${typeConfig.color}`}>
+              {typeConfig.label}
+            </span>
+          </div>
+        );
+      },
       sortable: true,
     },
     {
@@ -87,12 +101,16 @@ export default function CorrectionsView() {
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase text-emerald-600">In</span>
-            <span className="text-xs font-bold text-neutral-700">{item.clock_in_time}</span>
+            <span className="text-xs font-bold text-neutral-700">
+              {item.type === 'clock_out' ? "-" : item.clock_in_time || "-"}
+            </span>
           </div>
           <div className="w-px h-6 bg-slate-200" />
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase text-orange-600">Out</span>
-            <span className="text-xs font-bold text-neutral-700">{item.clock_out_time}</span>
+            <span className="text-xs font-bold text-neutral-700">
+              {item.type === 'clock_in' ? "-" : item.clock_out_time || "-"}
+            </span>
           </div>
         </div>
       ),

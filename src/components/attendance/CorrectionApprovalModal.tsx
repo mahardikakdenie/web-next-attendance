@@ -93,15 +93,25 @@ export default function CorrectionApprovalModal({ open, onClose, onSuccess, corr
                 <span className="text-[10px] font-black uppercase text-slate-400">Date</span>
                 <span className="text-sm font-bold text-slate-900">{correction.date}</span>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-200/60">
-                <div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">New Clock In</span>
-                  <span className="text-sm font-black text-emerald-600">{correction.clock_in_time}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">New Clock Out</span>
-                  <span className="text-sm font-black text-orange-600">{correction.clock_out_time}</span>
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase text-slate-400">Request Type</span>
+                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  {correction.type === 'clock_in' ? 'Clock In Only' : correction.type === 'clock_out' ? 'Clock Out Only' : 'Clock In & Out'}
+                </span>
+              </div>
+              <div className={`grid ${correction.type === 'both' ? 'grid-cols-2' : 'grid-cols-1'} gap-4 pt-2 border-t border-slate-200/60`}>
+                {correction.type !== 'clock_out' && (
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">New Clock In</span>
+                    <span className="text-sm font-black text-emerald-600">{correction.clock_in_time}</span>
+                  </div>
+                )}
+                {correction.type !== 'clock_in' && (
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">New Clock Out</span>
+                    <span className="text-sm font-black text-orange-600">{correction.clock_out_time}</span>
+                  </div>
+                )}
               </div>
               <div className="pt-2 border-t border-slate-200/60">
                 <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">Employee Reason</span>
