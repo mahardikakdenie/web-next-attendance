@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { LogIn, LogOut, Timer, Activity } from "lucide-react";
 import { getTodayAttendance } from "@/service/attendance";
-import { AttendanceToday } from "@/types/api";
-import { useRefresh } from "@/lib/RefreshContext";
+import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/Skeleton";
 import dayjs from "dayjs";
 
@@ -17,35 +16,25 @@ const getBadgeClassName = (status: string) => {
 };
 
 export default function TodayStatusCard() {
-  const [data, setData] = useState<AttendanceToday | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState<dayjs.Dayjs | null>(null);
-  const { refreshKey } = useRefresh();
+  const [mounted, setMounted] = useState(false);
 
-  // Fetch API
-  const fetchTodayStatus = useCallback(async () => {
-    try {
-      setLoading(true);
+  const { data: responseData, isLoading } = useQuery({
+    queryKey: ['today-attendance'],
+    queryFn: async () => {
       const res = await getTodayAttendance();
-      setData(res.data);
-    } catch (error) {
-      console.error("Failed to fetch today attendance", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return res.data;
+    },
+    refetchInterval: 60000,
+  });
+
+  const data = responseData;
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      setMounted(true);
-      setNow(dayjs());
-      fetchTodayStatus();
-    });
-  }, [fetchTodayStatus, refreshKey]);
-
-  // Interval untuk menghitung durasi live (update setiap 1 menit)
-  useEffect(() => {
+    setMounted(true);
+    setNow(dayjs());
+    
+    // Interval untuk menghitung durasi live (update setiap 1 menit)
     const timer = setInterval(() => {
       setNow(dayjs());
     }, 60000);
@@ -57,11 +46,15 @@ export default function TodayStatusCard() {
     return data?.duration;
   };
 
+  // Mapping aman (Robust Extraction) untuk mengantisipasi perbedaan key JSON dari backend
+  const clockInTime = data?.clock_in_time || (data as any)?.clock_in || (data as any)?.clockInTime;
+  const clockOutTime = data?.clock_out_time || (data as any)?.clock_out || (data as any)?.clockOutTime;
+
   const durationText = calculateDuration();
   const status = data?.status || "No Record";
-  const isWorking = data?.clock_in_time && !data?.clock_out_time;
+  const isWorking = clockInTime && !clockOutTime;
 
-  if (loading || !mounted || !now) {
+  if (isLoading || !mounted || !now) {
     return (
       <div className="w-full max-w-sm rounded-3xl border border-neutral-100 bg-white p-6 space-y-5 shadow-sm">
         <div className="flex justify-between items-center mb-2">
@@ -96,7 +89,7 @@ export default function TodayStatusCard() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm border border-blue-100/50">
               <LogIn size={18} strokeWidth={2.5} />
             </div>
-            {data?.clock_in_time && (
+            {clockInTime && (
               <span className="rounded-md bg-blue-100/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600">
                 Done
               </span>
@@ -104,7 +97,7 @@ export default function TodayStatusCard() {
           </div>
           <div className="mt-4">
             <p className="text-2xl font-bold tracking-tight text-neutral-900">
-              {data?.clock_in_time ? data.clock_in_time : "--:--"}
+              {clockInTime ? clockInTime : "--:--"}
             </p>
             <p className="mt-0.5 text-xs font-medium text-neutral-500">Clock In</p>
           </div>
@@ -112,19 +105,19 @@ export default function TodayStatusCard() {
 
         {/* Clock Out Card */}
         <div className={`flex flex-col justify-between rounded-[20px] border p-4 transition-all ${
-          data?.clock_out_time 
+          clockOutTime 
             ? "border-orange-100/60 bg-linear-to-br from-orange-50/80 to-orange-100/30 hover:bg-orange-50" 
             : "border-neutral-100 bg-neutral-50/50"
         }`}>
           <div className="flex items-start justify-between">
             <div className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-sm border ${
-              data?.clock_out_time
+              clockOutTime
                 ? "bg-white text-orange-500 border-orange-100/50"
                 : "bg-white text-neutral-400 border-neutral-100"
             }`}>
               <LogOut size={18} strokeWidth={2.5} />
             </div>
-            {data?.clock_out_time && (
+            {clockOutTime && (
               <span className="rounded-md bg-orange-100/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-600">
                 Done
               </span>
@@ -132,13 +125,13 @@ export default function TodayStatusCard() {
           </div>
           <div className="mt-4">
             <p className={`text-2xl font-bold tracking-tight ${
-                data?.clock_out_time ? "text-neutral-900" : "text-neutral-300"
+                clockOutTime ? "text-neutral-900" : "text-neutral-300"
               }`}
             >
-              {data?.clock_out_time ? data.clock_out_time : "--:--"}
+              {clockOutTime ? clockOutTime : "--:--"}
             </p>
             <p className={`mt-0.5 text-xs font-medium ${
-                data?.clock_out_time ? "text-neutral-500" : "text-neutral-400"
+                clockOutTime ? "text-neutral-500" : "text-neutral-400"
               }`}
             >
               Clock Out
@@ -172,9 +165,9 @@ export default function TodayStatusCard() {
             </span>
           )}
           <span className={`text-[11px] font-bold uppercase tracking-wider ${
-            data?.clock_out_time ? "text-neutral-500" : isWorking ? "text-emerald-600" : "text-neutral-400"
+            clockOutTime ? "text-neutral-500" : isWorking ? "text-emerald-600" : "text-neutral-400"
           }`}>
-            {data?.clock_out_time ? "Finished" : isWorking ? "Working" : "Not Started"}
+            {clockOutTime ? "Finished" : isWorking ? "Working" : "Not Started"}
           </span>
         </div>
       </div>
