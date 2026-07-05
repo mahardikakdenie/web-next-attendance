@@ -59,30 +59,67 @@ const mapClockOut = (attendance: UserAttendance): AttendanceItem | null => {
 };
 
 export const getTodayAttendanceItems = (user?: UserData | null): AttendanceItem[] => {
-  const todayRecord = getTodayRecord(user);
-  if (!todayRecord) return [];
+  if (!user?.attendances?.length) return [];
 
-  const items = [mapClockIn(todayRecord), mapClockOut(todayRecord)].filter(
-    (item): item is AttendanceItem => item !== null
-  );
+  const today = dayjs().startOf("day");
+  const todayRecords = user.attendances.filter((item: UserAttendance) => {
+    return dayjs(item.clock_in_time).isSame(today, "day");
+  });
+
+  // Sort by clock_in_time DESC so latest entries are at the top of the list/timeline
+  const sortedRecords = [...todayRecords].sort((a, b) => dayjs(b.clock_in_time).valueOf() - dayjs(a.clock_in_time).valueOf());
+
+  const items: AttendanceItem[] = [];
+  for (const record of sortedRecords) {
+    const outItem = mapClockOut(record);
+    if (outItem) items.push(outItem);
+    const inItem = mapClockIn(record);
+    if (inItem) items.push(inItem);
+  }
 
   return items;
 };
 
 export const getTodayAttendanceSummary = (user?: UserData | null): TodayAttendanceSummary => {
-  const todayRecord = getTodayRecord(user);
-  const clockIn = todayRecord ? mapClockIn(todayRecord) : null;
-  const clockOut = todayRecord ? mapClockOut(todayRecord) : null;
-  const items = [clockIn, clockOut].filter((item): item is AttendanceItem => item !== null);
+  if (!user?.attendances?.length) {
+    return {
+      items: [],
+      clockIn: null,
+      clockOut: null,
+      workingMinutes: 0,
+      badgeLabel: "Pending",
+      progressLabel: "Waiting",
+    };
+  }
 
-  const start = todayRecord?.clock_in_time ? dayjs(todayRecord.clock_in_time) : null;
-  const end = todayRecord?.clock_out_time
-    ? dayjs(todayRecord.clock_out_time)
-    : start
-      ? dayjs()
-      : null;
-  const workingMinutes =
-    start && end && start.isValid() && end.isValid() ? Math.max(end.diff(start, "minute"), 0) : 0;
+  const today = dayjs().startOf("day");
+  const todayRecords = user.attendances.filter((item: UserAttendance) => {
+    return dayjs(item.clock_in_time).isSame(today, "day");
+  });
+
+  const items = getTodayAttendanceItems(user);
+
+  // For quick metrics, find the overall first clock_in and last clock_out (or active)
+  const sortedRecordsAsc = [...todayRecords].sort((a, b) => dayjs(a.clock_in_time).valueOf() - dayjs(b.clock_in_time).valueOf());
+  const firstRecord = sortedRecordsAsc[0];
+  const lastRecord = sortedRecordsAsc[sortedRecordsAsc.length - 1];
+
+  const clockIn = firstRecord ? mapClockIn(firstRecord) : null;
+  const clockOut = lastRecord && lastRecord.clock_out_time ? mapClockOut(lastRecord) : null;
+
+  // Calculate total working minutes across all sessions today
+  let workingMinutes = 0;
+  for (const record of todayRecords) {
+    const start = record.clock_in_time ? dayjs(record.clock_in_time) : null;
+    const end = record.clock_out_time
+      ? dayjs(record.clock_out_time)
+      : start
+        ? dayjs()
+        : null;
+    if (start && end && start.isValid() && end.isValid()) {
+      workingMinutes += Math.max(end.diff(start, "minute"), 0);
+    }
+  }
 
   const badgeLabel = clockOut ? "Completed" : clockIn ? "In Progress" : "Pending";
   const progressLabel = clockOut ? "Finished" : clockIn ? "Active" : "Waiting";

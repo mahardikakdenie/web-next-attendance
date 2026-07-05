@@ -92,7 +92,7 @@ export function useClockCardLogic() {
 		try {
 			setLoading(true);
 			const [todayResp, eventsResp] = await Promise.all([
-				getTodayAttendance(),
+				getTodayAttendance(true),
 				getCalendarEvents(dayjs().year())
 			]);
 
