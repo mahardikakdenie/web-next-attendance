@@ -215,10 +215,35 @@ export function useClockCardLogic() {
 
 			queryClient.setQueryData(['today-attendance'], (oldData: any) => {
 				if (!oldData) return oldData;
+				
+				let updatedSessions = oldData.sessions ? [...oldData.sessions] : [];
+				if (tenantSettings.allowMultipleCheck) {
+					if (type === 'clock_in') {
+						updatedSessions.push({
+							id: `temp-${Date.now()}`,
+							clock_in_time: nowTime,
+							clock_out_time: "",
+							status: "on time"
+						});
+					} else if (type === 'clock_out') {
+						if (updatedSessions.length > 0 && !updatedSessions[updatedSessions.length - 1].clock_out_time) {
+							updatedSessions[updatedSessions.length - 1].clock_out_time = nowTime;
+						} else {
+							updatedSessions.push({
+								id: `temp-${Date.now()}`,
+								clock_in_time: "",
+								clock_out_time: nowTime,
+								status: "completed"
+							});
+						}
+					}
+				}
+
 				return {
 					...oldData,
-					clock_in_time: type === 'clock_in' ? nowTime : oldData.clock_in_time,
+					clock_in_time: type === 'clock_in' && !oldData.clock_in_time ? nowTime : oldData.clock_in_time,
 					clock_out_time: type === 'clock_out' ? nowTime : oldData.clock_out_time,
+					sessions: tenantSettings.allowMultipleCheck ? updatedSessions : oldData.sessions,
 				};
 			});
 
@@ -304,10 +329,35 @@ export function useClockCardLogic() {
 
 			queryClient.setQueryData(['today-attendance'], (oldData: any) => {
 				if (!oldData) return oldData;
+				
+				let updatedSessions = oldData.sessions ? [...oldData.sessions] : [];
+				if (tenantSettings.allowMultipleCheck) {
+					if (capturedAction === 'clock_in') {
+						updatedSessions.push({
+							id: `temp-${Date.now()}`,
+							clock_in_time: nowTime,
+							clock_out_time: "",
+							status: "on time"
+						});
+					} else if (capturedAction === 'clock_out') {
+						if (updatedSessions.length > 0 && !updatedSessions[updatedSessions.length - 1].clock_out_time) {
+							updatedSessions[updatedSessions.length - 1].clock_out_time = nowTime;
+						} else {
+							updatedSessions.push({
+								id: `temp-${Date.now()}`,
+								clock_in_time: "",
+								clock_out_time: nowTime,
+								status: "completed"
+							});
+						}
+					}
+				}
+
 				return {
 					...oldData,
-					clock_in_time: capturedAction === 'clock_in' ? nowTime : oldData.clock_in_time,
+					clock_in_time: capturedAction === 'clock_in' && !oldData.clock_in_time ? nowTime : oldData.clock_in_time,
 					clock_out_time: capturedAction === 'clock_out' ? nowTime : oldData.clock_out_time,
+					sessions: tenantSettings.allowMultipleCheck ? updatedSessions : oldData.sessions,
 				};
 			});
 
@@ -352,12 +402,13 @@ export function useClockCardLogic() {
 
 		// 2. Fallback Mode Bebas (Toggle in/out berkali-kali)
 		if (tenantSettings.allowMultipleCheck) {
-			const sessionCount = attendance.filter((a) => a.type === 'clock_in').length;
-			if (!latestLog || latestLog.type === 'clock_out') {
-				return [{ action_type: 'clock_in' as SessionActionType, name: sessionCount > 0 ? `Clock In (Sesi ${sessionCount + 1})` : 'Clock In' }];
-			} else {
-				return [{ action_type: 'clock_out' as SessionActionType, name: sessionCount > 0 ? `Clock Out (Sesi ${sessionCount})` : 'Clock Out' }];
-			}
+			const inCount = attendance.filter((a) => a.type === 'clock_in').length;
+			const outCount = attendance.filter((a) => a.type === 'clock_out').length;
+			
+			return [
+				{ action_type: 'clock_in' as SessionActionType, name: `Clock In ${inCount > 0 ? `(Sesi ${inCount + 1})` : ''}`.trim() },
+				{ action_type: 'clock_out' as SessionActionType, name: `Clock Out ${outCount > 0 || inCount > 0 ? `(Sesi ${outCount + 1})` : ''}`.trim() }
+			];
 		}
 
 		// 3. Fallback Mode Standard (Sekali In, Sekali Out)

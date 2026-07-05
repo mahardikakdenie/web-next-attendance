@@ -57,6 +57,7 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
       }
       startedRef.current = false;
       setIsCameraReady(false);
+      setCapturing(false);
     };
   }, [open]);
 
@@ -90,7 +91,7 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
       {/* Background Overlay */}
       <div 
         className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl animate-in fade-in duration-500"
-        onClick={capturing ? undefined : onClose}
+        onClick={onClose}
       />
 
       {/* Modal Container */}
@@ -111,15 +112,13 @@ export default function CameraModal({ open, onClose, onCapture }: Props) {
               </p>
             </div>
           </div>
-          {!capturing && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-500 active:scale-90"
-            >
-              <X size={20} strokeWidth={3} />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-500 active:scale-90"
+          >
+            <X size={20} strokeWidth={3} />
+          </button>
         </div>
 
         {/* Video Area */}

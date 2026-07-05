@@ -56,7 +56,7 @@ export default function MainAdminLayout({
             </MainLayout>
           </RefreshProvider>
         </ReactQueryProvider>
-        <Toaster richColors position="top-right" />
+        <Toaster richColors position="top-right" closeButton />
       </body>
     </html>
   );

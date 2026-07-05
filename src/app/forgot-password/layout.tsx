@@ -47,7 +47,7 @@ export default function ForgotPasswordLayout({
         <ReactQueryProvider>
           {children}
         </ReactQueryProvider>
-        <Toaster richColors position="top-right" />
+        <Toaster richColors position="top-right" closeButton />
       </body>
     </html>
   );

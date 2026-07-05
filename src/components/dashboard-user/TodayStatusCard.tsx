@@ -10,10 +10,11 @@ import { useAuthStore } from "@/store/auth.store";
 import { getTodayAttendanceSummary } from "@/lib/todayAttendance";
 
 const getBadgeClassName = (status: string) => {
-  if (status === "On Time") return "bg-emerald-50 text-emerald-600 border border-emerald-100/50";
-  if (status === "Late") return "bg-amber-50 text-amber-600 border border-amber-100/50";
-  if (status === "Absent") return "bg-rose-50 text-rose-600 border border-rose-100/50";
-  if (status === "On Leave") return "bg-blue-50 text-blue-600 border border-blue-100/50";
+  const s = status?.toLowerCase();
+  if (s === "on time") return "bg-emerald-50 text-emerald-600 border border-emerald-100/50";
+  if (s === "late") return "bg-amber-50 text-amber-600 border border-amber-100/50";
+  if (s === "absent") return "bg-rose-50 text-rose-600 border border-rose-100/50";
+  if (s === "on leave") return "bg-blue-50 text-blue-600 border border-blue-100/50";
   return "bg-neutral-50 text-neutral-500 border border-neutral-200/50";
 };
 
@@ -76,32 +77,52 @@ export default function TodayStatusCard() {
     );
   }
 
-  // Pengelompokan sesi apabila allowMultipleCheck aktif
-  const sessions: { in: string | null; out: string | null; in_image: string | null; out_image: string | null }[] = [];
-  
+  // Pengelompokan sesi secara manual dari summary.items untuk mempertahankan riwayat lengkap
+  let baseSessions: any[] = [];
   if (allowMultipleCheck && summary.items.length > 0) {
     const ascItems = [...summary.items].reverse();
-    let currentSession: { in: string | null; out: string | null; in_image: string | null; out_image: string | null } = { in: null, out: null, in_image: null, out_image: null };
+    let currentSession: any = { clock_in_time: null, clock_out_time: null, status: "completed" };
     
     ascItems.forEach((item) => {
       if (item.type === 'clock_in') {
-        if (currentSession.in !== null) {
-          sessions.push({ ...currentSession });
-          currentSession = { in: null, out: null, in_image: null, out_image: null };
+        if (currentSession.clock_in_time !== null) {
+          baseSessions.push({ ...currentSession });
+          currentSession = { clock_in_time: null, clock_out_time: null, status: "completed" };
         }
-        currentSession.in = item.time;
-        currentSession.in_image = item.image;
+        currentSession.clock_in_time = item.time;
       } else if (item.type === 'clock_out') {
-        currentSession.out = item.time;
-        currentSession.out_image = item.image;
-        sessions.push({ ...currentSession });
-        currentSession = { in: null, out: null, in_image: null, out_image: null };
+        currentSession.clock_out_time = item.time;
+        baseSessions.push({ ...currentSession });
+        currentSession = { clock_in_time: null, clock_out_time: null, status: "completed" };
       }
     });
     
-    if (currentSession.in !== null) {
-      sessions.push(currentSession);
+    if (currentSession.clock_in_time !== null) {
+      baseSessions.push(currentSession);
     }
+  }
+
+  // Ambil data sessions dari API yang berisi field baru seperti `status` dan `id`
+  const apiSessions = allowMultipleCheck && Array.isArray((data as any)?.sessions) ? (data as any).sessions : [];
+
+  // Merge baseSessions (riwayat lengkap) dengan apiSessions (status terbaru dari API)
+  let sessions = [...baseSessions];
+  
+  if (apiSessions.length > 0) {
+     if (apiSessions.length >= baseSessions.length) {
+         // Jika API sudah mengembalikan seluruh sesi secara lengkap, gunakan API
+         sessions = apiSessions;
+     } else {
+         // Jika API hanya mengembalikan sebagian (misal 1 sesi terakhir), timpa sesi-sesi terakhir di baseSessions
+         const startIdx = baseSessions.length - apiSessions.length;
+         for (let i = 0; i < apiSessions.length; i++) {
+             if (sessions[startIdx + i]) {
+                 sessions[startIdx + i] = { ...sessions[startIdx + i], ...apiSessions[i] };
+             }
+         }
+     }
+  } else if (sessions.length === 0 && apiSessions.length > 0) {
+     sessions = apiSessions;
   }
 
   return (
@@ -175,11 +196,18 @@ export default function TodayStatusCard() {
       ) : (
         /* Tampilan Multiple Session */
         <div className="flex flex-col gap-3 grow max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-          {sessions.map((session, index) => (
-            <div key={index} className="flex flex-col rounded-2xl border border-slate-100 overflow-hidden shadow-xs">
-              <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 flex items-center gap-2">
-                <ListOrdered size={14} className="text-slate-500" />
-                <span className="text-xs font-bold text-slate-700">Sesi {index + 1}</span>
+          {sessions.map((session: any, index: number) => (
+            <div key={session.id || index} className="flex flex-col rounded-2xl border border-slate-100 overflow-hidden shadow-xs">
+              <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ListOrdered size={14} className="text-slate-500" />
+                  <span className="text-xs font-bold text-slate-700">Sesi {index + 1}</span>
+                </div>
+                {session.status && (
+                  <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getBadgeClassName(session.status)}`}>
+                    {session.status}
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 divide-x divide-slate-100 bg-white">
                 <div className="p-3">
@@ -190,23 +218,29 @@ export default function TodayStatusCard() {
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">In</span>
                   </div>
                   <p className="text-lg font-bold text-slate-900 leading-none">
-                    {session.in ? session.in.substring(0, 5) : "--:--"}
+                    {session.clock_in_time ? session.clock_in_time.substring(0, 5) : "--:--"}
                   </p>
                 </div>
                 <div className="p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg ${session.out ? 'bg-orange-50 text-orange-500' : 'bg-slate-50 text-slate-400'}`}>
+                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg ${session.clock_out_time ? 'bg-orange-50 text-orange-500' : 'bg-slate-50 text-slate-400'}`}>
                       <LogOut size={12} strokeWidth={2.5} />
                     </div>
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Out</span>
                   </div>
-                  <p className={`text-lg font-bold leading-none ${session.out ? 'text-slate-900' : 'text-slate-300'}`}>
-                    {session.out ? session.out.substring(0, 5) : "--:--"}
+                  <p className={`text-lg font-bold leading-none ${session.clock_out_time ? 'text-slate-900' : 'text-slate-300'}`}>
+                    {session.clock_out_time ? session.clock_out_time.substring(0, 5) : "--:--"}
                   </p>
                 </div>
               </div>
             </div>
           ))}
+          {sessions.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+              <Activity className="text-slate-300 mb-2" size={24} />
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Belum ada sesi absensi</p>
+            </div>
+          )}
         </div>
       )}
 
