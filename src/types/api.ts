@@ -251,6 +251,7 @@ export interface AttendanceHistory {
   clock_in: string;
   clock_out: string;
   status: string;
+  sessions?: AttendanceSession[];
 }
 
 export interface AttendanceRecord {
